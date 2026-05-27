@@ -29,7 +29,7 @@ export function OdooListRenderer({ model, arch, fields, domain = [] }: ListRende
       callKw<Array<Record<string, unknown>>>(
         model,
         'search_read',
-        [[domain], visibleColumns.map((c) => c.name)],
+        [domain, visibleColumns.map((c) => c.name)],
         {
           offset: page * limit,
           limit,
