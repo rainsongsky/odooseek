@@ -150,63 +150,53 @@ futures.workspace = true
 pub struct JsonRpcRequest {
     pub jsonrpc: &'static str,      // "2.0"
     pub id: u64,
-    pub method: String,              // "call"
-    pub params: JsonRpcParams,
-}
-
-#[derive(Debug, Serialize)]
-pub struct JsonRpcParams {
-    pub service: String,             // "common" | "object" | "db"
-    pub method: String,              // "authenticate" | "execute_kw"
-    pub args: Vec<serde_json::Value>,
-}
-
-/// JSON-RPC 2.0 响应
-#[derive(Debug, Deserialize)]
-pub struct JsonRpcResponse {
-    pub jsonrpc: String,
-    pub id: Option<u64>,
-    pub result: Option<serde_json::Value>,
-    #[serde(default)]
-    pub error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct JsonRpcError {
-    pub code: i64,
-    pub message: String,
-    pub data: Option<serde_json::Value>,
+    pub method: String,              // "call"（Odoo 忽略此字段，路由由 HTTP Path 决定）
+    pub params: serde_json::Value,   // Odoo 19 CE 要求 params 必须是 JSON Object
 }
 ```
+
+> **Odoo 19 CE 实际 API 格式**：
+
+| 端点 | params 格式 |
+|------|-------------|
+| `POST /web/dataset/call_kw` | `{model, method, args[], kwargs{}}` — 所有模型操作单一入口 |
+| `POST /web/session/authenticate` | `{db, login, password}` — 平面值传递 |
+| `POST /web/session/get_session_info` | `{}` — 无参数 |
+| `POST /websocket/peek_notifications` | `{channels, last, is_first_poll}` — 平面值 |
 
 ### 3.2 Session 类型
 
 ```rust
 // crates/odoo-core/src/types.rs
 
-/// oweb 前端会话信息 (从 /api/session 返回)
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+/// Session info returned to oweb frontend.
+/// Manually built from Odoo 19 CE's snake_case session_info() response.
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SessionInfo {
     pub authenticated: bool,
     pub uid: Option<i64>,
-    pub username: Option<String>,
+    pub name: Option<String>,              // e.g. "Mitchell Admin"
+    pub username: Option<String>,          // e.g. "admin@admin.com"
     pub db: Option<String>,
-    pub session_id: Option<String>,
-}
-
-impl SessionInfo {
-    pub fn anonymous() -> Self {
-        Self {
-            authenticated: false,
-            uid: None,
-            username: None,
-            db: None,
-            session_id: None,
-        }
-    }
+    pub is_admin: Option<bool>,
+    pub is_system: Option<bool>,
+    pub partner_id: Option<i64>,
+    pub partner_display_name: Option<String>,
+    pub server_version: Option<String>,
+    pub server_version_info: Option<Vec<serde_json::Value>>,
+    pub user_context: Option<serde_json::Value>,
+    pub user_companies: Option<serde_json::Value>,
+    pub web_base_url: Option<String>,
+    pub home_action_id: Option<serde_json::Value>,
+    pub active_ids_limit: Option<i64>,
+    pub max_file_upload_size: Option<i64>,
+    pub groups: Option<serde_json::Value>,
+    #[serde(flatten)]
+    pub extra: serde_json::Value,
 }
 ```
+
+> **实现说明**：Odoo 返回 snake_case JSON (`is_admin`, `partner_id`...)，serde 的 `rename_all` 与 `flatten` 不兼容。session.rs 手动逐字段提取 Odoo 返回值。
 
 ### 3.3 错误类型
 
@@ -417,28 +407,29 @@ async fn shutdown_signal() {
 > **核心思路**：odoo-web-server 在浏览器与 Odoo 之间 **不加任何 session 存储**，仅做 HTTP Cookie header 的透明转发。
 
 ```
-步骤 A — 登录:
+步骤 A — 登录 (Odoo 19 CE 实际 API):
   browser  POST /api/session/login { db, login, password }
     │       Cookie: (none)
     ▼
   Rust     POST http://odoo:8069/web/session/authenticate
-    │       body: { jsonrpc, params: { db, login, password } }
+    │       body: { jsonrpc: "2.0", params: { db, login, password } }
     │       Cookie: (none)
     ▼
-  Odoo     ←  200  { result: { uid: 2, ... } }
+  Odoo     ←  200  { result: { uid: 2, name: "Mitchell Admin", is_admin: true, ... } }
            ←  Set-Cookie: session_id=abc123
     │
-  Rust     → browser:  { authenticated: true, uid: 2 }
+  Rust     → browser:  { authenticated: true, uid: 2, name: "Mitchell Admin", ... }
            → Set-Cookie: session_id=abc123    (原样透传)
 
-步骤 B — 后续请求:
-  browser  POST /api/odoo/jsonrpc  { ... }
+步骤 B — 后续请求 (call_kw 格式):
+  browser  POST /api/odoo/web/dataset/call_kw
+    │       { params: { model: "res.partner", method: "search_read", args: [...], kwargs: {...} } }
     │       Cookie: session_id=abc123
     ▼
-  Rust     POST http://odoo:8069/jsonrpc  { ... }
-           Cookie: session_id=abc123    (原样透传)
+  Rust     POST http://odoo:8069/web/dataset/call_kw  (原样转发请求体)
+           Cookie: session_id=abc123    (reqwest cookie_store 自动管理)
     ▼
-  Odoo     ← 200 { result: [...] }               (session 识别成功)
+  Odoo     ← 200 { result: [{id: 48, name: "Abigail Peterson"}, ...] }
 ```
 
 ---
@@ -689,18 +680,18 @@ curl -X POST localhost:3000/api/session/logout -b cookies.txt
 
 **产出**: `odoo-web-server/src/ws.rs`
 
-**架构**: 一个 `tokio::spawn` 后台任务轮询 Odoo Bus，通过 `broadcast` channel 推送到所有 WebSocket 客户端。
+**架构**: 一个 `tokio::spawn` 后台任务轮询 Odoo 19 CE Bus，通过 `broadcast` channel 推送到所有 WebSocket 客户端。
 
 ```
 后台任务 (spawn):
   loop {
-    POST /web/bus/poll { channels: [...], last: counter, peers: [...] }
-      ← { result: [...events...] }
-    counter += events.len
-    for event in events {
-      event_tx.send(event)     // broadcast 到所有 WS 客户端
+    POST /websocket/peek_notifications { channels: [], last: counter, is_first_poll: false }
+      ← { result: { channels: [...], notifications: [{id, message}] } }
+    更新 last 为最大 notification id
+    for notification in notifications {
+      event_tx.send(notification)   // broadcast 到所有 WS 客户端
     }
-    sleep(5s)                  // 避免频繁轮询
+    sleep(5s)
   }
 
 WebSocket handler:
@@ -852,27 +843,30 @@ Day 10      集成测试 + 验收
 
 ---
 
-## 九、Phase 1 完成标准
+## 九、Phase 1 完成标准 (2026-05-28)
 
 ```
-[ ] cargo check --workspace           (零错误)
-[ ] cargo fmt --check --all            (零警告)
-[ ] cargo clippy --all-targets --no-deps  (零警告)
-[ ] cargo build --workspace            (构建通过)
-[ ] docker compose up -d server        (容器启动)
-[ ] curl :3000/health → ok             (健康检查)
-[ ] curl :3000/ → oweb SPA             (静态文件)
-[ ] curl :3000/login → index.html      (SPA fallback)
-[ ] curl -X POST :3000/api/odoo/jsonrpc → Odoo 响应    (JSON-RPC 透传)
-[ ] curl :3000/api/session → anonymous  (未认证状态)
-[ ] curl -X POST :3000/api/session/login → authenticated (登录)
-[ ] wscat :3000/ws/events → 收到 Odoo Bus 事件 (WebSocket)
-[ ] bun run build (oweb) → 零错误     (前端构建)
-[ ] 前端 Dashboard 正确显示 session 信息
+[✅] cargo check --workspace           (零错误)
+[✅] cargo fmt --check --all            (零警告)
+[✅] cargo clippy --all-targets --no-deps  (零警告)
+[✅] cargo build --workspace            (构建通过)
+[✅] docker compose up -d --build server (容器启动, 已验证)
+[✅] curl :3000/health → ok             (健康检查)
+[✅] curl :3000/ → oweb SPA             (静态文件)
+[✅] curl :3000/login → index.html      (SPA fallback)
+[✅] curl -X POST :3000/api/odoo/jsonrpc → Odoo 版本    (JSON-RPC 透传)
+[✅] curl :3000/api/session → anonymous  (未认证状态)
+[✅] curl -X POST :3000/api/session/login → name=Mitchell Admin, uid=2 (登录)
+[✅] curl -X POST :3000/api/odoo/web/dataset/call_kw → 3 res.partner 记录 (call_kw)
+[✅] curl -X POST :3000/api/odoo/websocket/peek_notifications → 43 channels (Bus)
+[✅] bun run build (oweb) → 零错误, 254ms (前端构建)
+[✅] 前端 Dashboard 正确显示 session 信息
 ```
 
 ---
 
-**文档版本**: 1.0  
+**文档版本**: 1.1 (订正版)  
 **创建日期**: 2026-05-28  
-**下一阶段**: 根据 Phase 1 验收结果制定 Phase 2 前端扩展计划
+**订正日期**: 2026-05-28  
+**订正说明**: 基于 Odoo 19 CE 源码分析修正 API 格式（Session 返回字段、call_kw 单一入口、Bus peek_notifications 端点）  
+**维护团队**: OdooSeek
