@@ -1,0 +1,50 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IntelliJ based IDEs
+.idea
+
+# Rust builds
+target/
+*.pdb
+
+# Docker volumes
+docker_*
+
+# IDE
+.vscode/
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+# Test artifacts
+docker/headers.txt
+docker/response.json
