@@ -18,6 +18,7 @@ use tower_http::services::ServeDir;
 use tracing::info;
 
 mod error;
+mod menu;
 mod proxy;
 mod session;
 mod ws;
@@ -106,6 +107,7 @@ async fn main() -> anyhow::Result<()> {
     let frontend_dir = config.frontend_dir.clone();
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
+        .route("/api/menu", get(menu::get_menu))
         .route("/api/session", get(get_session_info))
         .route("/api/session/login", post(session_login))
         .route("/api/session/logout", post(session_logout))

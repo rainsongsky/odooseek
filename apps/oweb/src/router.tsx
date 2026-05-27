@@ -10,6 +10,7 @@ const LazyDashboardPage = lazy(() =>
 const LazySettingsPage = lazy(() =>
   import('./routes/settings').then((m) => ({ default: m.SettingsPage })),
 )
+const LazyMenuPage = lazy(() => import('./routes/menu').then((m) => ({ default: m.MenuPage })))
 
 const rootRoute = createRootRoute({ component: RootLayout })
 
@@ -48,7 +49,19 @@ const settingsRoute = createRoute({
   component: LazySettingsPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, dashboardRoute, settingsRoute])
+const menuRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/menu',
+  component: LazyMenuPage,
+})
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  loginRoute,
+  dashboardRoute,
+  settingsRoute,
+  menuRoute,
+])
 
 export const router = createRouter({ routeTree })
 

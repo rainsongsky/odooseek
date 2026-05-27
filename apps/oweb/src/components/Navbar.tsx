@@ -13,8 +13,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Home', icon: Home, shortcut: 'H' },
+  { to: '/menu', label: 'Apps', icon: Menu, shortcut: 'A' },
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3, shortcut: 'D' },
-  { to: '/menu', label: 'Modules', icon: Menu, shortcut: 'M' },
 ]
 
 export function Navbar() {
