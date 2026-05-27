@@ -438,12 +438,13 @@ bun typecheck              # TypeScript 类型检查
 
 ### 参考资料层级
 
-| 优先级 | 来源 | 用途 |
-|--------|------|------|
-| **P0** | `~/EA/odoo` (Odoo 19 CE 源码) | API 契约、Model 定义、JSON-RPC 协议、Session 机制、Bus 事件 |
-| **P1** | [odoo-rust-mcp](https://github.com/rachmataditiya/odoo-rust-mcp) | Rust 侧 Odoo 客户端封装、reqwest 模式、axum 集成 |
-| **P2** | `~/EA/Rustdoo` (`odoo-rust`) | 业务模型 Rust struct 参照、Session 管理、Web 服务器配置 |
-| **P3** | `~/EA/uncode` (uncode-platform) | axum Router 组织、WebSocket 广播、静态文件 serve |
+| 优先级 | 来源 | 用途 | 方向 |
+|--------|------|------|:----:|
+| **P0** | `~/EA/odoo` (Odoo 19 CE 源码) | API 契约、Model 定义、JSON-RPC 协议、Session 机制、Bus 事件 | 全栈 |
+| **P1** | `~/EA/l8-erp-react` (Odoo React 前端) | React Odoo 组件模式、列表/表单/搜索、RPC 客户端、数据表 | 前端 |
+| **P1** | [odoo-rust-mcp](https://github.com/rachmataditiya/odoo-rust-mcp) | Rust 侧 Odoo 客户端封装、reqwest 模式、axum 集成 | 后端 |
+| **P2** | `~/EA/Rustdoo` (`odoo-rust`) | 业务模型 Rust struct 参照、Session 管理、Web 服务器配置 | 后端 |
+| **P3** | `~/EA/uncode` (uncode-platform) | axum Router 组织、WebSocket 广播、静态文件 serve | 全栈 |
 
 ---
 
@@ -477,7 +478,52 @@ bun typecheck              # TypeScript 类型检查
 
 ---
 
-### 9.2 P1 — odoo-rust-mcp
+### 9.2 P1 (前端) — l8-erp-react
+
+**路径**: `~/EA/l8-erp-react`
+
+**定位**: Odoo ERP 的 React 前端 monorepo（pnpm + turborepo），包含完整的 Odoo 业务 UI 组件库。
+
+**规模**: `packages/biz-ui`（业务组件）+ `packages/odoo-rpc`（JSON-RPC 客户端）+ `packages/oweb-core`（核心框架）+ `apps/oweb`（应用）
+
+**核心模块及对 OdooSeek 的参考价值**:
+
+| 模块 | 文件 | 行数 | 参考点 |
+|------|------|------|--------|
+| Odoo JSON-RPC 客户端 | `packages/odoo-rpc/src/client.ts` | ~300 | `searchRead/search/write/create/unlink` 方法签名、双端点 fallback、Session Cookie 管理 |
+| 动态列表渲染 | `packages/biz-ui/components/views/list-preview.tsx` | ~400 | Odoo 数据列表 + 虚拟滚动 (>80 行) + 行选择 + 排序 |
+| 动态表单渲染 | `packages/biz-ui/components/views/form-preview.tsx` | 738 | 全部字段类型分发: char→input, text→textarea, boolean→checkbox, selection→select, many2one→关联, date→日期, image→图片 |
+| 搜索面板 | `packages/biz-ui/components/search/` | — | Odoo SearchView domain 构建、多条件过滤、分组聚合 |
+| 统一查询 Hook | `packages/biz-ui/hooks/use-preview-queries.ts` | 1844 | 构建 list/kanban/pivot/graph 视图查询的 master hook |
+| URL 状态同步 | `apps/oweb/src/hooks/use-table-url-state.ts` | ~100 | TanStack Table 状态 ↔ URL search params 双向同步 |
+| 认证状态管理 | `apps/oweb/src/stores/auth-store.ts` | ~200 | Zustand 实现 login/restore/logout，Cookie 管理 |
+| 通用表格子组件 | `apps/oweb/src/components/data-table/` | — | toolbar/pagination/faceted-filter/column-header/view-options |
+| WebSocket 管理 | `apps/oweb/src/features/discuss/bus/` | — | Odoo Bus WebSocket 连接、重连、事件分发 |
+
+**技术栈对比**:
+
+| 方面 | l8-erp-react | OdooSeek (oweb) |
+|------|-------------|-----------------|
+| UI 组件库 | **shadcn/ui** (Radix) | 纯 Tailwind CSS |
+| HTTP 客户端 | **axios** | fetch |
+| 状态管理 | **Zustand** | TanStack Query + Context |
+| 路由 | TanStack Router (v1 file-based) | TanStack Router (v1 code-based) |
+| 构建 | Vite | Vite |
+| 包管理 | pnpm + turborepo | Bun |
+
+**可借鉴模式**（即使技术栈不同）:
+- `FormPreview` 的字段类型分发逻辑 — 可直接翻译为本项目的 `OdooFormView`
+- `ListPreview` 的虚拟滚动 + 行选择 + 排序 — 可简化为本项目的 `OdooListView`
+- `search_read` 的参数签名（domain/fields/limit/offset/order/context）— 与我们现有 SDK 对齐
+- `DataTableToolbar` 的搜索 + 过滤 + 列可见性框架 — 可参考 UI 布局
+
+**不适用点**: 依赖 shadcn/ui 生态（Radix primitives + cmdk + lucide-react），组件不能直接复用。
+
+---
+
+### 9.3 P1 (后端) — odoo-rust-mcp
+
+**路径**: `~/EA/odoo-rust-mcp` ([GitHub](https://github.com/rachmataditiya/odoo-rust-mcp))
 
 **定位**: 为 Cursor/Claude Desktop 等 AI 助手提供 MCP 协议的工具服务器。
 
@@ -493,7 +539,9 @@ bun typecheck              # TypeScript 类型检查
 
 ---
 
-### 9.3 P2 — Rustdoo (`odoo-rust`)
+### 9.4 P2 — Rustdoo (`odoo-rust`)
+
+**路径**: `~/EA/Rustdoo`
 
 **定位**: Odoo ERP 的完整 Rust 重写 (53 crates, ~186K LOC)。
 
@@ -507,24 +555,26 @@ bun typecheck              # TypeScript 类型检查
 | 会计分录 | `odoo_account/src/models/account_move_line.rs` | 881 | 凭证行 52+ 字段 |
 | ORM | `odoo_orm/src/queries/` | — | sqlx 直连 PostgreSQL |
 
-**局限性**: 20 个 crate 无法编译，适合作为"参考图书馆"查阅特定实现，不适合直接引入依赖。
+**局限性**: 20 个 crate 无法编译，适合作为"参考图书馆"查阅，不适合直接引入依赖。
 
 ---
 
-### 9.4 P3 — uncode (uncode-platform)
+### 9.5 P3 — uncode (uncode-platform)
+
+**路径**: `~/EA/uncode/crates/uncode-platform`
 
 **定位**: AI Agent 编码系统的 Web 后端，本项目脚手架的 axum 模式来源。
 
 | 参考模块 | 行号 | 说明 |
 |----------|------|------|
-| `main.rs` Router | 779-794 | `Router::new()` + `CorsLayer::permissive()` + `ServeDir` fallback |
-| `main.rs` WebSocket | — | `broadcast::channel` + `ws.on_upgrade` 模式 |
-| `main.rs` reqwest | 691 | `Client::builder().user_agent().build()` 模式 |
+| `src/main.rs` Router | 779-794 | `Router::new()` + `CorsLayer::permissive()` + `ServeDir` fallback |
+| `src/main.rs` WebSocket | — | `broadcast::channel` + `ws.on_upgrade` 模式 |
+| `src/main.rs` reqwest | 691 | `Client::builder().user_agent().build()` 模式 |
 | `Cargo.toml` | — | workspace 依赖组织 + profile 配置 |
 
 ---
 
-### 9.5 odoo-web-server 构建路线（基于参考优先级）
+### 9.6 构建路线（基于参考优先级）
 
 ```
 第一阶段：骨架
@@ -564,6 +614,6 @@ bun typecheck              # TypeScript 类型检查
 
 ---
 
-**文档版本**: 1.5  
+**文档版本**: 1.6  
 **更新日期**: 2026-05-28  
 **维护团队**: OdooSeek
