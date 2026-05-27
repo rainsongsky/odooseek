@@ -29,7 +29,7 @@ export function DashboardPage() {
         <span className="text-xs text-text-muted">{session.db}</span>
       </div>
 
-      <OdooViewLoader model="res.partner" viewType="list" domain={[]} />
+      <OdooViewLoader model="res.partner" viewType="list" />
     </div>
   )
 }
