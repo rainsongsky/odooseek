@@ -11,6 +11,7 @@ const LazySettingsPage = lazy(() =>
   import('./routes/settings').then((m) => ({ default: m.SettingsPage })),
 )
 const LazyMenuPage = lazy(() => import('./routes/menu').then((m) => ({ default: m.MenuPage })))
+const LazyWebPage = lazy(() => import('./routes/web').then((m) => ({ default: m.WebPage })))
 
 const rootRoute = createRootRoute({ component: RootLayout })
 
@@ -55,12 +56,20 @@ const menuRoute = createRoute({
   component: LazyMenuPage,
 })
 
+const webRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/web',
+  component: LazyWebPage,
+  validateSearch: (search: Record<string, unknown>) => search,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   dashboardRoute,
   settingsRoute,
   menuRoute,
+  webRoute,
 ])
 
 export const router = createRouter({ routeTree })

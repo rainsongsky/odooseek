@@ -4,7 +4,9 @@ export {
   Bug,
   ChevronDown,
   ChevronRight,
+  Columns3,
   Home,
+  LayoutList,
   LogIn,
   LogOut,
   Menu,
@@ -13,5 +15,6 @@ export {
   Search,
   Settings,
   Sun,
+  Table,
   Terminal,
 } from 'lucide-react'
