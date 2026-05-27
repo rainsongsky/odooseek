@@ -1,5 +1,5 @@
-import { OdooListView } from '../components/OdooListView'
 import { useAuth } from '../lib/auth'
+import { OdooViewLoader } from '../views/OdooViewLoader'
 
 export function DashboardPage() {
   const { isAuthenticated, session } = useAuth()
@@ -24,34 +24,12 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
-      <div className="rounded-xl border border-border-subtle bg-surface/50 px-6 py-4">
-        <dl className="flex gap-6 text-xs">
-          <div>
-            <dt className="text-text-muted">User</dt>
-            <dd className="text-text-primary">{session.username ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-text-muted">DB</dt>
-            <dd className="text-text-primary">{session.db ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-text-muted">UID</dt>
-            <dd className="text-text-primary">{session.uid ?? '—'}</dd>
-          </div>
-        </dl>
+      <div className="flex items-center gap-4 border-b border-border-subtle bg-surface/50 px-6 py-3">
+        <span className="text-xs text-text-muted">{session.name ?? session.username}</span>
+        <span className="text-xs text-text-muted">{session.db}</span>
       </div>
 
-      <OdooListView
-        model="res.partner"
-        fields={[
-          { name: 'id', label: 'ID' },
-          { name: 'name', label: 'Name' },
-          { name: 'email', label: 'Email' },
-          { name: 'phone', label: 'Phone' },
-          { name: 'company_id', label: 'Company' },
-        ]}
-        limit={20}
-      />
+      <OdooViewLoader model="res.partner" viewType="list" domain={[]} />
     </div>
   )
 }
