@@ -89,7 +89,7 @@ export function Navbar() {
         {isAuthenticated ? (
           <>
             <span className="px-2.5 py-1.5 text-xs text-text-secondary">
-              {session.username ?? 'User'}
+              {session.name ?? session.username ?? 'User'}
             </span>
             <Link
               to="/login"

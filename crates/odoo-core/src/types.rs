@@ -21,35 +21,6 @@ impl JsonRpcRequest {
             params,
         }
     }
-
-    pub fn odoo_call(path: &str, kwargs: serde_json::Value) -> Self {
-        Self::new(
-            "call",
-            serde_json::json!({
-                "path": path,
-                "kwargs": kwargs,
-            }),
-        )
-    }
-
-    pub fn odoo_authenticate(db: &str, login: &str, password: &str) -> Self {
-        Self::odoo_call(
-            "/web/session/authenticate",
-            serde_json::json!({
-                "db": db,
-                "login": login,
-                "password": password,
-            }),
-        )
-    }
-
-    pub fn odoo_get_session() -> Self {
-        Self::odoo_call("/web/session/get_session", serde_json::json!({}))
-    }
-
-    pub fn odoo_destroy_session() -> Self {
-        Self::odoo_call("/web/session/destroy", serde_json::json!({}))
-    }
 }
 
 /// JSON-RPC 2.0 response
@@ -72,24 +43,38 @@ pub struct JsonRpcError {
 }
 
 /// Session info returned to oweb frontend
-#[derive(Debug, Serialize, Deserialize)]
+/// Mirrors Odoo 19 CE ir.http.session_info() return fields
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionInfo {
     pub authenticated: bool,
     pub uid: Option<i64>,
+    pub name: Option<String>,
     pub username: Option<String>,
     pub db: Option<String>,
-    pub session_id: Option<String>,
+    pub is_admin: Option<bool>,
+    pub is_system: Option<bool>,
+    pub partner_id: Option<i64>,
+    pub partner_display_name: Option<String>,
+    pub server_version: Option<String>,
+    pub server_version_info: Option<Vec<serde_json::Value>>,
+    pub user_context: Option<serde_json::Value>,
+    pub user_companies: Option<serde_json::Value>,
+    pub web_base_url: Option<String>,
+    pub home_action_id: Option<i64>,
+    pub active_ids_limit: Option<i64>,
+    pub max_file_upload_size: Option<i64>,
+    pub groups: Option<serde_json::Value>,
+    /// Extra fields from Odoo we don't type explicitly
+    #[serde(flatten)]
+    pub extra: serde_json::Value,
 }
 
 impl SessionInfo {
     pub fn anonymous() -> Self {
         Self {
             authenticated: false,
-            uid: None,
-            username: None,
-            db: None,
-            session_id: None,
+            ..Default::default()
         }
     }
 }

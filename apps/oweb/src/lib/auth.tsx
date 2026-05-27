@@ -4,17 +4,29 @@ import { createContext, type ReactNode, useContext } from 'react'
 interface AuthState {
   authenticated: boolean
   uid: number | null
+  name: string | null
   username: string | null
   db: string | null
-  sessionId: string | null
+  isAdmin: boolean
+  isSystem: boolean
+  partnerId: number | null
+  partnerDisplayName: string | null
+  serverVersion: string | null
+  homeActionId: number | null
 }
 
 const ANONYMOUS: AuthState = {
   authenticated: false,
   uid: null,
+  name: null,
   username: null,
   db: null,
-  sessionId: null,
+  isAdmin: false,
+  isSystem: false,
+  partnerId: null,
+  partnerDisplayName: null,
+  serverVersion: null,
+  homeActionId: null,
 }
 
 async function fetchSession(): Promise<AuthState> {

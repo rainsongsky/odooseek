@@ -11,17 +11,13 @@ interface JsonRpcResponse<T> {
 
 let _callId = 0
 
-async function jsonRpc<T>(
-  url: string,
-  method: string,
-  params: Record<string, unknown>,
-): Promise<T> {
+async function jsonRpc<T>(url: string, params: Record<string, unknown>): Promise<T> {
   const id = ++_callId
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ jsonrpc: '2.0', method, params, id }),
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params, id }),
   })
 
   if (!res.ok) {
@@ -37,51 +33,53 @@ async function jsonRpc<T>(
   return data.result as T
 }
 
-const RPC_URL = '/api/odoo/jsonrpc'
+const DATASET_URL = '/api/odoo/web/dataset/call_kw'
 
-export function call(path: string, kwargs?: Record<string, unknown>) {
-  return jsonRpc<unknown>(RPC_URL, 'call', {
-    path,
-    kwargs: kwargs ?? {},
-  })
+/// Call any Odoo model method via /web/dataset/call_kw
+export function callKw<T = unknown>(
+  model: string,
+  method: string,
+  args: unknown[] = [],
+  kwargs: Record<string, unknown> = {},
+): Promise<T> {
+  return jsonRpc<T>(DATASET_URL, { model, method, args, kwargs })
 }
 
-export function authenticate(db: string, login: string, password: string) {
-  return jsonRpc<{ uid: number }>(RPC_URL, 'call', {
-    path: '/web/session/authenticate',
-    kwargs: { db, login, password },
-  })
-}
-
-export function searchRead(
+/// search_read: most common data fetch operation
+export function searchRead<T = unknown[]>(
   model: string,
   domain: unknown[] = [],
   fields: string[] = [],
   offset = 0,
   limit = 80,
-) {
-  return jsonRpc<unknown[]>(RPC_URL, 'call', {
-    path: '/web/dataset/search_read',
-    kwargs: { model, domain, fields, offset, limit },
-  })
+  order = '',
+): Promise<T> {
+  return callKw<T>(model, 'search_read', [[domain], fields], { offset, limit, order })
 }
 
-export function getSession() {
-  return jsonRpc<{
-    uid: number
-    session_id: string
-    username: string
-    db: string
-    user_context: Record<string, unknown>
-  }>(RPC_URL, 'call', {
-    path: '/web/session/get_session',
-    kwargs: {},
-  })
+/// Read specific records by ID
+export function read<T = unknown[]>(
+  model: string,
+  ids: number[],
+  fields: string[] = [],
+): Promise<T> {
+  return callKw<T>(model, 'read', [ids, fields])
 }
 
-export function destroySession() {
-  return jsonRpc<null>(RPC_URL, 'call', {
-    path: '/web/session/destroy',
-    kwargs: {},
-  })
+/// Get views and fields in one call: get_views([[id, type], ...])
+export function getViews<T = unknown>(
+  model: string,
+  views: [number | false, string][],
+  options: Record<string, unknown> = {},
+): Promise<T> {
+  return callKw<T>(model, 'get_views', [views], { options })
+}
+
+/// Get model field metadata
+export function fieldsGet<T = unknown>(
+  model: string,
+  allfields: string[] = [],
+  attributes: string[] = ['string', 'type', 'required', 'readonly', 'relation'],
+): Promise<T> {
+  return callKw<T>(model, 'fields_get', [allfields], { attributes })
 }
