@@ -1,21 +1,40 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useAuth } from '../lib/auth'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const { isAuthenticated, refetch } = useAuth()
   const [db, setDb] = useState('')
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (isAuthenticated) navigate({ to: '/dashboard' })
+  }, [isAuthenticated, navigate])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
     try {
-      const { authenticate } = await import('../lib/api')
-      await authenticate(db, login, password)
+      const res = await fetch('/api/session/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ db, login, password }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.message || 'Authentication failed')
+      }
+      const data = await res.json()
+      if (!data.authenticated) {
+        throw new Error('Invalid credentials')
+      }
+      refetch()
       navigate({ to: '/dashboard' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed')

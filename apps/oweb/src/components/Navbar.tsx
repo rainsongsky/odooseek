@@ -1,6 +1,7 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { BarChart3, Home, Menu, Settings } from '@/lib/lucide-icons'
+import { BarChart3, Home, LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
+import { useAuth } from '../lib/auth'
 import { ThemeToggle } from './ThemeToggle'
 
 interface NavItem {
@@ -25,6 +26,8 @@ export function Navbar() {
     if (item.to === '/') return currentPath === '/'
     return currentPath.startsWith(item.to)
   }
+
+  const { isAuthenticated, session, refetch } = useAuth()
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,13 +86,34 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-1">
-        <Link
-          to="/login"
-          className="flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover hover:text-text-primary"
-        >
-          <Settings className="h-4 w-4" />
-          <span>Connect</span>
-        </Link>
+        {isAuthenticated ? (
+          <>
+            <span className="px-2.5 py-1.5 text-xs text-text-secondary">
+              {session.username ?? 'User'}
+            </span>
+            <Link
+              to="/login"
+              className="flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover hover:text-text-primary"
+              onClick={() => {
+                fetch('/api/session/logout', {
+                  method: 'POST',
+                  credentials: 'include',
+                }).then(() => refetch())
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </Link>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            className="flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover hover:text-text-primary"
+          >
+            <LogIn className="h-4 w-4" />
+            <span>Connect</span>
+          </Link>
+        )}
         <Link
           to="/settings"
           className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${

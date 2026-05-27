@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
 import { lazy } from 'react'
 import { RootLayout } from './routes/__root'
 import { HomePage } from './routes/home'
@@ -29,6 +29,17 @@ const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
   component: LazyDashboardPage,
+  beforeLoad: async () => {
+    try {
+      const res = await fetch('/api/session', { credentials: 'include' })
+      if (!res.ok) throw redirect({ to: '/login' })
+      const data = await res.json()
+      if (!data.authenticated) throw redirect({ to: '/login' })
+    } catch (e) {
+      if (e instanceof Response || e instanceof redirect) throw e
+      throw redirect({ to: '/login' })
+    }
+  },
 })
 
 const settingsRoute = createRoute({
