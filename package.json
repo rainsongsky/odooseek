@@ -1,12 +1,26 @@
 {
   "name": "odooseek",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+  "scripts": {
+    "dev": "cargo run -p odoo-web-server",
+    "build": "cargo build --release -p odoo-web-server",
+    "build:dev": "cargo build -p odoo-web-server",
+    "test": "cargo test --workspace",
+    "test:core": "cargo test -p odoo-core",
+    "lint": "cargo clippy --workspace --all-targets --no-deps",
+    "fmt": "cargo fmt --all",
+    "fmt:check": "cargo fmt --check --all",
+    "check": "cargo check --workspace",
+    "doc": "cargo doc --workspace --no-deps",
+    "clean": "cargo clean",
+    "oweb:dev": "cd apps/oweb && bun dev",
+    "oweb:build": "cd apps/oweb && bun run build",
+    "oweb:lint": "cd apps/oweb && bun run lint",
+    "oweb:format": "cd apps/oweb && bun run format",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:build": "docker compose -f docker/docker-compose.yml build",
+    "docker:server": "docker compose -f docker/docker-compose.yml up -d --build server",
+    "precommit": "cargo fmt --check --all && cargo clippy --workspace --all-targets --no-deps && cargo build --workspace && cargo doc --workspace --no-deps && cargo test --workspace -- --test-threads=1 && cd apps/oweb && bun run build && bun run lint"
   }
 }
