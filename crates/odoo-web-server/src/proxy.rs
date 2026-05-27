@@ -13,20 +13,26 @@ use odoo_core::error::OdooError;
 pub async fn proxy_odoo(
     state: AppState,
     path: &str,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Result<Response, AppError> {
     let odoo_url = format!("{}/{}", state.odoo_url.trim_end_matches('/'), path);
     tracing::debug!("Proxying JSON-RPC to: {odoo_url}");
 
-    let response = state
+    let mut request = state
         .http_client
         .post(&odoo_url)
         .header("Content-Type", "application/json")
-        .body(body)
-        .send()
-        .await
-        .map_err(|e| {
+        .body(body);
+
+    // Forward browser Cookie to Odoo (reqwest cookie_store handles Set-Cookie return)
+    if let Some(cookie) = headers.get("cookie")
+        && let Ok(cookie_str) = cookie.to_str()
+    {
+        request = request.header("cookie", cookie_str);
+    }
+
+    let response = request.send().await.map_err(|e| {
             tracing::warn!("Odoo unreachable at {odoo_url}: {e}");
             OdooError::Unreachable(format!("Odoo not reachable: {e}"))
         })?;
