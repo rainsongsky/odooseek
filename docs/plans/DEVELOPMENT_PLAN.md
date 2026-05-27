@@ -1,6 +1,8 @@
 # OdooSeek 开发计划
 
-> 基于 [VISION.md](./VISION.md) 的愿景，将"探寻 Odoo 最佳可能"的使命分解为可执行、可追踪的开发任务。
+> 基于 [VISION.md](../VISION.md) 的愿景，将"探寻 Odoo 最佳可能"的使命分解为可执行、可追踪的开发任务。
+>
+> **对接目标**：Odoo 19 Community Edition（源码 `~/EA/odoo`），JSON-RPC 协议，Session Cookie 认证。
 
 ---
 

@@ -10,6 +10,15 @@
 前端代号 **oweb** — `odoo` + `web`，代表新生的 Odoo Web 客户端。  
 服务端代号 **odoo-web-server** — Rust 构建的中间层网关，连接前端与 Odoo。
 
+### 对接目标
+
+| 项目 | 详情 |
+|------|------|
+| **Odoo 版本** | **Odoo 19 Community Edition**（社区版） |
+| **Odoo 源码** | `~/EA/odoo` |
+| **API 风格** | JSON-RPC (Odoo 原生协议)，无 Odoo Enterprise 依赖 |
+| **协议** | `POST /jsonrpc` 标准端点，Session Cookie 认证 |
+
 ---
 
 ## 二、缘起：为什么要做这个项目？
@@ -63,7 +72,7 @@ oweb (React SPA)
 |------|--------|------|
 | **oweb** | React + TypeScript + Vite + TanStack | 用户界面，纯静态 SPA |
 | **odoo-web-server** | Rust + axum + tokio + reqwest | API 网关/BFF，前后端之间的智能中间层 |
-| **Odoo 19.0** | Python + PostgreSQL | 业务逻辑核心，ORM，工作流引擎 |
+| **Odoo 19 CE** | Python (源码 `~/EA/odoo`) + PostgreSQL 16 | 业务逻辑核心，ORM，工作流引擎 |
 
 ---
 
@@ -421,129 +430,124 @@ bun typecheck              # TypeScript 类型检查
 
 ---
 
-## 九、开源参考项目分析
+## 九、参考资源与优先级
 
-在构建 `odoo-web-server` 之前，我们调研了两个与"Rust + Odoo"相关的开源项目，评估其可复用价值。
+开发过程中遵循以下参考优先级：
 
-### 参考项目概览
+> **Odoo 19 CE 源码 > 第三方开源项目 > 其他通用参考**
 
-| 项目 | 定位 | 规模 | 许可证 | 可编译 |
-|------|------|------|--------|--------|
-| [odoo-rust-mcp](https://github.com/rachmataditiya/odoo-rust-mcp) | MCP 工具服务器 (面向 AI Agent) | v0.3.31, 271 commits | AGPL-3.0 | ✅ |
-| **Rustdoo** (`odoo-rust`) | Odoo ERP 完整 Rust 重写 | 53 crates, ~186K LOC, 751 .rs 文件 | LGPL-3.0 | ❌ |
+### 参考资料层级
 
----
-
-### 9.1 odoo-rust-mcp
-
-**定位**: 为 Cursor/Claude Desktop 等 AI 助手提供 MCP 协议的工具服务器，通过标准化协议暴露 Odoo CRUD 操作。
-
-**优势**:
-
-| 维度 | 说明 |
-|------|------|
-| 工程成熟度 | CI/CD + codecov + 多平台安装包 (Homebrew/APT/Docker/K8s/Helm) |
-| 多传输协议 | stdio / Streamable HTTP / SSE / WebSocket 全覆盖 |
-| Odoo 兼容 | 双模式：Odoo 19+ (JSON-2 API Key) 和 Odoo < 19 (JSON-RPC user/pass) |
-| 配置热更新 | `tools.json` / `prompts.json` 声明式定义 + 文件监听自动重载 |
-| 代码分层 | `src/odoo/` (Odoo 客户端) / `src/mcp/` (协议层) / `src/config_manager/` (配置) |
-| 多实例 | 通过 `instances.json` 管理多 Odoo 环境 |
-| 测试 | wiremock 模拟 Odoo + axum-test 集成测试 |
-
-**对 odoo-web-server 的参考价值**:
-
-| 文件/模块 | 参考点 | 用途 |
-|-----------|--------|------|
-| `src/odoo/` (Odoo 客户端) | JSON-RPC + JSON-2 API 封装、session 管理、元数据缓存 | odoo-web-server 的 Odoo 连接层 |
-| Cargo.toml 依赖 | `reqwest` + `serde_json` + `base64` + `tokio` + `tracing` | 项目依赖配置 |
-| axum 多传输模式 | HTTP/WebSocket 端口绑定 + 服务发现 | 服务器启动骨架 |
-| Config Manager | JSON 文件热重载 + REST API 配置管理 | 配置管理模块 |
-
-**不适用点**: MCP 的"工具语义"与 BFF 的"聚合 API 语义"是两种不同的抽象，整体架构需独立设计。
+| 优先级 | 来源 | 用途 |
+|--------|------|------|
+| **P0** | `~/EA/odoo` (Odoo 19 CE 源码) | API 契约、Model 定义、JSON-RPC 协议、Session 机制、Bus 事件 |
+| **P1** | [odoo-rust-mcp](https://github.com/rachmataditiya/odoo-rust-mcp) | Rust 侧 Odoo 客户端封装、reqwest 模式、axum 集成 |
+| **P2** | `~/EA/Rustdoo` (`odoo-rust`) | 业务模型 Rust struct 参照、Session 管理、Web 服务器配置 |
+| **P3** | `~/EA/uncode` (uncode-platform) | axum Router 组织、WebSocket 广播、静态文件 serve |
 
 ---
 
-### 9.2 Rustdoo (`odoo-rust`)
+### 9.1 P0 — Odoo 19 Community Edition 源码
 
-**定位**: Odoo ERP 的完整 Rust 重写，目标是与 Python 版保持 100% API 兼容。
+**路径**: `~/EA/odoo`
 
-**规模**:
+**关键目录**:
 
-| 指标 | 值 |
-|------|-----|
-| workspace crates | 53 个 |
-| 有实质实现的 crate (>500 LOC) | 34 个 |
-| 空壳 crate (声明但无实现) | 20 个 |
-| 最大模块 | `odoo_sale` 19.5K LOC / `odoo_account` 19.1K LOC / `odoo_web` 14.9K LOC |
+| 目录 | 内容 | odoo-web-server 参考点 |
+|------|------|------------------------|
+| `odoo/http.py` | HTTP 请求处理、JSON-RPC 调度 | Odoo JSON-RPC 协议规范 |
+| `odoo/service/model.py` | 服务方法注册 | `common.authenticate` 等标准服务 |
+| `odoo/addons/web/controllers/` | Web 客户端 API 端点 | `/web/session/*`, `/web/dataset/*` |
+| `odoo/addons/base/models/` | 基础模型 (res.users, res.partner) | 核心 Model 字段定义 |
+| `odoo/orm/` | ORM 引擎 | 模型字段类型、domain 语法、关系映射 |
+| `odoo/addons/bus/` | 实时事件总线 | Bus 轮询协议、事件格式 |
 
-**核心架构**:
+**核心 API 端点** (Odoo 19 CE 标准路径):
 
-```
-crates/odoo_server/src/main.rs    axum HTTP 服务器入口 (5.2K LOC)
-crates/odoo_web/src/server.rs     Web 框架配置 + 静态文件 (375行)
-crates/odoo_web/src/sessions.rs   Session 生命周期 + Cookie 处理
-crates/odoo_api/src/jsonrpc.rs    Odoo JSON-RPC 调用封装
-crates/odoo_api/src/rest.rs       REST API 端点设计
-crates/odoo_api/src/xmlrpc.rs     XML-RPC 兼容支持
-crates/odoo_orm/                  ORM 引擎 + 迁移 + 查询 (6K LOC)
-crates/odoo_auth/                  认证/权限/OAuth (3.5K LOC)
-crates/odoo_security/              安全框架 (7.9K LOC)
-```
-
-**业务模型完备性** (示例):
-
-```
-odoo_crm/src/models/crm_lead.rs           CRM 线索模型 (1368行)
-  - CrmLeadType (Lead/Opportunity)
-  - CrmLeadPriority (Low/Normal/High/VeryHigh)
-  - CrmLeadStage, CrmLeadActivity
-  - 完整字段定义 + SQL 操作 + 状态转换逻辑
-
-odoo_account/src/models/account_move_line.rs   会计分录行 (881行)
-  - AccountMoveLineStatus (Draft/Posted/Cancelled)
-  - 52+ 字段 (debit/credit/balance/amount_residual/...)
-  - 完整 Serde Serialize/Deserialize
-```
-
-**对 odoo-web-server 的参考价值**:
-
-| 模块 | 复用方式 | 具体内容 |
-|------|----------|----------|
-| `odoo_web/src/server.rs` | 直接参考 | ServerConfig (host/port/workers/timeout), 请求处理流程, 静态文件目录 |
-| `odoo_web/src/sessions.rs` | 直接参考 | Session 创建/销毁/验证, Cookie 注入/解析, 超时管理 |
-| `odoo_server/src/main.rs` | 直接参考 | axum Router 组织, tracing 初始化, 优雅关闭 (signal handling), 配置加载 |
-| `odoo_api/src/jsonrpc.rs` | 参考 + 提取 | JSON-RPC `call_kw` 参数构造, 响应解析, 错误映射 |
-| `odoo_orm/src/queries/` | 参考 | PostgreSQL 直连查询模式, sqlx 参数绑定 |
-| 业务模型类型定义 | 参考 | CRM/Account/Sale 的 Rust struct 定义 |
-
-**局限性**: 53 个 crate 中有 20 个声明了 `src/bin/main.rs` 但文件不存在，导致 `cargo build --workspace` 失败；根 package 引用 `src/lib.rs` 但文件缺失。适合作为"参考图书馆"查阅，不适合直接引入为依赖。
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `POST /jsonrpc` | `call` | 通用 JSON-RPC 入口 |
+| `POST /web/session/authenticate` | — | 用户登录 (返回 session_id) |
+| `POST /web/session/get_session` | — | 获取当前会话信息 |
+| `POST /web/session/destroy` | — | 销毁当前会话 |
+| `POST /web/dataset/search_read` | — | 搜索并返回记录 |
+| `POST /web/dataset/call_kw` | — | 通用 ORM 调用 |
+| `POST /web/bus/poll` | — | 事件轮询 |
+| `GET /web/content/*` | — | 附件/图片下载 |
 
 ---
 
-### 9.3 odoo-web-server 构建路线（基于参考分析）
+### 9.2 P1 — odoo-rust-mcp
+
+**定位**: 为 Cursor/Claude Desktop 等 AI 助手提供 MCP 协议的工具服务器。
+
+| 参考模块 | 具体内容 |
+|----------|----------|
+| `src/odoo/legacy_client.rs` | `reqwest::Client` 构建 (cookie_store, timeout, user_agent) |
+| `src/odoo/legacy_client.rs` | JSON-RPC `call(service, method, args)` 到 `/jsonrpc` |
+| `src/odoo/client.rs` | Odoo 19+ HTTP 客户端模式 (Bearer token, headers) |
+| `src/odoo/config.rs` | `OdooInstanceConfig` 多实例配置加载 |
+| `Cargo.toml` | 依赖版本: `reqwest 0.12` (json+cookies+rustls-tls), `axum 0.8` (ws), `tower-http 0.6` (cors+fs) |
+
+**不适用点**: MCP 的"工具语义"与 BFF 的"聚合 API 语义"是两种不同的抽象。
+
+---
+
+### 9.3 P2 — Rustdoo (`odoo-rust`)
+
+**定位**: Odoo ERP 的完整 Rust 重写 (53 crates, ~186K LOC)。
+
+| 参考模块 | 文件 | 行数 | 说明 |
+|----------|------|------|------|
+| Web 框架 | `odoo_web/src/server.rs` | 375 | `ServerConfig` + 请求处理 |
+| Session 管理 | `odoo_web/src/sessions.rs` | ~300 | `SessionManager`, `SessionConfig` |
+| 服务器入口 | `odoo_server/src/main.rs` | 188 | axum Router 组装 + 优雅关闭 |
+| JSON-RPC | `odoo_api/src/jsonrpc.rs` | — | Odoo JSON-RPC 封装 |
+| CRM 模型 | `odoo_crm/src/models/crm_lead.rs` | 1368 | 线索/商机字段定义 |
+| 会计分录 | `odoo_account/src/models/account_move_line.rs` | 881 | 凭证行 52+ 字段 |
+| ORM | `odoo_orm/src/queries/` | — | sqlx 直连 PostgreSQL |
+
+**局限性**: 20 个 crate 无法编译，适合作为"参考图书馆"查阅特定实现，不适合直接引入依赖。
+
+---
+
+### 9.4 P3 — uncode (uncode-platform)
+
+**定位**: AI Agent 编码系统的 Web 后端，本项目脚手架的 axum 模式来源。
+
+| 参考模块 | 行号 | 说明 |
+|----------|------|------|
+| `main.rs` Router | 779-794 | `Router::new()` + `CorsLayer::permissive()` + `ServeDir` fallback |
+| `main.rs` WebSocket | — | `broadcast::channel` + `ws.on_upgrade` 模式 |
+| `main.rs` reqwest | 691 | `Client::builder().user_agent().build()` 模式 |
+| `Cargo.toml` | — | workspace 依赖组织 + profile 配置 |
+
+---
+
+### 9.5 odoo-web-server 构建路线（基于参考优先级）
 
 ```
 第一阶段：骨架
-  ┌─ 参照 uncode/crates/uncode-platform/src/main.rs ──→ axum 启动 + 路由组织
-  ├─ 参照 odoo-rust-mcp/src/odoo/ ──→ Odoo JSON-RPC 客户端
-  └─ 参照 uncode-platform Cargo.toml ──→ 依赖版本锁定
+  ┌─ P3 参照 uncode-platform/src/main.rs ──→ axum 启动 + Router + CORS + ServeDir
+  ├─ P0 参照 ~/EA/odoo/odoo/http.py ──→ Odoo JSON-RPC 协议规范
+  ├─ P1 参照 odoo-rust-mcp/src/odoo/ ──→ reqwest client 构建模式
+  └─ P1 参照 odoo-rust-mcp Cargo.toml ──→ 依赖版本
 
 第二阶段：Session 代理
-  ┌─ 参照 Rustdoo/odoo_web/src/sessions.rs ──→ Session 生命周期
-  ├─ 参照 Rustdoo/odoo_web/src/server.rs ──→ Cookie 注入/解析
-  └─ 参照 odoo-rust-mcp 的 instance 配置 ──→ Odoo 连接管理
+  ┌─ P0 参照 ~/EA/odoo/addons/web/controllers/session.py ──→ authenticate/get_session/destroy API
+  ├─ P2 参照 Rustdoo/odoo_web/src/sessions.rs ──→ SessionConfig 结构设计
+  └─ P1 参照 odoo-rust-mcp config ──→ Odoo 连接多实例管理
 
 第三阶段：API 聚合
-  ┌─ 参照 Rustdoo/odoo_api/src/jsonrpc.rs ──→ JSON-RPC 调用封装
-  ├─ 参照 Rustdoo 业务模型 struct ──→ REST 响应格式设计
-  └─ 参照 uncode-platform REST 端点模式 ──→ /api/session, /api/dashboard, /api/menu
+  ┌─ P0 参照 ~/EA/odoo/odoo/orm/ ──→ Model 字段类型 + domain 语法
+  ├─ P0 参照 ~/EA/odoo/addons/web/controllers/dataset.py ──→ search_read/call_kw
+  ├─ P2 参照 Rustdoo/odoo_api/src/jsonrpc.rs ──→ JSON-RPC 调用封装
+  └─ P2 参照 Rustdoo 业务模型 struct ──→ REST 响应格式设计
 
 第四阶段：高性能扩展
-  ├─ 参照 Rustdoo/odoo_orm/src/queries/ ──→ sqlx 直连 PostgreSQL
-  └─ 参照 odoo-rust-mcp 元数据缓存 ──→ 内存缓存层 (moka/dashmap)
+  ├─ P2 参照 Rustdoo/odoo_orm/src/queries/ ──→ sqlx 直连 PostgreSQL
+  └─ P1 参照 odoo-rust-mcp 元数据缓存 ──→ moka/dashmap 内存缓存
 ```
-
----
 
 ## 十、命名释义
 
@@ -560,6 +564,6 @@ odoo_account/src/models/account_move_line.rs   会计分录行 (881行)
 
 ---
 
-**文档版本**: 1.3  
+**文档版本**: 1.5  
 **更新日期**: 2026-05-28  
 **维护团队**: OdooSeek
