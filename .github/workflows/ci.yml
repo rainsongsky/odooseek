@@ -11,8 +11,9 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
-  backend:
-    name: Rust check
+  # ── Backend: stable ─────────────────────────────
+  backend-stable:
+    name: Rust (stable)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,8 +50,62 @@ jobs:
       - name: Test
         run: cargo test --workspace -- --test-threads=1
 
+  # ── Backend: beta + nightly (informational) ────
+  backend-other:
+    name: Rust (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        toolchain: [beta, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --workspace
+
+      - name: Test
+        run: cargo test --workspace -- --test-threads=1
+
+  # ── Latest dependencies check ───────────────────
+  latest-deps:
+    name: Latest dependencies
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: allow
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update to latest deps
+        run: cargo update --verbose
+
+      - name: Build with latest deps
+        run: cargo build --workspace
+
+      - name: Test with latest deps
+        run: cargo test --workspace -- --test-threads=1
+
+  # ── Frontend ────────────────────────────────────
   frontend:
-    name: Frontend check (oweb)
+    name: Frontend (oweb)
     runs-on: ubuntu-latest
     defaults:
       run:
