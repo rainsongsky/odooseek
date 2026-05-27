@@ -92,8 +92,8 @@ export function ThemeToggle() {
                             className="h-3 w-3 rounded-full border border-border-subtle"
                             style={{
                               backgroundColor:
-                                p.accentSwatches.find((s) => s.id === p.defaultAccentId)
-                                  ?.accent ?? p.accentSwatches[0].accent,
+                                p.accentSwatches.find((s) => s.id === p.defaultAccentId)?.accent ??
+                                p.accentSwatches[0].accent,
                             }}
                           />
                         </div>

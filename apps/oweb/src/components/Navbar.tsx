@@ -56,9 +56,7 @@ export function Navbar() {
             <circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.6" />
             <circle cx="20" cy="20" r="4" fill="currentColor" />
           </svg>
-          <span className="text-[15px] font-semibold tracking-tight text-accent">
-            OdooSeek
-          </span>
+          <span className="text-[15px] font-semibold tracking-tight text-accent">OdooSeek</span>
         </div>
 
         <nav className="flex items-center gap-1">

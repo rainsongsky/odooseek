@@ -2,15 +2,11 @@ export function SettingsPage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8">
       <div className="w-full max-w-2xl">
-        <h2 className="mb-8 text-center text-2xl font-semibold text-text-primary">
-          Settings
-        </h2>
+        <h2 className="mb-8 text-center text-2xl font-semibold text-text-primary">Settings</h2>
 
         <div className="space-y-4">
           <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
-            <h3 className="mb-3 text-sm font-semibold text-text-primary">
-              Odoo Connection
-            </h3>
+            <h3 className="mb-3 text-sm font-semibold text-text-primary">Odoo Connection</h3>
             <dl className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <dt className="text-text-secondary">API Endpoint</dt>
@@ -28,12 +24,17 @@ export function SettingsPage() {
           </div>
 
           <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
-            <h3 className="mb-3 text-sm font-semibold text-text-primary">
-              Technology Stack
-            </h3>
+            <h3 className="mb-3 text-sm font-semibold text-text-primary">Technology Stack</h3>
             <div className="flex flex-wrap gap-2">
-              {['React 19', 'TypeScript 6', 'TanStack Router', 'TanStack Query',
-                'Vite 8', 'Bun', 'Tailwind CSS 4', 'Lucide Icons',
+              {[
+                'React 19',
+                'TypeScript 6',
+                'TanStack Router',
+                'TanStack Query',
+                'Vite 8',
+                'Bun',
+                'Tailwind CSS 4',
+                'Lucide Icons',
               ].map((tech) => (
                 <span
                   key={tech}

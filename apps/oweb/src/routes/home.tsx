@@ -99,8 +99,7 @@ export function HomePage() {
             <span className="text-text-secondary"> / oweb</span>
           </h1>
           <p className="mx-auto max-w-xl text-lg leading-relaxed text-text-secondary">
-            A modern, type-safe React frontend for Odoo ERP.
-            Decoupled. Extensible. Open source.
+            A modern, type-safe React frontend for Odoo ERP. Decoupled. Extensible. Open source.
           </p>
         </div>
 
@@ -111,12 +110,8 @@ export function HomePage() {
               className="rounded-xl border border-border-subtle bg-surface/50 p-5 transition-colors hover:border-border-default"
             >
               <div className="mb-3 text-accent">{f.icon}</div>
-              <h3 className="mb-1 text-sm font-semibold text-text-primary">
-                {f.title}
-              </h3>
-              <p className="text-xs leading-relaxed text-text-secondary">
-                {f.description}
-              </p>
+              <h3 className="mb-1 text-sm font-semibold text-text-primary">{f.title}</h3>
+              <p className="text-xs leading-relaxed text-text-secondary">{f.description}</p>
             </div>
           ))}
         </div>

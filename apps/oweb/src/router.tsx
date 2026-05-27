@@ -3,9 +3,7 @@ import { lazy } from 'react'
 import { RootLayout } from './routes/__root'
 import { HomePage } from './routes/home'
 
-const LazyLoginPage = lazy(() =>
-  import('./routes/login').then((m) => ({ default: m.LoginPage })),
-)
+const LazyLoginPage = lazy(() => import('./routes/login').then((m) => ({ default: m.LoginPage })))
 const LazyDashboardPage = lazy(() =>
   import('./routes/dashboard').then((m) => ({ default: m.DashboardPage })),
 )
@@ -39,12 +37,7 @@ const settingsRoute = createRoute({
   component: LazySettingsPage,
 })
 
-const routeTree = rootRoute.addChildren([
-  indexRoute,
-  loginRoute,
-  dashboardRoute,
-  settingsRoute,
-])
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, dashboardRoute, settingsRoute])
 
 export const router = createRouter({ routeTree })
 

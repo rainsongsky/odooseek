@@ -11,7 +11,11 @@ interface JsonRpcResponse<T> {
 
 let _callId = 0
 
-async function jsonRpc<T>(url: string, method: string, params: Record<string, unknown>): Promise<T> {
+async function jsonRpc<T>(
+  url: string,
+  method: string,
+  params: Record<string, unknown>,
+): Promise<T> {
   const id = ++_callId
   const res = await fetch(url, {
     method: 'POST',
