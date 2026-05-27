@@ -29,7 +29,7 @@ export function OdooViewLoader({
     queryFn: () =>
       callKw<{
         views: Record<string, { arch: string; id: number }>
-        models: Record<string, Record<string, OdooFieldMeta>>
+        models: Record<string, { fields: Record<string, OdooFieldMeta> }>
       }>(model, 'get_views', [viewsToLoad], { options: { toolbar: true } }),
     staleTime: 15 * 60_000,
   })
@@ -51,7 +51,8 @@ export function OdooViewLoader({
   }
 
   const activeView = viewData?.views?.[viewType]
-  const fields = viewData?.models?.[model] ?? {}
+  const modelData = viewData?.models?.[model]
+  const fields: Record<string, OdooFieldMeta> = modelData?.fields ?? {}
 
   if (!activeView) {
     return (
