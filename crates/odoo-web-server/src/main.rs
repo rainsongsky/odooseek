@@ -38,19 +38,19 @@ struct AppState {
 #[derive(Parser, Debug)]
 #[command(name = "odoo-web-server")]
 struct Cli {
-    #[arg(long, default_value = "0.0.0.0")]
+    #[arg(long, env = "HOST", default_value = "0.0.0.0")]
     host: String,
 
-    #[arg(long, default_value_t = 3000)]
+    #[arg(long, env = "PORT", default_value_t = 3000)]
     port: u16,
 
-    #[arg(long, default_value = "http://localhost:8069")]
+    #[arg(long, env = "ODOO_URL", default_value = "http://localhost:8069")]
     odoo_url: String,
 
-    #[arg(long)]
+    #[arg(long, env = "ODOO_DB")]
     odoo_db: Option<String>,
 
-    #[arg(long, default_value = "../apps/oweb/dist")]
+    #[arg(long, env = "FRONTEND_DIR", default_value = "../apps/oweb/dist")]
     frontend_dir: String,
 }
 
