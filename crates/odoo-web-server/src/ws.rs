@@ -11,7 +11,10 @@ pub async fn poll_odoo_bus(
     odoo_url: String,
     event_tx: broadcast::Sender<serde_json::Value>,
 ) {
-    let bus_url = format!("{}/web/bus/poll", odoo_url.trim_end_matches('/'));
+    let bus_url = format!(
+        "{}/websocket/peek_notifications",
+        odoo_url.trim_end_matches('/')
+    );
     let mut last: i64 = 0;
 
     loop {
@@ -21,12 +24,9 @@ pub async fn poll_odoo_bus(
             "jsonrpc": "2.0",
             "method": "call",
             "params": {
-                "path": "/web/bus/poll",
-                "kwargs": {
-                    "channels": [],
-                    "last": last,
-                    "peers": [],
-                },
+                "channels": [],
+                "last": last,
+                "is_first_poll": false,
             },
             "id": 1,
         });
@@ -47,13 +47,21 @@ pub async fn poll_odoo_bus(
             }
         };
 
-        if let Some(events) = body.get("result").and_then(|r| r.as_array())
-            && !events.is_empty()
+        // Odoo 19 CE returns { result: { channels, notifications: [{id, message}] } }
+        if let Some(notifications) = body
+            .get("result")
+            .and_then(|r| r.get("notifications"))
+            .and_then(|n| n.as_array())
+            && !notifications.is_empty()
         {
-            debug!("Broadcasting {} Odoo Bus event(s)", events.len());
-            last += events.len() as i64;
-            for event in events {
-                let _ = event_tx.send(event.clone());
+            debug!("Broadcasting {} Odoo Bus notification(s)", notifications.len());
+            last = notifications
+                .iter()
+                .filter_map(|n| n.get("id").and_then(|id| id.as_i64()))
+                .max()
+                .unwrap_or(last);
+            for n in notifications {
+                let _ = event_tx.send(n.clone());
             }
         }
     }

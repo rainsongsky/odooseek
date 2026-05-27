@@ -1,467 +1,412 @@
 # Phase 2 技术方案与开发计划
 
-> **目标**：实现 Odoo 元数据驱动的动态视图渲染引擎——从 `ir.ui.view` 获取 XML 定义，前端动态解析并渲染列表/表单/看板，替代硬编码字段方案。
+> **目标**：实现 Odoo 19 CE 元数据驱动的动态视图渲染引擎，严格遵循 Odoo 真实 API 契约。
 
 ---
 
-## 一、核心修正：遵循 Odoo 元数据驱动哲学
+## 一、核心修正：基于 Odoo 19 CE 源码的真实 API
 
-### 1.1 修正原理
+### 1.1 关键发现（来自 `~/EA/odoo` 源码分析）
 
-Odoo 的视图定义存储在 `ir.ui.view` 表中，而非前端代码中：
+| 发现 | 说明 |
+|------|------|
+| **单一 RPC 入口** | 所有模型操作走 `POST /web/dataset/call_kw` + `{model, method, args, kwargs}`，无独立 search_read/fields_get 端点 |
+| **`fields_view_get()` 已移除** | Odoo 19 CE 用 `get_view()` / `get_views()` 替代，返回 `{arch, id, model, models}`（字段定义由独立 `fields_get()` 调用获取） |
+| **视图类型重命名** | `'tree'` → `'list'`，有效类型: `list, form, kanban, graph, pivot, calendar, search, qweb` |
+| **Bus 架构变更** | 无 `/web/bus/poll`：轮询用 `POST /websocket/peek_notifications`，主通道用 `ws://odo/websocket` |
+| **Session 返回丰富** | `authenticate()` 返回 50+ 键的完整 `session_info`（含 `user_companies`, `currencies`, `server_version` 等） |
+| **JSON-RPC params 必须是对象** | Odoo `JsonRPCDispatcher` 明确要求 `params` 为 JSON Object，不接受 Array |
 
-```xml
-<!-- Odoo ir.ui.view 表 arch_db 字段中的 XML -->
-<form string="Partner">
-  <sheet>
-    <group>
-      <field name="name"/>
-      <field name="email"/>
-      <field name="phone" widget="phone"/>
-      <field name="company_id" options="{'no_create': True}"/>
-    </group>
-  </sheet>
-</form>
+### 1.2 `get_views()` — 一次调用获取所有视图和字段
+
+```json
+// 请求: POST /web/dataset/call_kw
+{
+  "model": "res.partner",
+  "method": "get_views",
+  "args": [[[false, "list"], [false, "search"]]],
+  "kwargs": { "options": { "toolbar": true, "load_filters": true } }
+}
+
+// 返回:
+{
+  "views": {
+    "list": {
+      "arch": "<tree string=\"Contacts\"><field name=\"name\"/><field name=\"email\"/></tree>",
+      "id": 5,
+      "model": "res.partner"
+    },
+    "search": {
+      "arch": "<search><field name=\"name\"/><filter name=\"company\" domain=\"[('is_company','=',true)]\"/></search>",
+      "id": 128,
+      "model": "res.partner"
+    }
+  },
+  "models": {
+    "res.partner": {
+      "name": {"type": "char", "string": "Name", "required": true, "readonly": false, ...},
+      "email": {"type": "char", "string": "Email", "required": false, ...}
+    }
+  }
+}
 ```
 
-OdooSeek 遵循相同原则：
+### 1.3 Phase 1 待修复项
+
+Phase 1 的 `odoo-web-server/src/ws.rs` 轮询了不存在的 `/web/bus/poll`，需修正：
 
 ```
-Odoo 原生路径:
-  浏览器 → Python 控制器 → ir.ui.view → XML 解析 → QWeb 模板 → HTML
-
-OdooSeek 路径:
-  浏览器 → odoo-web-server → Odoo JSON-RPC → ir.ui.view → XML → React 组件 → DOM
+修正前: POST {odoo_url}/web/bus/poll
+修正后: POST {odoo_url}/websocket/peek_notifications
+  body: { channels: [], last: {counter}, is_first_poll: false }
+  response: { channels: [...], notifications: [{id: N, message: {...}}] }
 ```
-
-**前端不硬编码任何视图结构。** 字段列表、标签文本、widget 类型、只读/必填状态、继承关系全部从数据库获取。
 
 ---
 
-## 二、odoo-web-server 新增端点
+## 二、odoo-web-server API 设计
 
-### 2.1 路由表（新增）
+### 2.1 设计原则
 
-| 路由 | 处理 | 用途 |
+> **不做重复造轮子** — Odoo 已有 `call_kw` 单一入口 + `get_views()` 批量接口。odoo-web-server 的职责是**透传 + 缓存**，而非创建新端点。
+
+### 2.2 路由修正
+
+| 路由 | 作用 | 实现 |
 |------|------|------|
-| `GET /api/model/{model}/fields` | Rust → Odoo `fields_get()` | 获取模型字段元数据（类型、标签、必填、只读） |
-| `GET /api/view/{model}/{view_type}` | Rust → Odoo `ir.ui.view` search_read | 获取特定模型的视图 XML（form/tree/kanban/search） |
-| `GET /api/menu` | Rust → Odoo `ir.ui.menu` search_read | 动态构建导航菜单 |
-| `GET /api/action/{id}` | Rust → Odoo `ir.actions.*` read | 获取动作定义（目标模型、视图模式） |
+| `POST /api/odoo/{*path}` | JSON-RPC 透传（已有） | `proxy.rs` — 保持 |
+| `GET /api/menu` | 动态导航菜单 | **新增** — 调用 `ir.ui.menu.search_read` |
+| `GET /api/session` | 当前会话（已有） | `session.rs` — 修正返回格式，透传完整 `session_info()` |
 
-### 2.2 字段元数据端点
+**不再新增的端点**（通过 `call_kw` 实现）：
 
-**请求**: `GET /api/model/res.partner/fields`
+| 前端请求 | 实际调用 |
+|----------|----------|
+| 获取列表/表单视图 + 字段 | `call_kw(model, 'get_views', [[[false, 'list'], [false, 'form']]], {})` |
+| 搜索数据 | `call_kw(model, 'search_read', [[domain], [fields]], {limit, offset, order})` |
+| 读单条记录 | `call_kw(model, 'read', [[id], [fields]], {})` |
+| 创建/更新/删除 | `call_kw(model, 'create'/'write'/'unlink', ...)` |
 
-**实现**:
+### 2.3 Menu 端点实现
+
 ```rust
-// crates/odoo-web-server/src/view.rs
-pub async fn get_model_fields(
+// crates/odoo-web-server/src/menu.rs
+
+pub async fn get_menu(
     State(state): State<AppState>,
-    Path(model): Path<String>,
 ) -> Result<Json<Value>, AppError> {
     let payload = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "call",
         "params": {
-            "service": "object",
-            "method": "execute_kw",
+            "model": "ir.ui.menu",
+            "method": "search_read",
             "args": [
-                state.odoo_db.as_deref().unwrap_or(""),
-                state.uid.unwrap_or(0),
-                state.password.as_deref().unwrap_or(""),
-                model,
-                "fields_get",
-                [],
-                {},
+                [["parent_id", "=", false]],           // root menus only
+                ["id", "name", "action", "children", "sequence", "web_icon"]
             ],
+            "kwargs": {}
         },
         "id": 1,
     });
 
-    // ... forward to Odoo, cache response with model name as key
+    // Forward to Odoo via proxy, cache 15 min
 }
 ```
-
-**响应**:
-```json
-{
-  "name": { "type": "char", "string": "Name", "required": true, "readonly": false },
-  "email": { "type": "char", "string": "Email", "required": false, "readonly": false },
-  "phone": { "type": "char", "string": "Phone", "required": false, "readonly": false },
-  "company_id": { "type": "many2one", "string": "Company", "relation": "res.company" }
-}
-```
-
-### 2.3 视图 XML 端点
-
-**请求**: `GET /api/view/res.partner/tree`
-
-**实现**:
-```rust
-pub async fn get_view(
-    State(state): State<AppState>,
-    Path((model, view_type)): Path<(String, String)>,
-) -> Result<Json<Value>, AppError> {
-    // search_read ir.ui.view with domain:
-    // [("model", "=", model), ("type", "=", view_type)]
-    // Return arch_base (XML string) + fields (field definitions)
-}
-```
-
-**响应**:
-```json
-{
-  "arch": "<tree string=\"Contacts\"><field name=\"name\"/><field name=\"email\"/><field name=\"phone\"/><field name=\"company_id\"/></tree>",
-  "fields": {
-    "name": { "string": "Name", "type": "char", ... },
-    "email": { "string": "Email", "type": "char", ... }
-  }
-}
-```
-
-### 2.4 缓存策略
-
-| 缓存项 | TTL | 理由 |
-|--------|-----|------|
-| 模型字段 (`fields_get`) | 30 min | 模块安装/升级时才变更 |
-| 视图 XML (`ir.ui.view`) | 15 min | 视图修改可即时清缓存 |
-| 菜单树 (`ir.ui.menu`) | 15 min | 按用户角色缓存 |
-
-实现：odoo-web-server 的 `AppState` 新增 `Arc<DashMap<String, CachedValue>>`。
 
 ---
 
-## 三、前端视图引擎组件
+## 三、前端视图引擎
 
 ### 3.1 架构
 
 ```
 apps/oweb/src/views/
-├── OdooListView.tsx       # 列表视图（读取 <tree> XML）
-├── OdooFormView.tsx       # 表单视图（读取 <form> XML）
-├── OdooKanbanView.tsx     # 看板视图（读取 <kanban> XML）
-├── OdooSearchView.tsx     # 搜索视图（读取 <search> XML）
-├── OdooViewRenderer.tsx   # 视图分发器：根据 view_type 渲染对应组件
-├── xml-parser.ts          # Odoo XML 视图解析器
-├── field-widgets.tsx      # 字段类型 → React Widget 映射
-└── types.ts               # Odoo 视图类型定义
+├── OdooViewLoader.tsx      # ★ 核心：一次 call_kw 获取 get_views() 全部
+├── OdooListRenderer.tsx    # 解析 <list> XML + 渲染数据表
+├── OdooFormRenderer.tsx    # 解析 <form> XML + 递归布局渲染
+├── OdooKanbanRenderer.tsx  # 解析 <kanban> XML + 卡片布局
+├── OdooSearchPanel.tsx     # 解析 <search> XML + 过滤器/分组
+├── OdooViewSwitcher.tsx    # 视图模式切换器 (list/form/kanban)
+├── xml-parser.ts           # Odoo XML 视图解析器
+├── field-widgets.tsx       # 字段类型 → React Widget 映射
+└── types.ts                # Odoo 视图类型定义
 ```
 
-### 3.2 XML 视图解析器 (`xml-parser.ts`)
-
-**输入**: Odoo `<tree>`, `<form>`, `<kanban>` XML 字符串
-
-**输出**: 结构化 JSON
+### 3.2 OdooViewLoader — 核心组件
 
 ```typescript
-interface ParsedTreeView {
-  type: 'tree'
-  string: string        // 视图标题
-  editable?: 'top' | 'bottom'
-  fields: TreeField[]
+interface ViewLoaderProps {
+  model: string
+  viewType: 'list' | 'form' | 'kanban'
+  viewId?: number
+  domain?: unknown[]
+  recordId?: number
 }
 
-interface TreeField {
-  name: string           // 字段名
-  string?: string        // 列标题（覆盖模型默认 label）
-  invisible?: string     // 可见性条件
-  optional?: 'show' | 'hide'
-  sum?: string           // 汇总函数
-  decoration?: string    // 条件样式
-}
+export function OdooViewLoader({ model, viewType, viewId, domain, recordId }: ViewLoaderProps) {
+  // 一次调用获取 LIST + FORM + KANBAN 全部视图 + 全部字段
+  const viewsToLoad: [number | false, string][] = [
+    [viewId ?? false, viewType],
+    ...(viewType !== 'list' ? [[false, 'list'] as const] : []),
+    ...(viewType !== 'form' ? [[false, 'form'] as const] : []),
+  ]
 
-interface ParsedFormView {
-  type: 'form'
-  string: string
-  elements: FormElement[]
-}
-
-type FormElement = SheetElement | GroupElement | NotebookElement | FieldElement | ...
-
-interface FieldElement {
-  type: 'field'
-  name: string
-  widget?: string        // 覆盖默认 widget
-  options?: Record<string, unknown>
-  invisible?: string
-  required?: boolean
-  readonly?: boolean
-  placeholder?: string
-  nolabel?: boolean
-}
-```
-
-**解析逻辑**:
-1. 使用 `DOMParser` 解析 XML 字符串
-2. 递归遍历 `<sheet>`, `<group>`, `<notebook>`, `<page>` 嵌套结构
-3. 对 `<field>` 元素提取 name/widget/options/invisible/readonly 等属性
-4. 处理 `attrs="{'invisible': [('state', '=', 'draft')]}"` 的条件表达式
-5. 支持 `<xpath>` 继承（从多个视图合并）
-
-### 3.3 字段 Widget 映射 (`field-widgets.tsx`)
-
-```typescript
-// Odoo 字段类型 → React 组件映射
-const FIELD_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>> = {
-  char:              CharWidget,           // <input type="text">
-  text:              TextWidget,           // <textarea>
-  integer:           IntegerWidget,        // <input type="number">
-  float:             FloatWidget,          // <input type="number" step="0.01">
-  monetary:          MonetaryWidget,       // 带货币符号的数字输入
-  boolean:           BooleanWidget,        // <input type="checkbox">
-  date:              DateWidget,           // <input type="date">
-  datetime:          DateTimeWidget,       // <input type="datetime-local">
-  selection:         SelectionWidget,      // <select>
-  many2one:          Many2OneWidget,       // 搜索下拉 + 自动补全
-  many2many:         Many2ManyWidget,      // 多选标签列表
-  one2many:          One2ManyWidget,       // 内联列表
-  binary:            BinaryWidget,         // 文件上传/图片预览
-  image:             ImageWidget,          // 图片预览 + 上传
-  html:              HtmlWidget,           // 富文本编辑器
-  reference:         ReferenceWidget,      // 模型 + ID 选择器
-}
-
-// 特殊 widget 覆盖
-const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = {
-  phone:             PhoneWidget,          // 电话格式
-  email:             EmailWidget,          // mailto 链接
-  url:               UrlWidget,            // 新窗口打开
-  monetary:          MonetaryWidget,
-  percentage:        PercentageWidget,
-  handle:            HandleWidget,         // 拖拽排序手柄
-  priority:          PriorityWidget,       // 星级/表情选择
-  statinfo:          StatInfoWidget,       // 统计按钮
-  many2one_barcode:  Many2OneBarcodeWidget,// 扫码枪输入
-}
-```
-
-### 3.4 OdooListView（修正版）
-
-```typescript
-interface OdooListViewProps {
-  model: string           // 必填：Odoo 模型名
-  viewId?: number         // 可选：指定视图 ID（否则取默认 tree 视图）
-  domain?: unknown[]      // 可选：初始过滤条件
-}
-
-export function OdooListView({ model, viewId, domain }: OdooListViewProps) {
-  // 1. 获取视图 XML: GET /api/view/{model}/tree
-  const { data: viewData } = useQuery({
-    queryKey: ['odoo', 'view', model, 'tree', viewId],
-    queryFn: () => fetchView(model, 'tree', viewId),
+  const { data: viewData, isLoading } = useQuery({
+    queryKey: ['odoo', 'get_views', model, viewsToLoad],
+    queryFn: () => callKw(model, 'get_views', [viewsToLoad], {}),
     staleTime: 15 * 60_000,
   })
 
-  // 2. 解析 XML → 列定义
-  const columns = useMemo(() => {
-    if (!viewData?.arch) return []
-    return parseTreeXml(viewData.arch, viewData.fields)
-  }, [viewData])
+  if (isLoading) return <LoadingSpinner />
 
-  // 3. 查询数据: POST /api/odoo/web/dataset/search_read
-  const { data: records } = useQuery({
-    queryKey: ['odoo', 'data', model, domain, page, order],
-    queryFn: () => searchRead(model, columns, domain, page, order),
-  })
+  const activeView = viewData?.views?.[viewType]
+  const fields = viewData?.models?.[model] ?? {}
 
-  // 4. 渲染表格
-  return (
-    <div className="flex flex-col gap-4">
-      <OdooSearchView model={model} onSearch={setDomain} />
-      <DataTable columns={columns} records={records} onSort={setOrder} />
-      <Pagination page={page} onPage={setPage} />
-    </div>
-  )
+  switch (viewType) {
+    case 'list':
+      return <OdooListRenderer model={model} arch={activeView?.arch} fields={fields} domain={domain}/>
+    case 'form':
+      return <OdooFormRenderer model={model} arch={activeView?.arch} fields={fields} recordId={recordId}/>
+    case 'kanban':
+      return <OdooKanbanRenderer model={model} arch={activeView?.arch} fields={fields} domain={domain}/>
+  }
 }
 ```
 
-### 3.5 OdooFormView
+### 3.3 XML 视图解析器 (`xml-parser.ts`)
+
+**支持 `<list>` XML 解析**（注意：Odoo 19 用 `list` 非 `tree`）:
 
 ```typescript
-interface OdooFormViewProps {
-  model: string
-  recordId?: number      // 编辑模式（有 ID）/ 创建模式（无 ID）
-  viewId?: number
+interface ParsedListView {
+  string: string
+  editable?: 'top' | 'bottom'
+  create?: boolean
+  delete?: boolean
+  multi_edit?: boolean
+  limit?: number
+  columns: ListColumn[]
 }
 
-export function OdooFormView({ model, recordId, viewId }: OdooFormViewProps) {
-  // 1. 获取视图 XML: GET /api/view/{model}/form
-  const { data: viewData } = useQuery(...)
+interface ListColumn {
+  name: string
+  string?: string          // 列标题
+  invisible?: number        // 0=显示, 1=隐藏, 2=debug 模式显示
+  optional?: 'show' | 'hide'
+  sum?: string
+  decoration_bf?: string    // 条件加粗
+  decoration_it?: string    // 条件斜体
+  decoration_danger?: string
+  widget?: string
+  width?: string
+}
+```
 
-  // 2. 获取字段元数据: GET /api/model/{model}/fields
-  const { data: fields } = useQuery(...)
+**支持 `<form>` XML 嵌套结构**:
 
-  // 3. 如果是编辑模式，获取记录数据
+```typescript
+type FormElement =
+  | { type: 'sheet', elements: FormElement[] }
+  | { type: 'group', string?: string, col?: number, elements: FormElement[] }
+  | { type: 'notebook', pages: { string: string, elements: FormElement[] }[] }
+  | { type: 'field', name: string, widget?: string, readonly?: boolean,
+      required?: boolean, invisible?: boolean, nolabel?: boolean, placeholder?: string }
+  | { type: 'label', string: string }
+  | { type: 'separator', string?: string }
+  | { type: 'newline' }
+  | { type: 'button', string: string, name?: string, type?: string, icon?: string }
+```
+
+### 3.4 字段 Widget 映射 (`field-widgets.tsx`)
+
+```typescript
+type FieldWidgetComponent = React.ComponentType<{
+  field: FieldMeta       // { name, type, string, required, readonly, ... }
+  value: unknown
+  onChange: (value: unknown) => void
+  context: Record<string, unknown>
+}>
+
+const TYPE_WIDGETS: Record<string, FieldWidgetComponent> = {
+  char:       CharWidget,
+  text:       TextWidget,
+  integer:    IntegerWidget,
+  float:      FloatWidget,
+  monetary:   MonetaryWidget,
+  boolean:    BooleanWidget,
+  date:       DateWidget,
+  datetime:   DateTimeWidget,
+  selection:  SelectionWidget,
+  many2one:   Many2OneWidget,     // 搜索下拉 + 自动补全
+  many2many:  Many2ManyWidget,    // 多选标签
+  one2many:   One2ManyWidget,     // 内联子列表
+  binary:     BinaryWidget,
+  html:       HtmlWidget,
+  reference:  ReferenceWidget,
+}
+
+// widget 属性覆盖（Odoo field 的 widget="" 属性）
+const WIDGET_OVERRIDES: Record<string, FieldWidgetComponent> = {
+  phone:   PhoneWidget,
+  email:   EmailWidget,
+  url:     UrlWidget,
+  image:   ImageWidget,
+  monetary: MonetaryWidget,
+  priority: PriorityWidget,
+  many2many_tags: Many2ManyWidget,
+  many2many_binary: Many2ManyWidget,
+  many2many_checkboxes: Many2ManyWidget,
+  one2many_list: One2ManyWidget,
+  handle:  HandleWidget,
+  statinfo: StatInfoWidget,
+  barcode_handler: BarcodeWidget,
+}
+```
+
+### 3.5 OdooFormRenderer — 递归布局
+
+```typescript
+export function OdooFormRenderer({ model, arch, fields, recordId }: FormRendererProps) {
+  const formLayout = useMemo(() => parseFormXml(arch), [arch])
+
+  // 编辑模式：读取记录
   const { data: record } = useQuery({
     queryKey: ['odoo', 'read', model, recordId],
-    queryFn: () => readRecord(model, recordId),
+    queryFn: () => callKw(model, 'read', [[recordId]]),
     enabled: !!recordId,
   })
 
-  // 4. 解析 XML + 构建表单结构
-  const formLayout = useMemo(() => {
-    if (!viewData?.arch) return null
-    return parseFormXml(viewData.arch, fields)
-  }, [viewData, fields])
-
-  // 5. 递归渲染嵌套布局结构
-  return (
-    <FormLayoutRenderer
-      layout={formLayout}
-      record={record}
-      fields={fields}
-      onChange={handleChange}
-      onSave={handleSave}
-    />
-  )
+  return <FormLayoutNode node={formLayout} record={record?.[0]} fields={fields} model={model}/>
 }
 
-// 递归渲染器
-function FormLayoutRenderer({ layout, record, fields, onChange, onSave }: Props) {
-  return (
-    <div className="space-y-4 p-6">
-      {layout.elements.map((el, i) => {
-        switch (el.type) {
-          case 'sheet':
-            return <Sheet key={i}><FormLayoutRenderer .../></Sheet>
-          case 'group':
-            return <Group key={i} string={el.string}>
-              <FormLayoutRenderer .../>
-            </Group>
-          case 'field':
-            const Widget = getWidget(el, fields[el.name])
-            return <Widget key={el.name} field={el} value={record?.[el.name]} onChange={onChange}/>
-          case 'notebook':
-            return <Notebook key={i} pages={el.pages}/>
-          // ... more layout types
-        }
-      })}
-    </div>
-  )
-}
-```
-
-### 3.6 OdooViewRenderer（视图分发器）
-
-```typescript
-interface OdooViewRendererProps {
-  model: string
-  viewType: 'list' | 'form' | 'kanban' | 'calendar' | 'pivot' | 'graph'
-  viewId?: number
-  recordId?: number
-  domain?: unknown[]
-}
-
-export function OdooViewRenderer({ model, viewType, ...props }: OdooViewRendererProps) {
-  switch (viewType) {
-    case 'list':
-      return <OdooListView model={model} domain={props.domain} viewId={props.viewId}/>
-    case 'form':
-      return <OdooFormView model={model} recordId={props.recordId} viewId={props.viewId}/>
-    case 'kanban':
-      return <OdooKanbanView model={model} domain={props.domain} viewId={props.viewId}/>
-    case 'calendar':
-      return <OdooCalendarView model={model} domain={props.domain}/>
-    case 'pivot':
-      return <OdooPivotView model={model} domain={props.domain}/>
-    case 'graph':
-      return <OdooGraphView model={model} domain={props.domain}/>
+// 递归渲染
+function FormLayoutNode({ node, record, fields, model }: NodeProps) {
+  switch (node.type) {
+    case 'sheet':
+      return <div className="p-6">{node.elements.map((el, i) =>
+        <FormLayoutNode key={i} node={el} record={record} fields={fields} model={model}/>
+      )}</div>
+    case 'group':
+      return (
+        <fieldset className="mb-4 rounded-lg border border-border-subtle p-4">
+          {node.string && <legend className="text-xs text-text-secondary">{node.string}</legend>}
+          <div className={`grid gap-4 ${node.col ? `grid-cols-${node.col}` : 'grid-cols-2'}`}>
+            {node.elements.map((el, i) =>
+              <FormLayoutNode key={i} node={el} record={record} fields={fields} model={model}/>
+            )}
+          </div>
+        </fieldset>
+      )
+    case 'field': {
+      const meta = fields[node.name]
+      if (!meta) return null
+      const Widget = getFieldWidget(node, meta)
+      return (
+        <div className={node.invisible ? 'hidden' : ''}>
+          {!node.nolabel && (
+            <label className="mb-1 block text-xs text-text-secondary">{node.string || meta.string}</label>
+          )}
+          <Widget field={meta} value={record?.[node.name]} onChange={...}/>
+        </div>
+      )
+    }
+    case 'notebook':
+      return <TabView pages={node.pages.map(p => ({ label: p.string, content: <FormLayoutNode .../> }))}/>
+    case 'separator':
+      return <hr className="my-2 border-border-subtle"/>
+    case 'newline':
+      return <div className="col-span-full"/>
   }
 }
 ```
 
 ---
 
-## 四、WebSocket 事件面板
+## 四、WebSocket 事件修复
 
-### 4.1 目标
+### 4.1 Phase 1 修正
 
-利用 Phase 1 已实现的 `/ws/events` 端点，创建实时事件显示和模型自动刷新。
+**文件**: `crates/odoo-web-server/src/ws.rs`
 
-### 4.2 EventPanel 组件
+```rust
+// 修正：使用 peek_notifications 而非不存在的 /web/bus/poll
+pub async fn poll_odoo_bus(client: reqwest::Client, odoo_url: String, event_tx: broadcast::Sender<Value>) {
+    let bus_url = format!("{}/websocket/peek_notifications", odoo_url.trim_end_matches('/'));
+    let mut last: i64 = 0;
+
+    loop {
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "call",
+            "params": {
+                "channels": [],
+                "last": last,
+                "is_first_poll": false,
+            },
+            "id": 1,
+        });
+
+        let response = match client.post(&bus_url).json(&payload).send().await {
+            Ok(r) => r,
+            Err(e) => { tracing::warn!("Bus poll failed: {e}"); continue; }
+        };
+
+        let body: Value = match response.json().await {
+            Ok(b) => b,
+            Err(e) => { tracing::warn!("Bus response parse failed: {e}"); continue; }
+        };
+
+        // Odoo 19 CE returns { channels, notifications: [{id, message}] }
+        if let Some(notifications) = body.get("result").and_then(|r| r.get("notifications")).and_then(|n| n.as_array()) {
+            if !notifications.is_empty() {
+                last = notifications.iter()
+                    .filter_map(|n| n.get("id").and_then(|id| id.as_i64()))
+                    .max()
+                    .unwrap_or(last);
+                for n in notifications {
+                    let _ = event_tx.send(n.clone());
+                }
+            }
+        }
+    }
+}
+```
+
+### 4.2 前端 EventPanel
 
 ```typescript
 export function EventPanel() {
   const queryClient = useQueryClient()
-  const { events, connected } = useOdooBus()
-
-  useEffect(() => {
-    // 监听 Odoo Bus 事件，自动刷新相关模型列表
-    for (const event of events) {
-      if (event.type === 'record_created' || event.type === 'record_modified') {
-        queryClient.invalidateQueries({
-          queryKey: ['odoo', 'data', event.model],
-        })
-      }
-    }
-  }, [events, queryClient])
-
-  // 在页面底部显示连接状态 + 最近事件
-  return (
-    <div className="border-t border-border-subtle px-4 py-2">
-      <span className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`}/>
-      <span className="ml-2 text-xs text-text-muted">
-        {connected ? `Live (${events.length} events)` : 'Disconnected'}
-      </span>
-    </div>
-  )
-}
-
-function useOdooBus() {
-  const [events, setEvents] = useState<OdooBusEvent[]>([])
+  const [events, setEvents] = useState<OdooBusNotification[]>([])
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
     const ws = new WebSocket(`ws://${location.host}/ws/events`)
     ws.onopen = () => setConnected(true)
-    ws.onclose = () => setConnected(false)
+    ws.onclose = () => {
+      setConnected(false)
+      setTimeout(() => { /* reconnect */ }, 5000)
+    }
     ws.onmessage = (e) => {
-      setEvents((prev) => [...prev.slice(-99), JSON.parse(e.data)])
+      const notification = JSON.parse(e.data)
+      setEvents(prev => [...prev.slice(-49), notification])
+      // Auto-refresh related model queries
+      if (notification.message?.payload?.model) {
+        queryClient.invalidateQueries({ queryKey: ['odoo', 'data', notification.message.payload.model] })
+      }
     }
     return () => ws.close()
-  }, [])
-
-  return { events, connected }
-}
-```
-
----
-
-## 五、更新 Routing 方案
-
-### 5.1 路由调整
-
-```
-/_authenticated/                (新增布局：含 EventPanel)
-  ├── /                          HomePage
-  ├── /menu                      MenuPage (从 ir.ui.menu 动态构建)
-  ├── /web                       OdooViewRenderer (主视图)
-  │   ├── #model={model}         → OdooViewRenderer
-  │   ├── #action={id}           → 加载 action → 跳转到对应 model
-  │   ├── #view_type={type}      → 切换视图模式
-  │   └── #id={record_id}        → 打开表单
-  ├── /dashboard                 DashboardPage
-  └── /settings                  SettingsPage
-```
-
-### 5.2 MenuPage
-
-```typescript
-export function MenuPage() {
-  const { data: menuTree } = useQuery({
-    queryKey: ['odoo', 'menu'],
-    queryFn: () => fetch('/api/menu').then(r => r.json()),
-    staleTime: 15 * 60_000,
-  })
+  }, [queryClient])
 
   return (
-    <div className="grid grid-cols-2 gap-4 p-6">
-      {menuTree?.map((app) => (
-        <AppCard key={app.id} app={app}
-          onClick={() => navigate({ to: '/web', search: { action: app.action_id } })}
-        />
-      ))}
+    <div className="flex items-center justify-end border-t border-border-subtle bg-root px-4 py-1">
+      <span className="flex items-center gap-1.5 text-[10px] text-text-muted">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`}/>
+        {connected ? `Live (${events.length})` : 'Disconnected'}
+      </span>
     </div>
   )
 }
@@ -469,73 +414,114 @@ export function MenuPage() {
 
 ---
 
-## 六、任务分解
+## 五、Session 格式修正
 
-### 6.1 子任务清单
+### 5.1 Rust 类型对齐
 
-| # | 任务 | 工时 | 产出 |
-|---|------|------|------|
-| 2.1 | odoo-web-server 新增聚合端点 | 2 天 | `view.rs` (fields_get, ir.ui.view search_read, menu) |
-| 2.2 | 视图缓存层 (DashMap) | 1 天 | `AppState` 新增 `cache: Arc<DashMap<>>` |
-| 2.3 | XML 视图解析器 | 2 天 | `views/xml-parser.ts` (tree/form/kanban/search 解析) |
-| 2.4 | 字段 Widget 映射表 | 1.5 天 | `views/field-widgets.tsx` (12+ 字段类型 + widget 覆盖) |
-| 2.5 | OdooListView（动态列定义） | 1.5 天 | 读 `<tree>` XML → 自动列定义 → TanStack Query 渲染 |
-| 2.6 | OdooFormView（动态表单） | 2.5 天 | 读 `<form>` XML → 递归布局渲染 → Widget 分发 |
-| 2.7 | OdooViewRenderer（视图分发器） | 0.5 天 | list/form/kanban 路由 |
-| 2.8 | WebSocket EventPanel | 1 天 | `useOdooBus` + `EventPanel` + 自动刷新 |
-| 2.9 | MenuPage（动态导航） | 1 天 | `GET /api/menu` → React 渲染 |
-| 2.10 | 路由守卫增强 | 0.5 天 | `_authenticated` 布局 + EventPanel 底栏 |
+```rust
+// crates/odoo-core/src/types.rs
 
-### 6.2 开发顺序
-
-```
-Day 1-2   [2.1] odoo-web-server 聚合端点
-Day 2-3   [2.2] 视图缓存层
-Day 3-5   [2.3] XML 视图解析器 ──────────┐
-Day 5-7   [2.4] 字段 Widget 映射表        │
-Day 7-9   [2.5] OdooListView ←─ 依赖 2.3  │
-Day 9-12  [2.6] OdooFormView ←─ 依赖 2.3,2.4
-Day 12-13 [2.7] OdooViewRenderer ── 依赖 2.5,2.6
-Day 13-14 [2.8] WebSocket EventPanel
-Day 14-15 [2.9] MenuPage
-Day 15    [2.10] 路由守卫增强
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionInfo {
+    pub authenticated: bool,
+    pub uid: Option<i64>,
+    pub name: Option<String>,
+    pub username: Option<String>,
+    pub db: Option<String>,
+    pub is_admin: Option<bool>,
+    pub is_system: Option<bool>,
+    pub partner_id: Option<i64>,
+    pub partner_display_name: Option<String>,
+    pub user_companies: Option<Value>,
+    pub server_version: Option<String>,
+    pub server_version_info: Option<Vec<Value>>,
+    pub user_context: Option<Value>,
+    pub web_base_url: Option<String>,
+}
 ```
 
-**总计**: 15 个工作日（3 周）
+### 5.2 前端对齐
+
+```typescript
+// apps/oweb/src/lib/auth.tsx
+interface AuthState {
+  authenticated: boolean
+  uid: number | null
+  name: string | null
+  username: string | null
+  db: string | null
+  isAdmin: boolean
+  partnerDisplayName: string | null
+  serverVersion: string | null
+}
+```
 
 ---
 
-## 七、参考来源
+## 六、开发顺序（修正后）
 
-| 参考 | 具体借鉴 |
-|------|----------|
-| `~/EA/odoo/addons/base/models/ir_ui_view.py` | P0 — `ir.ui.view` 模型字段定义、视图继承规则 |
-| `~/EA/odoo/addons/web/controllers/dataset.py` | P0 — `fields_get`, `read` API 参数格式 |
-| `~/EA/l8-erp-react/packages/biz-ui/.../form-preview.tsx` | P1 — 738 行动态表单渲染逻辑（字段类型分发最完整参考） |
-| `~/EA/l8-erp-react/packages/biz-ui/.../list-preview.tsx` | P1 — 列表渲染 + 虚拟滚动模式 |
-| `~/EA/l8-erp-react/apps/oweb/src/hooks/use-table-url-state.ts` | P1 — URL ↔ Table 状态同步 |
-| `~/EA/l8-erp-react/packages/oweb-core/` | P1 — 视图解析、domain 构建、服务注册 |
-| `~/EA/uncode/crates/uncode-platform/src/main.rs` | P3 — axum Router + WebSocket 模式 |
+```
+第 1 步 (0.5 天): Phase 1 修复
+  ├── ws.rs: /web/bus/poll → /websocket/peek_notifications
+  └── session.rs: 返回完整 session_info
+
+第 2 步 (0.5 天): Menu 端点
+  └── odoo-web-server/src/menu.rs
+
+第 3 步 (1 天):  前端 RPC SDK 更新
+  └── lib/api.ts: 添加 callKw(model, method, args, kwargs) 通用函数
+
+第 4 步 (1 天):  XML 解析器
+  └── views/xml-parser.ts (list/form/kanban/search)
+
+第 5 步 (1 天):  字段 Widget 映射
+  └── views/field-widgets.tsx
+
+第 6 步 (1 天):  OdooViewLoader (get_views 一次调用)
+  └── views/OdooViewLoader.tsx
+
+第 7 步 (1 天):  OdooListRenderer
+  └── views/OdooListRenderer.tsx
+
+第 8 步 (1.5 天): OdooFormRenderer
+  └── views/OdooFormRenderer.tsx
+
+第 9 步 (1 天):  OdooViewSwitcher + OdooSearchPanel
+  └── views/OdooViewSwitcher.tsx, views/OdooSearchPanel.tsx
+
+第 10 步 (0.5 天): EventPanel + 自动刷新
+  └── views/EventPanel.tsx
+
+第 11 步 (0.5 天): MenuPage 动态导航
+  └── routes/menu.tsx
+```
+
+**总计**: 9 个工作日
 
 ---
 
-## 八、Phase 2 完成标准
+## 七、Phase 2 完成标准（修正后）
 
 ```
-[ ] GET /api/model/{model}/fields     → JSON 字段元数据
-[ ] GET /api/view/{model}/{type}       → XML 视图 + 解析后的 JSON
-[ ] GET /api/menu                      → 多级菜单树
-[ ] OdooListView 从 <tree> XML 自动生成列定义
-[ ] OdooFormView 从 <form> XML 递归渲染布局（sheet/group/notebook/page/field）
-[ ] 12 种基础字段类型 Widget 可用 (char/text/int/float/boolean/date/datetime/selection/many2one/many2many/one2many/binary/image)
-[ ] WebSocket EventPanel 显示连接状态 + 最近事件
-[ ] 数据变更自动刷新相关列表
-[ ] MenuPage 从 ir.ui.menu 动态构建导航
+[ ] ws.rs 修正: 使用 /websocket/peek_notifications
+[ ] session.rs 修正: 返回完整 session_info (name, partner_id, companies, ...)
+[ ] GET /api/menu → JSON 菜单树
+[ ] lib/api.ts: callKw(model, method, args, kwargs)
+[ ] xml-parser.ts: 解析 <list> <form> <kanban> <search> XML
+[ ] field-widgets.tsx: 12+ 字段类型 Widget
+[ ] OdooViewLoader: 一次 call_kw(get_views) 获取全部视图+字段
+[ ] OdooListRenderer: <list> XML → 动态列定义 + TanStack Query 渲染
+[ ] OdooFormRenderer: <form> XML → 递归渲染 sheet/group/notebook/field
+[ ] OdooViewSwitcher: list/form/kanban 视图切换
+[ ] EventPanel: WebSocket 连接 + 自动刷新相关模型
+[ ] MenuPage: ir.ui.menu 动态导航
 [ ] cargo clippy + cargo build + bun build 全部通过
 ```
 
 ---
 
-**文档版本**: 1.0  
+**文档版本**: 2.0  
 **创建日期**: 2026-05-28  
+**更新**: 基于 Odoo 19 CE 源码真实 API 修正  
 **维护团队**: OdooSeek
