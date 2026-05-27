@@ -38,16 +38,29 @@ pub async fn get_session_info(
     let resp_headers = response.headers().clone();
     let json_body: serde_json::Value = response.json().await?;
 
-    // Build SessionInfo from Odoo's session_info() response
+    // Build SessionInfo from Odoo's session_info() response (snake_case keys)
     let info = match json_body.get("result") {
-        Some(result) => serde_json::from_value::<SessionInfo>(result.clone())
-            .unwrap_or_else(|_| SessionInfo {
-                authenticated: result.get("uid").and_then(|v| v.as_i64()).is_some(),
-                uid: result.get("uid").and_then(|v| v.as_i64()),
-                username: result.get("username").and_then(|v| v.as_str()).map(String::from),
-                db: result.get("db").and_then(|v| v.as_str()).map(String::from),
-                ..Default::default()
-            }),
+        Some(result) => SessionInfo {
+            authenticated: true,
+            uid: result.get("uid").and_then(|v| v.as_i64()),
+            name: result.get("name").and_then(|v| v.as_str()).map(String::from),
+            username: result.get("username").and_then(|v| v.as_str()).map(String::from),
+            db: result.get("db").and_then(|v| v.as_str()).map(String::from),
+            is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
+            is_system: result.get("is_system").and_then(|v| v.as_bool()),
+            partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
+            partner_display_name: result.get("partner_display_name").and_then(|v| v.as_str()).map(String::from),
+            server_version: result.get("server_version").and_then(|v| v.as_str()).map(String::from),
+            server_version_info: result.get("server_version_info").cloned().and_then(|v| v.as_array().cloned()),
+            user_context: result.get("user_context").cloned(),
+            user_companies: result.get("user_companies").cloned(),
+            web_base_url: result.get("web.base.url").and_then(|v| v.as_str()).map(String::from),
+            home_action_id: result.get("home_action_id").cloned(),
+            active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
+            max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
+            groups: result.get("groups").cloned(),
+            extra: serde_json::Value::default(),
+        },
         None => SessionInfo::anonymous(),
     };
 
@@ -108,16 +121,29 @@ pub async fn login(
         }));
     }
 
-    // Parse session_info from Odoo's authenticate response
+    // Parse session_info from Odoo's authenticate response (snake_case keys)
     let info = match json_body.get("result") {
-        Some(result) => serde_json::from_value::<SessionInfo>(result.clone())
-            .unwrap_or_else(|_| SessionInfo {
-                authenticated: result.get("uid").and_then(|v| v.as_i64()).is_some(),
-                uid: result.get("uid").and_then(|v| v.as_i64()),
-                username: Some(body.login),
-                db: Some(body.db),
-                ..Default::default()
-            }),
+        Some(result) => SessionInfo {
+            authenticated: result.get("uid").and_then(|v| v.as_i64()).is_some(),
+            uid: result.get("uid").and_then(|v| v.as_i64()),
+            name: result.get("name").and_then(|v| v.as_str()).map(String::from),
+            username: Some(body.login),
+            db: Some(body.db),
+            is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
+            is_system: result.get("is_system").and_then(|v| v.as_bool()),
+            partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
+            partner_display_name: result.get("partner_display_name").and_then(|v| v.as_str()).map(String::from),
+            server_version: result.get("server_version").and_then(|v| v.as_str()).map(String::from),
+            server_version_info: result.get("server_version_info").cloned().and_then(|v| v.as_array().cloned()),
+            user_context: result.get("user_context").cloned(),
+            user_companies: result.get("user_companies").cloned(),
+            web_base_url: result.get("web.base.url").and_then(|v| v.as_str()).map(String::from),
+            home_action_id: result.get("home_action_id").cloned(),
+            active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
+            max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
+            groups: result.get("groups").cloned(),
+            extra: serde_json::Value::default(),
+        },
         None => SessionInfo::anonymous(),
     };
 

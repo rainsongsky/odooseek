@@ -7,12 +7,12 @@ interface AuthState {
   name: string | null
   username: string | null
   db: string | null
-  isAdmin: boolean
-  isSystem: boolean
-  partnerId: number | null
-  partnerDisplayName: string | null
-  serverVersion: string | null
-  homeActionId: number | null
+  is_admin: boolean
+  is_system: boolean
+  partner_id: number | null
+  partner_display_name: string | null
+  server_version: string | null
+  home_action_id: number | null
 }
 
 const ANONYMOUS: AuthState = {
@@ -21,12 +21,12 @@ const ANONYMOUS: AuthState = {
   name: null,
   username: null,
   db: null,
-  isAdmin: false,
-  isSystem: false,
-  partnerId: null,
-  partnerDisplayName: null,
-  serverVersion: null,
-  homeActionId: null,
+  is_admin: false,
+  is_system: false,
+  partner_id: null,
+  partner_display_name: null,
+  server_version: null,
+  home_action_id: null,
 }
 
 async function fetchSession(): Promise<AuthState> {

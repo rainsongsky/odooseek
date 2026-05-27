@@ -42,11 +42,11 @@ pub struct JsonRpcError {
     pub data: Option<serde_json::Value>,
 }
 
-/// Session info returned to oweb frontend
-/// Mirrors Odoo 19 CE ir.http.session_info() return fields
+/// Session info returned to oweb frontend (camelCase JSON).
+/// Built manually in session.rs from Odoo 19 CE's snake_case response.
 #[derive(Debug, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
 pub struct SessionInfo {
+    #[serde(default)]
     pub authenticated: bool,
     pub uid: Option<i64>,
     pub name: Option<String>,
@@ -61,11 +61,10 @@ pub struct SessionInfo {
     pub user_context: Option<serde_json::Value>,
     pub user_companies: Option<serde_json::Value>,
     pub web_base_url: Option<String>,
-    pub home_action_id: Option<i64>,
+    pub home_action_id: Option<serde_json::Value>,
     pub active_ids_limit: Option<i64>,
     pub max_file_upload_size: Option<i64>,
     pub groups: Option<serde_json::Value>,
-    /// Extra fields from Odoo we don't type explicitly
     #[serde(flatten)]
     pub extra: serde_json::Value,
 }
