@@ -54,7 +54,7 @@ export function searchRead<T = unknown[]>(
   limit = 80,
   order = '',
 ): Promise<T> {
-  return callKw<T>(model, 'search_read', [[domain], fields], { offset, limit, order })
+  return callKw<T>(model, 'search_read', [domain, fields], { offset, limit, order })
 }
 
 /// Read specific records by ID
