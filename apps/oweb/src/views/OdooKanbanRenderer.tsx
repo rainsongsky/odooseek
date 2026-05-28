@@ -32,7 +32,7 @@ export function OdooKanbanRenderer({
   const { data: records, isLoading } = useQuery({
     queryKey: ['odoo', 'kanban', model, domain, groupBy],
     queryFn: () =>
-      callKw<Array<Record<string, unknown>>>(model, 'search_read', [[domain], kanbanView.fields], {
+      callKw<Array<Record<string, unknown>>>(model, 'search_read', [domain, kanbanView.fields], {
         limit: 200,
       }),
   })
