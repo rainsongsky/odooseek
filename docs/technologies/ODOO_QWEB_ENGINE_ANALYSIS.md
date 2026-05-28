@@ -18,6 +18,35 @@
 | **指令** | `<field>`, `<group>`, `<notebook>` 等 | `t-if`, `t-foreach`, `t-out`, `t-call` 等 |
 | **使用场景** | 通用 CRUD 界面 (list/form/kanban) | 网站、报表、邮件、看板卡片 |
 
+### 1.1 关键澄清：Kanban 是唯一的 QWeb 兼容视图
+
+Odoo 源码中有一个精确的门卫函数，定义在 `ir_ui_view.py:2131`：
+
+```python
+def _is_qweb_based_view(self, view_type):
+    return view_type == 'kanban'
+```
+
+**只有 kanban 返回 `True`。** 这意味着：
+
+| 视图类型 | QWeb 指令可用？ | 可用指令 |
+|----------|:---:|------|
+| `form` / `list` / `search` | ❌ | 仅 `t-translation` |
+| `kanban` | ✅ | 全部：`t-if`, `t-foreach`, `t-out`, `t-set`, `t-att`, `t-call`, `t-name`, `t-esc`, `t-elif`, `t-else`, `t-key` |
+| type=`qweb` | ✅ | （这是纯 QWeb 模版，不是视图） |
+
+这个边界由 `_validate_qweb_directive()`（`ir_ui_view.py:2332`）强制执行：在 form/list 中写 `t-if` 会触发校验错误。
+
+**OdooSeek 的对应关系**：
+
+```
+Odoo 架构                              OdooSeek 实现
+───────────                           ──────────────
+<form>/<list> (no QWeb)          →    parseFormXml/parseListXml → React 布局
+<kanban> + <templates> (QWeb)    →    parseKanbanXml + parseKanbanTemplate → KanbanNode
+type='qweb' (report/email)       →    未实现
+```
+
 **核心区别**：XML 视图定义 **"什么字段、什么布局"**，QWeb 控制 **"如何渲染、何时显示"**。两者在 Odoo 中不是对立而是互补的。
 
 ---
