@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
 import { parseFormXml } from '../lib/xml-parser'
@@ -13,7 +13,11 @@ interface FormRendererProps {
 }
 
 export function OdooFormRenderer({ model, arch, fields, recordId }: FormRendererProps) {
+  const queryClient = useQueryClient()
   const formLayout = useMemo(() => parseFormXml(arch), [arch])
+    const [editMode, setEditMode] = useState(false)
+    const [formValues, setFormValues] = useState<Record<string, unknown>>({})
+    const [saveError, setSaveError] = useState<string | null>(null)
 
   const { data: record } = useQuery({
     queryKey: ['odoo', 'read', model, recordId],
@@ -24,18 +28,98 @@ export function OdooFormRenderer({ model, arch, fields, recordId }: FormRenderer
     enabled: !!recordId,
   })
 
+  const saveMutation = useMutation({
+    mutationFn: (values: Record<string, unknown>) =>
+      callKw(model, 'write', [[recordId], values]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
+      setEditMode(false)
+    },
+  })
+
+  const handleEdit = () => {
+    if (record?.[0]) {
+      setFormValues({ ...record[0] })
+      setEditMode(true)
+    }
+  }
+
+  const handleCancel = () => {
+    setEditMode(false)
+  }
+
+  const handleChange = (name: string, value: unknown) => {
+    setFormValues((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSave = () => {
+    // Validate required fields
+    const missing: string[] = []
+    for (const [name, meta] of Object.entries(fields)) {
+      if (meta.required && !formValues[name]) {
+        missing.push(meta.string || name)
+      }
+    }
+    if (missing.length > 0) {
+      setSaveError(`Required: ${missing.join(', ')}`)
+      return
+    }
+    setSaveError(null)
+    saveMutation.mutate(formValues)
+  }
+
   if (!formLayout) {
     return <div className="p-6 text-sm text-text-muted">Failed to parse form XML</div>
   }
 
+  const currentRecord = editMode ? formValues : record?.[0]
+
   return (
     <div className="p-6">
-      <h3 className="mb-4 text-lg font-semibold text-text-primary">{formLayout.string || model}</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-text-primary">{formLayout.string || model}</h3>
+        <div className="flex gap-2">
+          {editMode ? (
+            <>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-hover/50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saveMutation.isPending}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+              >
+                {saveMutation.isPending ? 'Saving...' : 'Save'}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
+      {saveError && (
+        <div className="mb-4 rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-2 text-xs text-red-400">
+          {saveError}
+        </div>
+      )}
       <FormLayoutNode
         elements={formLayout.elements}
-        record={record?.[0]}
+        record={currentRecord}
         fields={fields}
         model={model}
+        editMode={editMode}
+        onChange={handleChange}
       />
     </div>
   )
@@ -46,6 +130,8 @@ interface NodeProps {
   record?: Record<string, unknown>
   fields: Record<string, OdooFieldMeta>
   model: string
+  editMode?: boolean
+  onChange?: (name: string, value: unknown) => void
   level?: number
 }
 
@@ -54,12 +140,16 @@ function NotebookRenderer({
   record,
   fields,
   model,
+  editMode,
+  onChange,
   level,
 }: {
   pages: { string: string; elements: FormElement[] }[]
   record?: Record<string, unknown>
   fields: Record<string, OdooFieldMeta>
   model: string
+  editMode?: boolean
+  onChange?: (name: string, value: unknown) => void
   level: number
 }) {
   const [activePage, setActivePage] = useState(0)
@@ -89,6 +179,8 @@ function NotebookRenderer({
             record={record}
             fields={fields}
             model={model}
+            editMode={editMode}
+            onChange={onChange}
             level={level + 1}
           />
         )}
@@ -97,7 +189,7 @@ function NotebookRenderer({
   )
 }
 
-function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProps) {
+function FormLayoutNode({ elements, record, fields, model, editMode, onChange, level = 0 }: NodeProps) {
   return (
     <>
       {elements.map((el, i) => {
@@ -110,6 +202,8 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
                 record={record}
                 fields={fields}
                 model={model}
+                editMode={editMode}
+                onChange={onChange}
                 level={level + 1}
               />
             )
@@ -123,7 +217,7 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
                   </legend>
                 )}
                 <div
-                  className={`grid gap-4`}
+                  className="grid gap-4"
                   style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
                 >
                   <FormLayoutNode
@@ -131,6 +225,8 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
                     record={record}
                     fields={fields}
                     model={model}
+                    editMode={editMode}
+                    onChange={onChange}
                     level={level + 1}
                   />
                 </div>
@@ -145,6 +241,8 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
                 record={record}
                 fields={fields}
                 model={model}
+                editMode={editMode}
+                onChange={onChange}
                 level={level}
               />
             )
@@ -152,20 +250,24 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
             const meta = fields[el.name]
             if (!meta) return null
             if (el.invisible && el.invisible >= 1) return null
+            // Skip system fields in edit mode
+            if (editMode && SYSTEM_FIELDS.has(el.name)) return null
             const Widget = getFieldWidget(el, meta.type)
-            const readOnly = el.readonly || meta.readonly || !record
+            const readOnly = !editMode || !!(el.readonly ?? meta.readonly)
             return (
               <div key={i}>
                 {!el.nolabel && (
                   <label className="mb-1 block text-xs font-medium text-text-secondary">
                     {el.string || meta.string || el.name}
+                    {editMode && meta.required && <span className="ml-0.5 text-red-400">*</span>}
                   </label>
                 )}
                 <Widget
                   field={el}
                   value={record?.[el.name]}
-                  onChange={() => {}}
+                  onChange={(v) => onChange?.(el.name, v)}
                   readOnly={readOnly}
+                  meta={meta}
                 />
               </div>
             )
@@ -187,3 +289,5 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
     </>
   )
 }
+
+const SYSTEM_FIELDS = new Set(['id', 'create_date', 'create_uid', 'write_date', 'write_uid', 'display_name'])

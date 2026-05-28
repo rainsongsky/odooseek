@@ -5,6 +5,7 @@ export interface FieldWidgetProps {
   value: unknown
   onChange: (value: unknown) => void
   readOnly?: boolean
+  meta?: { selection?: [string, string][] }
 }
 
 function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
@@ -70,14 +71,56 @@ function BooleanWidget({ value, onChange, readOnly }: FieldWidgetProps) {
   )
 }
 
-function DateWidget({ value }: FieldWidgetProps) {
+function DateWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly) {
+    return <span className="text-sm text-text-primary">{value ? String(value).slice(0, 10) : ''}</span>
+  }
   return (
-    <span className="text-sm text-text-primary">{value ? String(value).slice(0, 10) : ''}</span>
+    <input
+      type="date"
+      value={value ? String(value).slice(0, 10) : ''}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+    />
   )
 }
 
-function SelectionWidget({ value }: FieldWidgetProps) {
-  return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+function DatetimeWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly) {
+    return <span className="text-sm text-text-primary">{value ? String(value).slice(0, 19) : ''}</span>
+  }
+  const dt = value ? String(value).slice(0, 19) : ''
+  // Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM"
+  const local = dt ? dt.replace(' ', 'T').slice(0, 16) : ''
+  return (
+    <input
+      type="datetime-local"
+      value={local}
+      onChange={(e) => onChange(e.target.value.replace('T', ' ') + ':00')}
+      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+    />
+  )
+}
+
+function SelectionWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps & { meta?: { selection?: [string, string][] } }) {
+  if (readOnly) {
+    return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+  }
+  if (!meta?.selection?.length) {
+    return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+  }
+  return (
+    <select
+      value={String(value ?? '')}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+    >
+      <option value="">--</option>
+      {meta.selection.map(([k, v]) => (
+        <option key={k} value={k}>{v}</option>
+      ))}
+    </select>
+  )
 }
 
 function Many2OneWidget({ value }: FieldWidgetProps) {
@@ -112,7 +155,7 @@ export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>>
   monetary: FloatWidget,
   boolean: BooleanWidget,
   date: DateWidget,
-  datetime: DateWidget,
+  datetime: DatetimeWidget,
   selection: SelectionWidget,
   many2one: Many2OneWidget,
   many2many: Many2ManyWidget,
@@ -123,7 +166,7 @@ export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>>
 }
 
 export function getFieldWidget(
-  _field: FieldElement,
+  field: FieldElement,
   type: string,
 ): React.ComponentType<FieldWidgetProps> {
   return TYPE_WIDGETS[type] ?? CharWidget
