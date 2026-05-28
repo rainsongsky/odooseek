@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { BarChart3, Home, LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
-import { useTranslations } from '@better-i18n/use-intl'
+import { useTranslations } from 'use-intl'
 import { useAuth } from '../lib/auth'
 import { ThemeToggle } from './ThemeToggle'
 

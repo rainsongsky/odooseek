@@ -1,4 +1,4 @@
-import { BetterI18nProvider } from '@better-i18n/use-intl'
+import { IntlProvider } from 'use-intl'
 import type { ReactNode } from 'react'
 import { useAuth } from './auth'
 import enMessages from './locales/en.json'
@@ -27,18 +27,11 @@ function odooLangToLocale(lang: string | null | undefined): string {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
-
-  // Default to zh_CN for development, fallback to Odoo user language
   const locale = session.db ? odooLangToLocale('zh_CN') : 'en'
 
   return (
-    <BetterI18nProvider
-      key={locale}
-      project="HL8-ORG/odooseek"
-      locale={locale}
-      messages={MESSAGES[locale]}
-    >
+    <IntlProvider key={locale} locale={locale} messages={MESSAGES[locale] ?? {}}>
       {children}
-    </BetterI18nProvider>
+    </IntlProvider>
   )
 }

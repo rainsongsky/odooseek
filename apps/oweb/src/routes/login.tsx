@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { useTranslations } from '@better-i18n/use-intl'
+import { useTranslations } from 'use-intl'
 import { useAuth } from '../lib/auth'
 
 function LoginPage() {
