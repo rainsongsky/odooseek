@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { callKw } from '../lib/api'
+import { SearchBar } from '../components/SearchBar'
+import { parseSearchXml } from '../lib/xml-parser'
 import { OdooFormRenderer } from './OdooFormRenderer'
 import { OdooKanbanRenderer } from './OdooKanbanRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
@@ -18,11 +21,16 @@ export function OdooViewLoader({
   model,
   viewType,
   viewId,
-  domain,
+  domain: initialDomain = [],
   recordId: _recordId,
   onRowClick,
 }: ViewLoaderProps) {
-  const viewsToLoad: [number | false, string][] = [[viewId ?? false, viewType]]
+  const viewsToLoad: [number | false, string][] = [
+    [viewId ?? false, viewType],
+    [false, 'search'], // always load search view
+  ]
+  const [domain, setDomain] = useState<unknown[]>(initialDomain)
+  const [keyword, setKeyword] = useState('')
 
   const {
     data: viewData,
@@ -55,8 +63,10 @@ export function OdooViewLoader({
   }
 
   const activeView = viewData?.views?.[viewType]
+  const searchView = viewData?.views?.search
   const modelData = viewData?.models?.[model]
   const fields: Record<string, OdooFieldMeta> = modelData?.fields ?? {}
+  const searchData = searchView ? parseSearchXml(searchView.arch) : null
 
   if (!activeView) {
     return (
@@ -66,29 +76,43 @@ export function OdooViewLoader({
     )
   }
 
-  switch (viewType) {
-    case 'list':
-      return (
-        <OdooListRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} onRowClick={onRowClick} />
-      )
-    case 'form':
-      return (
-        <OdooFormRenderer
-          model={model}
-          arch={activeView.arch}
-          fields={fields}
-          recordId={_recordId}
-        />
-      )
-    case 'kanban':
-      return (
-        <OdooKanbanRenderer
-          model={model}
-          arch={activeView.arch}
-          fields={fields}
-          domain={domain}
-          onRecordClick={onRowClick}
-        />
-      )
+  const handleSearch = (newDomain: unknown[], kw: string) => {
+    setDomain(newDomain)
+    setKeyword(kw)
   }
+
+  return (
+    <div className="flex flex-1 flex-col overflow-auto">
+      {(viewType === 'list' || viewType === 'kanban') && (
+        <div className="border-b border-border-subtle p-4">
+          <SearchBar
+            onSearch={handleSearch}
+            placeholder={`Search ${model}...`}
+            searchFields={searchData?.fields}
+          />
+          {keyword && (
+            <span className="mt-1 inline-block text-xs text-text-muted">
+              Filtered by: <span className="text-accent">"{keyword}"</span>
+              <button
+                type="button"
+                onClick={() => handleSearch(initialDomain, '')}
+                className="ml-2 cursor-pointer underline"
+              >
+                clear
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+      {viewType === 'list' && (
+        <OdooListRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} onRowClick={onRowClick} />
+      )}
+      {viewType === 'form' && (
+        <OdooFormRenderer model={model} arch={activeView.arch} fields={fields} recordId={_recordId} />
+      )}
+      {viewType === 'kanban' && (
+        <OdooKanbanRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} onRecordClick={onRowClick} />
+      )}
+    </div>
+  )
 }
