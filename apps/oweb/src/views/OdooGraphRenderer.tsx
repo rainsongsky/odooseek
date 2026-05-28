@@ -93,7 +93,7 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
   return (
     <div className="p-4">
       <h3 className="mb-4 text-sm font-semibold text-text-primary">{graphView.string || model}</h3>
-      <div className="h-80">
+      <div style={{ height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
           {graphView.graphType === 'pie' ? (
             <PieChart>
