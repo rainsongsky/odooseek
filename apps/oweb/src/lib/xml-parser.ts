@@ -1,6 +1,7 @@
 import type {
   FieldElement,
   FormElement,
+  KanbanTemplateNode,
   ParsedFormView,
   ParsedKanbanView,
   ParsedListView,
@@ -129,15 +130,21 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
   const fields = Array.from(fieldEls).map((el) => el.getAttribute('name') ?? '')
 
   const defaultGroupBy = root.getAttribute('default_group_by') ?? undefined
+  const highlightColor = root.getAttribute('highlight_color') ?? undefined
   const template = root.querySelector('template')?.textContent ?? ''
   const qweb = root.querySelector('templates')?.textContent ?? ''
+
+  const rawTemplate = template || qweb
+  const templateNodes = rawTemplate ? parseKanbanTemplate(rawTemplate) : undefined
 
   return {
     type: 'kanban',
     string: root.getAttribute('string') ?? '',
     fields,
-    template: template || qweb,
+    template: rawTemplate,
+    templateNodes,
     defaultGroupBy,
+    highlightColor,
   }
 }
 
@@ -151,6 +158,141 @@ export function parseKanbanFields(templateXml: string): ViewField[] {
     invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
     readonly: el.hasAttribute('readonly'),
   }))
+}
+
+// ── Phase 4: QWeb template AST parser ─────────────────────────
+
+/** Parse kanban card template XML → KanbanTemplateNode[] AST */
+export function parseKanbanTemplate(templateXml: string): KanbanTemplateNode[] {
+  const doc = new DOMParser().parseFromString(templateXml, 'text/xml')
+  const root = doc.documentElement
+  const nodes = parseChildNodes(root)
+  return mergeConditionChains(nodes)
+}
+
+/** Recursively parse child nodes of an element */
+function parseChildNodes(el: Element): KanbanTemplateNode[] {
+  const result: KanbanTemplateNode[] = []
+  for (const child of el.childNodes) {
+    const node = parseNode(child)
+    if (node) result.push(node)
+  }
+  return result
+}
+
+const HTML_TAGS = new Set([
+  'div', 'span', 'a', 'p', 'strong', 'em', 'b', 'i', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'ul', 'ol', 'li', 'section', 'header', 'table', 'tr', 'td', 'th', 'br', 'hr', 'img', 't',
+])
+
+function parseNode(node: ChildNode): KanbanTemplateNode | null {
+  if (node.nodeType === 3) {
+    // Text node
+    const content = node.textContent?.replace(/\s+/g, ' ').trim()
+    if (!content) return null
+    return { type: 'text', content }
+  }
+  if (node.nodeType !== 1) return null
+
+  const el = node as Element
+  const tag = el.tagName.toLowerCase()
+
+  // <field> elements
+  if (tag === 'field') {
+    return {
+      type: 'field',
+      name: el.getAttribute('name') ?? '',
+      widget: el.getAttribute('widget') ?? undefined,
+      class: el.getAttribute('class') ?? undefined,
+    }
+  }
+
+  // Skip <widget> for now
+  if (tag === 'widget') return null
+
+  // QWeb directives
+  const tIf = el.getAttribute('t-if')
+  const tElif = el.getAttribute('t-elif')
+  const tElse = el.hasAttribute('t-else')
+  const tForeach = el.getAttribute('t-foreach')
+  const tAs = el.getAttribute('t-as')
+  const tOut = el.getAttribute('t-out')
+
+  if (tForeach && tAs) {
+    return {
+      type: 'loop',
+      foreach: tForeach,
+      as: tAs,
+      children: parseChildNodes(el),
+    }
+  }
+
+  if (tIf) {
+    return {
+      type: 'condition',
+      if: tIf,
+      children: parseChildNodes(el),
+    }
+  }
+
+  if (tElif) {
+    return {
+      type: 'condition',
+      elif: tElif,
+      children: parseChildNodes(el),
+    }
+  }
+
+  if (tElse) {
+    return {
+      type: 'condition',
+      else: '',
+      children: parseChildNodes(el),
+    }
+  }
+
+  if (tOut) {
+    return {
+      type: 'output',
+      expr: tOut,
+      widget: el.getAttribute('t-options-widget') ?? undefined,
+    }
+  }
+
+  // <footer> special handling
+  if (tag === 'footer') {
+    return { type: 'footer', children: parseChildNodes(el) }
+  }
+
+  // HTML wrapper elements
+  if (HTML_TAGS.has(tag)) {
+    return {
+      type: 'html',
+      tag,
+      class: el.getAttribute('class') ?? undefined,
+      children: parseChildNodes(el),
+    }
+  }
+
+  // Unknown: recurse into children (skip the wrapper)
+  return null
+}
+
+/** Merge adjacent condition nodes (t-elif/t-else) into a chain */
+function mergeConditionChains(nodes: KanbanTemplateNode[]): KanbanTemplateNode[] {
+  const result: KanbanTemplateNode[] = []
+  for (const node of nodes) {
+    if (node.type === 'condition' && (node.elif || node.else) && result.length > 0) {
+      const last = result[result.length - 1]
+      if (last?.type === 'condition' && last.if) {
+        // Append as elif/else to the previous if-condition
+        last.children.push(node)
+        continue
+      }
+    }
+    result.push(node)
+  }
+  return result
 }
 
 /** Parse Odoo <search> XML → ParsedSearchView */

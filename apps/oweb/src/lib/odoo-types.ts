@@ -107,8 +107,21 @@ export interface ParsedKanbanView {
   string: string
   fields: string[]
   template: string // raw template HTML
+  templateNodes?: KanbanTemplateNode[] // AST (Phase 4)
   defaultGroupBy?: string
+  highlightColor?: string // e.g. "color"
 }
+
+// ── Phase 4: QWeb template AST ───────────────────────────────
+
+export type KanbanTemplateNode =
+  | { type: 'field'; name: string; widget?: string; class?: string }
+  | { type: 'condition'; if?: string; elif?: string; else?: string; children: KanbanTemplateNode[] }
+  | { type: 'loop'; foreach: string; as: string; children: KanbanTemplateNode[] }
+  | { type: 'output'; expr: string; widget?: string }
+  | { type: 'html'; tag: string; class?: string; children: KanbanTemplateNode[] }
+  | { type: 'text'; content: string }
+  | { type: 'footer'; children: KanbanTemplateNode[] }
 
 export interface ParsedSearchView {
   type: 'search'

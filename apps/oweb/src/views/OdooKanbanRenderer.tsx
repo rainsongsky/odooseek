@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { callKw } from '../lib/api'
-import type { OdooFieldMeta, ViewField } from '../lib/odoo-types'
+import { evalCondition, getValue } from '../lib/expression-evaluator'
+import type { KanbanTemplateNode, OdooFieldMeta, ViewField } from '../lib/odoo-types'
 import { parseKanbanFields, parseKanbanXml } from '../lib/xml-parser'
 import { getFieldWidget } from './field-widgets'
 
@@ -26,7 +27,9 @@ export function OdooKanbanRenderer({
     () => (kanbanView.template ? parseKanbanFields(kanbanView.template) : []),
     [kanbanView.template],
   )
+  const templateNodes = kanbanView.templateNodes
   const groupBy = kanbanView.defaultGroupBy ?? 'stage_id'
+  const highlightColor = kanbanView.highlightColor
 
   // 1. Fetch all records
   const { data: records, isLoading } = useQuery({
@@ -113,7 +116,9 @@ export function OdooKanbanRenderer({
             count={colRecords.length}
             records={colRecords}
             cardFields={cardFields}
+            templateNodes={templateNodes}
             fields={fields}
+            highlightColor={highlightColor}
             onRecordClick={onRecordClick}
             onDrop={handleDragEnd}
           />
@@ -129,7 +134,9 @@ function KanbanColumn({
   count,
   records,
   cardFields,
+  templateNodes,
   fields,
+  highlightColor,
   onRecordClick,
   onDrop,
 }: {
@@ -138,7 +145,9 @@ function KanbanColumn({
   count: number
   records: Record<string, unknown>[]
   cardFields: ViewField[]
+  templateNodes?: KanbanTemplateNode[]
   fields: Record<string, OdooFieldMeta>
+  highlightColor?: string
   onRecordClick?: (id: number) => void
   onDrop: (recordId: number, newStageId: number) => void
 }) {
@@ -161,7 +170,9 @@ function KanbanColumn({
             key={record.id as number}
             record={record}
             cardFields={cardFields}
+            templateNodes={templateNodes}
             fields={fields}
+            highlightColor={highlightColor}
             onClick={onRecordClick}
           />
         ))}
@@ -173,40 +184,133 @@ function KanbanColumn({
 function KanbanCard({
   record,
   cardFields,
+  templateNodes,
   fields,
+  highlightColor,
   onClick,
 }: {
   record: Record<string, unknown>
   cardFields: ViewField[]
+  templateNodes?: KanbanTemplateNode[]
   fields: Record<string, OdooFieldMeta>
+  highlightColor?: string
   onClick?: (id: number) => void
 }) {
+  const colorIdx = highlightColor ? Number(record[highlightColor]) : 0
+  const borderColor = colorIdx > 0 ? KANBAN_COLORS[Math.min(colorIdx, KANBAN_COLORS.length - 1)] : undefined
+
   return (
     <div
       draggable
       onDragStart={(e) => e.dataTransfer.setData('recordId', String(record.id))}
       onClick={() => onClick?.(record.id as number)}
       className="cursor-pointer rounded-lg border border-border-subtle bg-surface p-3 transition-colors hover:border-border-default"
+      style={borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined}
     >
-      {cardFields.map((f) => {
-        const meta = fields[f.name]
-        if (!meta) return null
-        if (f.invisible && f.invisible >= 1) return null
-        const Widget = getFieldWidget({ type: 'field', name: f.name, widget: f.widget }, meta.type)
-        return (
-          <div key={f.name}>
-            <Widget
-              field={{ type: 'field', name: f.name, widget: f.widget }}
-              value={record[f.name]}
-              onChange={() => {}}
-              readOnly
-            />
-          </div>
-        )
-      })}
-      {cardFields.length === 0 && (
+      {templateNodes ? (
+        templateNodes.map((node, i) => <KanbanNode key={i} node={node} record={record} fields={fields} />)
+      ) : cardFields.length > 0 ? (
+        cardFields.map((f) => {
+          const meta = fields[f.name]
+          if (!meta) return null
+          if (f.invisible && f.invisible >= 1) return null
+          const Widget = getFieldWidget({ type: 'field', name: f.name, widget: f.widget }, meta.type)
+          return (
+            <div key={f.name}>
+              <Widget
+                field={{ type: 'field', name: f.name, widget: f.widget }}
+                value={record[f.name]}
+                onChange={() => {}}
+                readOnly
+              />
+            </div>
+          )
+        })
+      ) : (
         <span className="text-sm font-medium text-text-primary">{record.name as string}</span>
       )}
     </div>
   )
+}
+
+const KANBAN_COLORS = [
+  '', '#a9a9a9', '#2ecc71', '#3498db', '#e67e22', '#9b59b6',
+  '#1abc9c', '#f39c12', '#e74c3c', '#7f8c8d', '#0d6efd', '#d63384',
+]
+
+function KanbanNode({ node, record, fields }: {
+  node: KanbanTemplateNode
+  record: Record<string, unknown>
+  fields: Record<string, OdooFieldMeta>
+}) {
+  switch (node.type) {
+    case 'field': {
+      const meta = fields[node.name]
+      if (!meta) return null
+      const Widget = getFieldWidget({ type: 'field', name: node.name, widget: node.widget }, meta.type)
+      return (
+        <div className={node.class}>
+          <Widget
+            field={{ type: 'field', name: node.name, widget: node.widget }}
+            value={record[node.name]}
+            onChange={() => {}}
+            readOnly
+          />
+        </div>
+      )
+    }
+    case 'condition': {
+      if (node.if) {
+        if (!evalCondition(node.if, record)) {
+          // Try elif/else children
+          const alt = node.children.find((c) => c.type === 'condition')
+          if (alt) return <KanbanNode node={alt} record={record} fields={fields} />
+          return null
+        }
+        return <>{node.children.filter((c) => c.type !== 'condition').map((c, i) => <KanbanNode key={i} node={c} record={record} fields={fields} />)}</>
+      }
+      if (node.elif) {
+        if (evalCondition(node.elif, record)) {
+          return <>{node.children.filter((c) => c.type !== 'condition').map((c, i) => <KanbanNode key={i} node={c} record={record} fields={fields} />)}</>
+        }
+        // Try next elif/else
+        const next = node.children.find((c) => c.type === 'condition')
+        if (next) return <KanbanNode node={next} record={record} fields={fields} />
+        return null
+      }
+      // t-else — always true
+      return <>{node.children.filter((c) => c.type !== 'condition').map((c, i) => <KanbanNode key={i} node={c} record={record} fields={fields} />)}</>
+    }
+    case 'loop': {
+      const list = getValue(node.foreach, record)
+      if (!Array.isArray(list)) return null
+      return <>{list.map((item, i) => {
+        const loopRecord: Record<string, unknown> = { ...record }
+        if (Array.isArray(item)) {
+          loopRecord[node.as] = item[1] ?? item[0]
+        } else {
+          loopRecord[node.as] = item
+        }
+        return node.children.map((c, j) => <KanbanNode key={`${i}-${j}`} node={c} record={loopRecord} fields={fields} />)
+      })}</>
+    }
+    case 'output': {
+      const val = getValue(node.expr, record)
+      return <span>{val != null ? String(val) : ''}</span>
+    }
+    case 'html':
+      return React.createElement(
+        node.tag,
+        { className: node.class, key: undefined },
+        ...node.children.map((c, i) => <KanbanNode key={i} node={c} record={record} fields={fields} />),
+      )
+    case 'text':
+      return <>{node.content}</>
+    case 'footer':
+      return (
+        <div className="mt-2 border-t border-border-subtle pt-2 text-xs text-text-muted">
+          {node.children.map((c, i) => <KanbanNode key={i} node={c} record={record} fields={fields} />)}
+        </div>
+      )
+  }
 }
