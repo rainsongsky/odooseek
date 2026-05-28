@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
@@ -143,14 +143,17 @@ function MenuPage() {
     }
   }
 
-  // If children are loaded, navigate to first actionable child
-  if (expandedMenuId && childMenus && childActionModels) {
-    const childModel = resolveChildModel()
-    if (childModel) {
-      navigate({ to: '/web', search: { model: childModel } })
-      setExpandedMenuId(null)
+  // Navigate to first actionable child when children are loaded
+  useEffect(() => {
+    if (expandedMenuId && childMenus && childActionModels) {
+      const childModel = resolveChildModel()
+      if (childModel) {
+        navigate({ to: '/web', search: { model: childModel } })
+        setExpandedMenuId(null)
+      }
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedMenuId, childMenus, childActionModels])
 
   if (!isAuthenticated) {
     return (

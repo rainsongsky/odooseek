@@ -92,12 +92,12 @@ export function OdooListRenderer({ model, arch, fields, domain = [], onRowClick 
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border-subtle bg-surface/50">
-                  {visibleColumns.map((col) => {
+                  {visibleColumns.map((col, ci) => {
                     const meta = fields[col.name]
                     const label = col.string || meta?.string || col.name
                     return (
                       <th
-                        key={col.name}
+                        key={`h-${col.name}-${ci}`}
                         onClick={() => handleSort(col.name)}
                         className="cursor-pointer whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary transition-colors hover:text-text-primary"
                       >
@@ -117,9 +117,9 @@ export function OdooListRenderer({ model, arch, fields, domain = [], onRowClick 
                       onRowClick ? 'cursor-pointer' : ''
                     } ${i === data.length - 1 ? 'border-b-0' : ''}`}
                   >
-                    {visibleColumns.map((col) => (
+                    {visibleColumns.map((col, ci) => (
                       <td
-                        key={col.name}
+                        key={`d-${col.name}-${ci}`}
                         className="whitespace-nowrap px-4 py-2 text-sm text-text-primary"
                       >
                         {renderCell(record[col.name], fields[col.name])}

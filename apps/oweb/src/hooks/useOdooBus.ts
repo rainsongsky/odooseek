@@ -65,7 +65,9 @@ export function useOdooBus() {
       cancelled = true
       clearTimeout(timer)
       clearTimeout(reconnectRef.current)
-      wsRef.current?.close()
+      if (wsRef.current && wsRef.current.readyState !== WebSocket.CONNECTING) {
+        wsRef.current.close()
+      }
     }
   }, [queryClient])
 
