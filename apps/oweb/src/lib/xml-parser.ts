@@ -128,6 +128,7 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
   const fieldEls = root.querySelectorAll('field')
   const fields = Array.from(fieldEls).map((el) => el.getAttribute('name') ?? '')
 
+  const defaultGroupBy = root.getAttribute('default_group_by') ?? undefined
   const template = root.querySelector('template')?.textContent ?? ''
   const qweb = root.querySelector('templates')?.textContent ?? ''
 
@@ -136,7 +137,20 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
     string: root.getAttribute('string') ?? '',
     fields,
     template: template || qweb,
+    defaultGroupBy,
   }
+}
+
+/** Extract <field> elements from a kanban card template */
+export function parseKanbanFields(templateXml: string): ViewField[] {
+  const doc = new DOMParser().parseFromString(templateXml, 'text/xml')
+  return Array.from(doc.querySelectorAll('field')).map((el) => ({
+    name: el.getAttribute('name') ?? '',
+    string: el.getAttribute('string') ?? undefined,
+    widget: el.getAttribute('widget') ?? undefined,
+    invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
+    readonly: el.hasAttribute('readonly'),
+  }))
 }
 
 /** Parse Odoo <search> XML → ParsedSearchView */

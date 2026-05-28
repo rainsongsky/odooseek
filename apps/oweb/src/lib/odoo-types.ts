@@ -107,6 +107,7 @@ export interface ParsedKanbanView {
   string: string
   fields: string[]
   template: string // raw template HTML
+  defaultGroupBy?: string
 }
 
 export interface ParsedSearchView {

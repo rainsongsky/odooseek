@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { callKw } from '../lib/api'
 import { OdooFormRenderer } from './OdooFormRenderer'
+import { OdooKanbanRenderer } from './OdooKanbanRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
 import type { OdooFieldMeta } from '../lib/odoo-types'
 
@@ -80,6 +81,14 @@ export function OdooViewLoader({
         />
       )
     case 'kanban':
-      return <div className="p-6 text-sm text-text-muted">Kanban view coming soon</div>
+      return (
+        <OdooKanbanRenderer
+          model={model}
+          arch={activeView.arch}
+          fields={fields}
+          domain={domain}
+          onRecordClick={onRowClick}
+        />
+      )
   }
 }
