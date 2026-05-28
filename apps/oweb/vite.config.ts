@@ -17,14 +17,13 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api/odoo': {
-        target: 'http://localhost:8069',
+      '/api': {
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/odoo/, ''),
       },
-      '/web': {
-        target: 'http://localhost:8069',
-        changeOrigin: true,
+      '/ws': {
+        target: 'ws://localhost:3000',
+        ws: true,
       },
     },
   },
