@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'use-intl'
+import { Pagination } from '../components/Pagination'
 import { callKw, readGroup } from '../lib/api'
 import { getDecorationClass } from '../lib/expression-evaluator'
 import type { OdooFieldMeta, ReadGroupResult } from '../lib/odoo-types'
@@ -25,8 +26,8 @@ export function OdooListRenderer({
 }: ListRendererProps) {
   const t = useTranslations()
   const [page, setPage] = useState(0)
+  const [limit, setLimit] = useState(80)
   const [order, setOrder] = useState('')
-  const limit = 80
 
   const listView = useMemo(() => parseListXml(arch), [arch])
   const visibleColumns = listView.columns.filter((c) => !c.invisible || c.invisible < 1)
@@ -74,7 +75,6 @@ export function OdooListRenderer({
   }
 
   const data = (groupedData ?? []) as unknown[]
-  const hasMore = !groupByActive && data.length === limit
   const groupData = groupByActive ? (groupedData as ReadGroupResult[] | undefined) : null
 
   const { data: totalCount } = useQuery({
@@ -260,26 +260,17 @@ export function OdooListRenderer({
             </table>
           </div>
 
-          {!groupByActive && (
-            <div className="flex items-center justify-between px-1">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="rounded-lg border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {t('list.prev')}
-              </button>
-              <span className="text-xs text-text-muted">{t('list.page', { page: page + 1 })}</span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={!hasMore}
-                className="rounded-lg border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {t('list.next')}
-              </button>
-            </div>
+          {!groupByActive && totalCount != null && (
+            <Pagination
+              page={page}
+              total={totalCount}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit)
+                setPage(0)
+              }}
+            />
           )}
         </>
       )}
