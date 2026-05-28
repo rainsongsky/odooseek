@@ -1,8 +1,29 @@
+import { useQuery } from '@tanstack/react-query'
+import { callKw } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 
 function DashboardPage() {
   const { isAuthenticated, session } = useAuth()
+
+  // Resolve home_action_id (if any) to the user's home model
+  const { data: homeModel } = useQuery({
+    queryKey: ['odoo', 'home_action', session.home_action_id],
+    queryFn: async () => {
+      const homeActionId = Number(session.home_action_id)
+      if (!homeActionId || homeActionId === 0) return null
+      const actions = await callKw<Array<{ res_model: string }>>(
+        'ir.actions.act_window',
+        'read',
+        [[Number(homeActionId)], ['res_model']],
+      )
+      return actions[0]?.res_model ?? null
+    },
+    enabled: isAuthenticated && !!session.home_action_id,
+    staleTime: 15 * 60_000,
+  })
+
+  const model = homeModel ?? 'res.partner'
 
   if (!isAuthenticated) {
     return (
@@ -29,7 +50,7 @@ function DashboardPage() {
         <span className="text-xs text-text-muted">{session.db}</span>
       </div>
 
-      <OdooViewLoader model="res.partner" viewType="list" />
+      <OdooViewLoader model={model} viewType="list" />
     </div>
   )
 }

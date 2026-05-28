@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { useMemo } from 'react'
+import { callKw } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 interface MenuItem {
@@ -8,6 +10,17 @@ interface MenuItem {
   action?: string
   sequence: number
   web_icon?: string
+}
+
+function parseActionRef(
+  action: string | undefined,
+): { type: string; id: number } | null {
+  if (!action || action === 'False') return null
+  const parts = action.split(',')
+  const actionType = parts[0]?.trim()
+  const actionId = Number(parts[1]?.trim())
+  if (!actionType || !actionId) return null
+  return { type: actionType, id: actionId }
 }
 
 function MenuPage() {
@@ -25,6 +38,50 @@ function MenuPage() {
     retry: false,
     enabled: isAuthenticated,
   })
+
+  // Resolve action refs to model names (only for act_window actions)
+  const actWindowIds = useMemo(() => {
+    const ids: number[] = []
+    if (!menus) return ids
+    for (const menu of menus) {
+      const ref = parseActionRef(menu.action)
+      if (ref?.type === 'ir.actions.act_window') ids.push(ref.id)
+    }
+    return [...new Set(ids)]
+  }, [menus])
+
+  const { data: actionModels } = useQuery({
+    queryKey: ['odoo', 'actions', actWindowIds],
+    queryFn: () =>
+      callKw<Array<{ id: number; res_model: string }>>(
+        'ir.actions.act_window',
+        'read',
+        [actWindowIds, ['res_model']],
+      ),
+    enabled: actWindowIds.length > 0,
+    staleTime: 15 * 60_000,
+  })
+
+  // Build model map: action_id → res_model
+  const modelMap = useMemo(() => {
+    const map = new Map<number, string>()
+    if (actionModels) {
+      for (const action of actionModels) {
+        map.set(action.id, action.res_model)
+      }
+    }
+    return map
+  }, [actionModels])
+
+  // Map menu to resolved model
+  const resolveModel = (action: string | undefined): string | null => {
+    const ref = parseActionRef(action)
+    if (!ref) return null
+    if (ref.type === 'ir.actions.act_window') {
+      return modelMap.get(ref.id) ?? null
+    }
+    return null
+  }
 
   if (!isAuthenticated) {
     return (
@@ -66,7 +123,7 @@ function MenuPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {menus?.map((menu) => {
-          const model = extractModel(menu.action)
+          const model = resolveModel(menu.action)
           return (
             <button
               key={menu.id}
@@ -83,7 +140,7 @@ function MenuPage() {
               </div>
               <span className="text-sm font-medium text-text-primary">{menu.name}</span>
               <span className="text-[10px] text-text-muted">
-                {model ? `→ ${model}` : 'Menu group'}
+                {model ?? 'Menu group'}
               </span>
             </button>
           )
@@ -97,16 +154,6 @@ function MenuPage() {
       )}
     </div>
   )
-}
-
-function extractModel(action: string | undefined): string | null {
-  if (!action || action === 'False') return null
-  const parts = action.split(',')
-  const actionType = parts[0]?.trim()
-  if (actionType === 'ir.actions.act_window') {
-    return 'res.partner'
-  }
-  return null
 }
 
 import { createFileRoute } from '@tanstack/react-router'
