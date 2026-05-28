@@ -131,17 +131,26 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
 
   const defaultGroupBy = root.getAttribute('default_group_by') ?? undefined
   const highlightColor = root.getAttribute('highlight_color') ?? undefined
-  const template = root.querySelector('template')?.textContent ?? ''
-  const qweb = root.querySelector('templates')?.textContent ?? ''
 
-  const rawTemplate = template || qweb
+  // Use XMLSerializer to preserve inner XML (textContent strips tags!)
+  const serializer = new XMLSerializer()
+  const templateEl = root.querySelector('template')
+  const templatesEl = root.querySelector('templates')
+  const rawTemplate = templateEl
+    ? Array.from(templateEl.children).map((c) => serializer.serializeToString(c)).join('')
+    : templatesEl
+      ? serializer.serializeToString(templatesEl)
+      : ''
+  const templateText = templateEl?.textContent ?? ''
+  const qwebText = templatesEl?.textContent ?? ''
+
   const templateNodes = rawTemplate ? parseKanbanTemplate(rawTemplate) : undefined
 
   return {
     type: 'kanban',
     string: root.getAttribute('string') ?? '',
     fields,
-    template: rawTemplate,
+    template: templateText || qwebText,
     templateNodes,
     defaultGroupBy,
     highlightColor,
