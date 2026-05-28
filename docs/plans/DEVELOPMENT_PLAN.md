@@ -11,10 +11,10 @@
 | 阶段 | 代号 | 工期 | 目标 |
 |------|------|------|------|
 | **Phase 0** | 地基 | ✅ 已完成 | Docker 基础设施 + oweb 脚手架 |
-| **Phase 1** | 网关 | 2-3 周 | odoo-web-server Rust BFF 核心 |
-| **Phase 2** | 视界 | 3-4 周 | 前端扩展：路由守卫、列表/表单、Bus 实时 |
+| **Phase 1** | 网关 | ✅ 已完成 | odoo-web-server Rust BFF 核心 |
+| **Phase 2** | 视界 | ✅ 已完成 | 路由守卫、视图引擎、XML 解析、WebSocket 面板、动态菜单 |
 | **Phase 3** | 疆域 | 8-12 周 | 业务模块：CRM → 销售 → 库存 → 会计 |
-| **Phase 4** | 磐石 | 2-3 周 | 生产就绪：测试、文档、CI/CD、k8s |
+| **Phase 4** | 磐石 | 2-3 周 | 生产就绪：i18n、测试、文档、CI/CD、k8s |
 
 ---
 
@@ -315,6 +315,29 @@ server:
 - 高级搜索 (domain 数组编辑)
 - 与 OdooListView 联动
 
+#### 2.6 国际化 (i18n)
+
+**参考**：`@better-i18n/use-intl` + [status.better-i18n.com](https://github.com/better-i18n/status.better-i18n.com)
+
+**产出**：
+- `apps/oweb/src/lib/i18n.ts` — 语言检测 + 翻译函数
+- `apps/oweb/src/lib/locales/{en,zh,...}.json` — UI 文案翻译文件
+
+**设计**：
+- 语言来源：`session_info.user_context.lang`（Odoo 用户设置）
+- 字段标签：Odoo `field.string` 已随语言返回翻译，无需额外处理
+- 前端 UI 文案：路由守卫 "Not authenticated"、列表 "No records found"、表单标签等硬编码英文文本 → 通过 `useIntl()` 翻译
+
+**技术方案**：
+```
+session_info.user_context.lang (zh_CN / en_US / ...)
+  ↓
+useIntl() 选择对应语言包
+  ↓
+t('dashboard.title') → "仪表盘" / "Dashboard"
+t('list.noRecords')  → "无记录" / "No records found"
+```
+
 ---
 
 ## 五、Phase 3：疆域 — 业务模块
@@ -504,15 +527,24 @@ Phase 4 (磐石)
 ## 九、当前进度
 
 ```
-Phase 0 ████████████████████ 100% (2026-05-28)
-Phase 1 ░░░░░░░░░░░░░░░░░░░░   0%
-Phase 2 ░░░░░░░░░░░░░░░░░░░░   0%
+Phase 0 ████████████████████ 100% ✅ (2026-05-28)
+Phase 1 ████████████████████ 100% ✅ (2026-05-28)
+Phase 2 ████████████████████ 100% ✅ (2026-05-28)
+  ├── #7  路由守卫 ✅
+  ├── #11 OdooListView ✅  
+  ├── #12 SearchBar ✅
+  ├── #13 MenuPage 动态导航 ✅
+  ├── #14 XML 视图解析器 ✅
+  ├── #15 OdooListRenderer ✅
+  ├── #16 OdooFormRenderer ✅
+  ├── #17 WebSocket EventPanel ✅
+  └── 2.6 i18n 国际化 ⏳
 Phase 3 ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 4 ░░░░░░░░░░░░░░░░░░░░   0%
 ```
 
 ---
 
-**文档版本**: 1.1  
-**创建日期**: 2026-05-28  
+**文档版本**: 1.2  
+**更新日期**: 2026-05-28  
 **维护团队**: OdooSeek
