@@ -33,3 +33,20 @@ export function DashboardPage() {
     </div>
   )
 }
+
+import { createFileRoute, redirect } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/dashboard')({
+  component: DashboardPage,
+  beforeLoad: async () => {
+    try {
+      const res = await fetch('/api/session', { credentials: 'include' })
+      if (!res.ok) throw redirect({ to: '/login' })
+      const data = await res.json()
+      if (!data.authenticated) throw redirect({ to: '/login' })
+    } catch (e) {
+      if (e instanceof Response || e instanceof redirect) throw e
+      throw redirect({ to: '/login' })
+    }
+  },
+})

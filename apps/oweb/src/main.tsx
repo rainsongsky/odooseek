@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AuthProvider } from './lib/auth'
-import { router } from './router'
 import { ThemeProvider } from './themes'
+import { routeTree } from './routeTree.gen'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -16,6 +16,14 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+const router = createRouter({ routeTree })
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

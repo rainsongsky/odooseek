@@ -23,3 +23,10 @@ export function WebPage() {
     </div>
   )
 }
+
+import { createFileRoute } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/web')({
+  component: WebPage,
+  validateSearch: (search: Record<string, unknown>) => search,
+})

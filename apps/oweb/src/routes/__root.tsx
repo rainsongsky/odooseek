@@ -1,7 +1,7 @@
-import { Outlet } from '@tanstack/react-router'
+import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { Navbar } from '../components/Navbar'
 
-export function RootLayout() {
+function RootLayout() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-root">
       <Navbar />
@@ -11,3 +11,7 @@ export function RootLayout() {
     </div>
   )
 }
+
+export const Route = createRootRoute({
+  component: RootLayout,
+})
