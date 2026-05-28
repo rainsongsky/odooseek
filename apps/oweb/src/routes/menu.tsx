@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
@@ -26,6 +26,7 @@ function parseActionRef(
 function MenuPage() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
+  const [expandedMenuId, setExpandedMenuId] = useState<number | null>(null)
 
   const { data: menus, isLoading, error } = useQuery({
     queryKey: ['odoo', 'menu'],
@@ -39,7 +40,7 @@ function MenuPage() {
     enabled: isAuthenticated,
   })
 
-  // Resolve action refs to model names (only for act_window actions)
+  // Resolve action refs to model names
   const actWindowIds = useMemo(() => {
     const ids: number[] = []
     if (!menus) return ids
@@ -62,7 +63,6 @@ function MenuPage() {
     staleTime: 15 * 60_000,
   })
 
-  // Build model map: action_id → res_model
   const modelMap = useMemo(() => {
     const map = new Map<number, string>()
     if (actionModels) {
@@ -73,7 +73,6 @@ function MenuPage() {
     return map
   }, [actionModels])
 
-  // Map menu to resolved model
   const resolveModel = (action: string | undefined): string | null => {
     const ref = parseActionRef(action)
     if (!ref) return null
@@ -81,6 +80,76 @@ function MenuPage() {
       return modelMap.get(ref.id) ?? null
     }
     return null
+  }
+
+  // Fetch children of expanded menu
+  const { data: childMenus } = useQuery({
+    queryKey: ['odoo', 'menu_children', expandedMenuId],
+    queryFn: () =>
+      callKw<Array<MenuItem & { action?: string }>>(
+        'ir.ui.menu',
+        'search_read',
+        [[['parent_id', '=', expandedMenuId]], ['id', 'name', 'action', 'sequence']],
+        { order: 'sequence' },
+      ),
+    enabled: !!expandedMenuId,
+  })
+
+  // Resolve child menu actions
+  const childActIds = useMemo(() => {
+    const ids: number[] = []
+    if (!childMenus) return ids
+    for (const menu of childMenus) {
+      const ref = parseActionRef(menu.action)
+      if (ref?.type === 'ir.actions.act_window') ids.push(ref.id)
+    }
+    return [...new Set(ids)]
+  }, [childMenus])
+
+  const { data: childActionModels } = useQuery({
+    queryKey: ['odoo', 'actions', childActIds],
+    queryFn: () =>
+      callKw<Array<{ id: number; res_model: string }>>(
+        'ir.actions.act_window',
+        'read',
+        [childActIds, ['res_model']],
+      ),
+    enabled: childActIds.length > 0,
+  })
+
+  // Find first actionable model from child menus
+  const resolveChildModel = (): string | null => {
+    if (!childMenus || !childActionModels) return null
+    const childModelMap = new Map<number, string>()
+    for (const action of childActionModels) {
+      childModelMap.set(action.id, action.res_model)
+    }
+    for (const child of childMenus) {
+      const ref = parseActionRef(child.action)
+      if (ref?.type === 'ir.actions.act_window' && childModelMap.has(ref.id)) {
+        return childModelMap.get(ref.id) ?? null
+      }
+    }
+    return null
+  }
+
+  const handleMenuClick = (menu: MenuItem) => {
+    const model = resolveModel(menu.action)
+    if (model) {
+      navigate({ to: '/web', search: { model } })
+    } else {
+      // No direct action — expand children to find first actionable item
+      setExpandedMenuId(expandedMenuId === menu.id ? null : menu.id)
+    }
+  }
+
+  // If children are loaded, navigate to first actionable child
+  if (expandedMenuId && childMenus && childActionModels) {
+    const childModel = resolveChildModel()
+    if (childModel) {
+      navigate({ to: '/web', search: { model: childModel } })
+      setExpandedMenuId(null)
+    }
   }
 
   if (!isAuthenticated) {
@@ -128,9 +197,7 @@ function MenuPage() {
             <button
               key={menu.id}
               type="button"
-              onClick={() => {
-                if (model) navigate({ to: '/web', search: { model } })
-              }}
+              onClick={() => handleMenuClick(menu)}
               className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 text-left transition-colors ${
                 model ? 'hover:border-border-default hover:bg-surface' : ''
               }`}
@@ -140,7 +207,7 @@ function MenuPage() {
               </div>
               <span className="text-sm font-medium text-text-primary">{menu.name}</span>
               <span className="text-[10px] text-text-muted">
-                {model ?? 'Menu group'}
+                {model ?? (expandedMenuId === menu.id ? 'Loading...' : 'Menu group')}
               </span>
             </button>
           )
