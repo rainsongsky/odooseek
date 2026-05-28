@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
-import type { OdooFieldMeta } from './types'
-import { parseListXml } from './xml-parser'
+import type { OdooFieldMeta } from '../lib/odoo-types'
+import { parseListXml } from '../lib/xml-parser'
 
 interface ListRendererProps {
   model: string

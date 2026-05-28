@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { TYPE_WIDGETS, getFieldWidget } from '../field-widgets'
-import type { FieldElement } from '../types'
+import type { FieldElement } from '../../lib/odoo-types'
 
 const baseField: FieldElement = {
   type: 'field',

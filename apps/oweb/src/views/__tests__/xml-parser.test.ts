@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parseListXml, parseFormXml } from '../xml-parser'
+import { parseListXml, parseFormXml } from '../../lib/xml-parser'
 
 describe('parseListXml', () => {
   test('parses simple list view with fields', () => {

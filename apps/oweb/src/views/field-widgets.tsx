@@ -1,4 +1,4 @@
-import type { FieldElement } from './types'
+import type { FieldElement } from '../lib/odoo-types'
 
 export interface FieldWidgetProps {
   field: FieldElement

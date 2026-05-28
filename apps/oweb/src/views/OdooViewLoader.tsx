@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { callKw } from '../lib/api'
 import { OdooFormRenderer } from './OdooFormRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
-import type { OdooFieldMeta } from './types'
+import type { OdooFieldMeta } from '../lib/odoo-types'
 
 interface ViewLoaderProps {
   model: string

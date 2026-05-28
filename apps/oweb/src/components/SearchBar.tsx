@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { ViewField } from '../views/types'
+import type { ViewField } from '../lib/odoo-types'
 
 interface SearchBarProps {
   onSearch: (domain: unknown[], keyword: string) => void

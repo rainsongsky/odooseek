@@ -7,7 +7,7 @@ import type {
   ParsedSearchView,
   SearchFilter,
   ViewField,
-} from './types'
+} from './odoo-types'
 
 function parseFieldElement(el: Element): FieldElement {
   return {

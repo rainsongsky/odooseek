@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
-import { parseFormXml } from './xml-parser'
+import { parseFormXml } from '../lib/xml-parser'
 import { getFieldWidget } from './field-widgets'
-import type { FormElement, OdooFieldMeta } from './types'
+import type { FormElement, OdooFieldMeta } from '../lib/odoo-types'
 
 interface FormRendererProps {
   model: string
