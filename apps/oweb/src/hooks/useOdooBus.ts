@@ -25,8 +25,11 @@ export function useOdooBus() {
 
     function connect() {
       if (cancelled) return
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const ws = new WebSocket(`${protocol}//${location.host}/ws/events`)
+      // Dev: Vite proxy may not forward WS correctly, use direct URL
+      const wsUrl = import.meta.env.DEV
+        ? 'ws://localhost:3000/ws/events'
+        : `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/events`
+      const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 
       ws.onopen = () => {
