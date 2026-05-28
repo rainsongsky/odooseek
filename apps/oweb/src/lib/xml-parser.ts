@@ -126,8 +126,9 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
   const root = doc.documentElement
 
-  const fieldEls = root.querySelectorAll('field')
-  const fields = Array.from(fieldEls).map((el) => el.getAttribute('name') ?? '')
+  // Only direct child <field> elements (not those inside <templates>)
+  const fieldEls = Array.from(root.children).filter((el) => el.tagName === 'field')
+  const fields = fieldEls.map((el) => el.getAttribute('name') ?? '')
 
   const defaultGroupBy = root.getAttribute('default_group_by') ?? undefined
   const highlightColor = root.getAttribute('highlight_color') ?? undefined

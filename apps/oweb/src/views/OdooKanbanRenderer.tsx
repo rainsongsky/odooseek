@@ -31,11 +31,16 @@ export function OdooKanbanRenderer({
   const groupBy = kanbanView.defaultGroupBy ?? 'stage_id'
   const highlightColor = kanbanView.highlightColor
 
+  // Ensure groupBy field is always included in search_read
+  const searchFields = kanbanView.fields.includes(groupBy)
+    ? kanbanView.fields
+    : [...kanbanView.fields, groupBy]
+
   // 1. Fetch all records
   const { data: records, isLoading } = useQuery({
     queryKey: ['odoo', 'kanban', model, domain, groupBy],
     queryFn: () =>
-      callKw<Array<Record<string, unknown>>>(model, 'search_read', [domain, kanbanView.fields], {
+      callKw<Array<Record<string, unknown>>>(model, 'search_read', [domain, searchFields], {
         limit: 200,
       }),
   })
@@ -207,7 +212,7 @@ function KanbanCard({
       className="cursor-pointer rounded-lg border border-border-subtle bg-surface p-3 transition-colors hover:border-border-default"
       style={borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined}
     >
-      {templateNodes ? (
+      {templateNodes && templateNodes.length > 0 ? (
         templateNodes.map((node, i) => <KanbanNode key={i} node={node} record={record} fields={fields} />)
       ) : cardFields.length > 0 ? (
         cardFields.map((f) => {
