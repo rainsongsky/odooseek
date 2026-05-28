@@ -166,23 +166,35 @@ export function parseKanbanFields(templateXml: string): ViewField[] {
 export function parseKanbanTemplate(templateXml: string): KanbanTemplateNode[] {
   const doc = new DOMParser().parseFromString(templateXml, 'text/xml')
   const root = doc.documentElement
-  const nodes = parseChildNodes(root)
-  return mergeConditionChains(nodes)
+  // <templates> or <template> is just a wrapper — parse its children directly
+  return mergeConditionChains(parseChildNodes(root))
 }
 
 /** Recursively parse child nodes of an element */
 function parseChildNodes(el: Element): KanbanTemplateNode[] {
   const result: KanbanTemplateNode[] = []
   for (const child of el.childNodes) {
-    const node = parseNode(child)
-    if (node) result.push(node)
+    if (child.nodeName === 't' && !childIsQwebDirective(child as Element)) {
+      // Transparent <t> container — flatten children inline
+      for (const grandchild of parseChildNodes(child as Element)) {
+        result.push(grandchild)
+      }
+    } else {
+      const node = parseNode(child)
+      if (node) result.push(node)
+    }
   }
   return result
 }
 
+function childIsQwebDirective(el: Element): boolean {
+  return el.hasAttribute('t-if') || el.hasAttribute('t-elif') || el.hasAttribute('t-else') ||
+    el.hasAttribute('t-foreach') || el.hasAttribute('t-out')
+}
+
 const HTML_TAGS = new Set([
   'div', 'span', 'a', 'p', 'strong', 'em', 'b', 'i', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'ul', 'ol', 'li', 'section', 'header', 'table', 'tr', 'td', 'th', 'br', 'hr', 'img', 't',
+  'ul', 'ol', 'li', 'section', 'header', 'table', 'tr', 'td', 'th', 'br', 'hr', 'img',
 ])
 
 function parseNode(node: ChildNode): KanbanTemplateNode | null {

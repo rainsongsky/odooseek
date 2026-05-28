@@ -12,12 +12,6 @@ function resolveValue(expr: string, record: Record<string, unknown>): unknown {
 
 /** Evaluate a QWeb condition expression against a record */
 export function evalCondition(expr: string, record: Record<string, unknown>): boolean {
-  // Handle: "record.field"
-  if (expr.startsWith('record.')) {
-    const val = resolveValue(expr, record)
-    return !!val
-  }
-
   // Handle: "!record.field"
   const notMatch = expr.match(/^!\s*record\.(\w+)$/)
   if (notMatch) {
@@ -32,7 +26,9 @@ export function evalCondition(expr: string, record: Record<string, unknown>): bo
   const orParts = splitExpr(expr, '||')
   if (orParts.length > 1) return orParts.some((p) => evalCondition(p.trim(), record))
 
-  return !!resolveValue(expr, record)
+  // Handle: simple "record.field" or "record.field[0]"
+  const val = resolveValue(expr, record)
+  return !!val
 }
 
 function splitExpr(expr: string, sep: string): string[] {
