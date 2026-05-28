@@ -5,7 +5,12 @@ interface JsonRpcResponse<T> {
   error?: {
     code: number
     message: string
-    data?: unknown
+    data?: {
+      name?: string
+      message?: string
+      debug?: string
+      fault_code?: number
+    }
   }
 }
 
@@ -27,7 +32,9 @@ async function jsonRpc<T>(url: string, params: Record<string, unknown>): Promise
   const data: JsonRpcResponse<T> = await res.json()
 
   if (data.error) {
-    throw new Error(`Odoo RPC Error: ${data.error.message} (code: ${data.error.code})`)
+    const err = data.error
+    const detail = err.data?.message || err.data?.debug?.split('\n')[0] || err.message
+    throw new Error(`Odoo Error: ${detail} (code: ${err.code})`)
   }
 
   return data.result as T

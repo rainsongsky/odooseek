@@ -101,7 +101,7 @@ describe('api', () => {
     })
     globalThis.fetch = mockFetch
 
-    await expect(callKw('model', 'method', [])).rejects.toThrow('Odoo RPC Error')
+    await expect(callKw('model', 'method', [])).rejects.toThrow('Odoo Error')
   })
 
   test('throws on HTTP error', async () => {
