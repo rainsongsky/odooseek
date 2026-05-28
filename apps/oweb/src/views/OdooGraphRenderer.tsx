@@ -46,7 +46,7 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
 
   const aggregateFields = graphView.measures
     .filter((m) => m.name !== '__count')
-    .map((m) => `${m.operator ?? 'sum'}(${m.name})`)
+    .map((m) => m.name)
   if (aggregateFields.length === 0) aggregateFields.push('__count')
 
   const fieldsToQuery = [...groupByFields, ...aggregateFields]
