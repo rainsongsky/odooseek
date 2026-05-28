@@ -178,9 +178,9 @@ export function SearchBar({
           </span>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 px-2 py-1">
-            {activeFilterFacets.map((f) => (
+            {activeFilterFacets.map((f, i) => (
               <span
-                key={`facet-f-${f.name || f.string}`}
+                key={`facet-f-${i}`}
                 className="inline-flex items-center gap-1 rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent"
               >
                 <span className="max-w-[8rem] truncate">{f.string}</span>
@@ -193,11 +193,11 @@ export function SearchBar({
                 </button>
               </span>
             ))}
-            {activeGroupByFacets.map((gb) => {
+            {activeGroupByFacets.map((gb, i) => {
               const ref = gb.interval ? `${gb.fieldName}:${gb.interval}` : gb.fieldName
               return (
                 <span
-                  key={`facet-gb-${ref}`}
+                  key={`facet-gb-${i}`}
                   className="inline-flex items-center gap-1 rounded bg-emerald-600/10 px-1.5 py-0.5 text-xs text-emerald-600"
                 >
                   <span className="max-w-[8rem] truncate">{gb.string}</span>
@@ -258,11 +258,11 @@ export function SearchBar({
                             </svg>
                             Filters
                           </div>
-                          {domainFilters.map((f) => {
+                          {domainFilters.map((f, i) => {
                             const key = f.name || f.string
                             return (
                               <label
-                                key={`menu-f-${key}`}
+                                key={`menu-f-${i}`}
                                 className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-text-primary transition-colors hover:bg-hover"
                               >
                                 <input
@@ -300,13 +300,13 @@ export function SearchBar({
                             </svg>
                             Group By
                           </div>
-                          {groupByFilters.map((gb) => {
+                          {groupByFilters.map((gb, i) => {
                             const ref = gb.interval
                               ? `${gb.fieldName}:${gb.interval}`
                               : gb.fieldName
                             return (
                               <label
-                                key={`menu-gb-${gb.name || gb.string}`}
+                                key={`menu-gb-${i}`}
                                 className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-text-primary transition-colors hover:bg-hover"
                               >
                                 <input
