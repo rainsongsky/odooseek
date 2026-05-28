@@ -17,7 +17,7 @@
 | **Phase 4** | 精工 | ✅ 已完成 (5/28) | 看板 QWeb 语义支持 + QWeb 引擎分析 |
 | **Phase 5** | 交互 | ✅ 已完成 (5/28) | 编辑模式、搜索/过滤、分组、装饰、图标移植 |
 | **Phase 6** | 磐石 | ✅ 已完成 (5/29) | 测试 143 个、Rust 后端测试、组件测试 |
-| **Phase 7** | 精进 | 📋 规划中 | 表单 Header/Action 按钮、Sheet 布局、分页器、Binary Widget、Graph 视图、m2m 标签选择器 |
+| **Phase 7** | 精进 | ✅ 已完成 (5/29) | 表单 Header/Action 按钮、Sheet 布局、分页器、Binary Widget、Graph 视图、m2m 标签选择器 |
 
 ---
 
@@ -183,7 +183,54 @@
 
 ---
 
-## 九、依赖关系图
+## 九、Phase 7：精进 — UI 完善 + 业务闭环 ✅ 已完成
+
+> 详细技术方案：`PHASE7_TECHNICAL_DESIGN.md`
+
+### 成果
+
+| 任务 | Issue | 产出 |
+|------|:-----:|------|
+| 表单 Header + Action 按钮 + Sheet 布局 | #45 | xml-parser 解析 `<header>`/`<button>`，FormRenderer 布局重构，Action button 执行 (object/action/edit) |
+| Sheet 居中布局 | #37 | Header 区域分离 (statusbar + buttons) vs Sheet 内容区 (max-w-860px) |
+| 分页器改进 | #39, #46 | Pagination 组件 (40/80/200/500 页大小, « ‹ Page X of Y › ») |
+| Binary/Image Widget | #46 | 文件上传/下载/图片预览，修复 binary 错误映射 |
+| Graph 图表视图 | #46 | recharts 集成 (BarChart/LineChart/PieChart)，parseGraphXml |
+| m2m 标签选择器 | #47 | 搜索+添加/移除标签，Odoo ORM 命令格式 |
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| `src/components/Pagination.tsx` | 分页器组件 |
+| `src/views/OdooGraphRenderer.tsx` | Graph 图表视图 |
+| `src/components/__tests__/Pagination.test.tsx` | 分页器测试 |
+| `src/views/__tests__/OdooGraphRenderer.test.tsx` | Graph 测试 |
+
+### 测试统计
+
+| 阶段 | 测试数 |
+|------|:------:|
+| Phase 6 完成时 | 143 |
+| Phase 7 完成后 | **157** |
+| 新增 | +14 |
+
+---
+
+## 十、Phase 8：扩展 — 深度交互 📋 规划中
+
+| # | 任务 | 优先级 | 说明 |
+|---|------|:------:|------|
+| 8.1 | one2many 内联列表 | P0 | 嵌套视图解析，内联表格 |
+| 8.2 | 列表内联编辑 | P1 | `editable` 属性已解析但未使用 |
+| 8.3 | Calendar 日历视图 | P1 | 需日历库 |
+| 8.4 | ControlPanel 工具栏 | P1 | toolbar 数据已获取但未使用 |
+| 8.5 | Activity 日程管理 | P2 | mail.activity 模型 |
+| 8.6 | Chatter 消息线程 | P2 | 重量级功能 |
+
+---
+
+## 十一、依赖关系图
 
 ```
 Phase 0 ✅ (Docker + 脚手架)
@@ -198,12 +245,16 @@ Phase 4 📋 (Kanban QWeb tree rendering, highlight_color)
     │
 Phase 5 📋 (Edit mode, search, pagination, many2one dropdown)
     │
-Phase 6 📋 (Tests, Storybook, deployment, E2E)
+Phase 6 ✅ (Tests 143, Storybook, deployment)
+    │
+Phase 7 ✅ (Header/Action buttons, Sheet, Pagination, Binary, Graph, m2m)
+    │
+Phase 8 📋 (o2m inline, list editing, Calendar, Chatter)
 ```
 
 ---
 
-## 十、当前进度
+## 十二、当前进度
 
 ```
 Phase 0 ████████████████████ 100% ✅ (2026-05-28)
@@ -213,12 +264,13 @@ Phase 3 ████████████████████ 100% ✅ (2
 Phase 4 ████████████████████ 100% ✅ (2026-05-28)
 Phase 5 ████████████████████ 100% ✅ (2026-05-28)
 Phase 6 ████████████████████ 100% ✅ (2026-05-29)
-Phase 7 ░░░░░░░░░░░░░░░░░░░░   0% 📋
+Phase 7 ████████████████████ 100% ✅ (2026-05-29)
+Phase 8 ░░░░░░░░░░░░░░░░░░░░   0% 📋
 ```
 
 ---
 
-## 十一、文档索引
+## 十三、文档索引
 
 | 文档 | 路径 | 版本 |
 |------|------|------|
@@ -230,10 +282,10 @@ Phase 7 ░░░░░░░░░░░░░░░░░░░░   0% 📋
 | Phase 2 设计 | `docs/plans/PHASE2_TECHNICAL_DESIGN.md` | — |
 | Phase 3 设计 | `docs/plans/PHASE3_TECHNICAL_DESIGN.md` | v3.0 |
 | Phase 4 设计 | `docs/plans/PHASE4_TECHNICAL_DESIGN.md` | v1.0 |
-| 开发工作流 | `docs/training/DEVELOPMENT_WORKFLOW.md` | — |
+| Phase 7 设计 | `docs/plans/PHASE7_TECHNICAL_DESIGN.md` | v1.0 |
 
 ---
 
-**文档版本**: 4.0 (Phase 6 完成)  
+**文档版本**: 5.0 (Phase 7 完成)
 **更新日期**: 2026-05-29  
 **维护团队**: OdooSeek
