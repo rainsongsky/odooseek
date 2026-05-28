@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest'
+/// <reference types="vitest" />
+import { describe, expect, test, vi } from 'vitest'
 import { callKw, searchRead, fieldsGet, read } from '../api'
 
 describe('api', () => {
@@ -7,7 +8,7 @@ describe('api', () => {
       ok: true,
       json: () => Promise.resolve({ result: [{ id: 1, name: 'Test' }] }),
     })
-    global.fetch = mockFetch
+    globalThis.fetch = mockFetch
 
     const result = await searchRead('res.partner', [], ['id', 'name'])
     expect(result).toEqual([{ id: 1, name: 'Test' }])
@@ -24,7 +25,7 @@ describe('api', () => {
       ok: true,
       json: () => Promise.resolve({ result: [{ id: 1 }] }),
     })
-    global.fetch = mockFetch
+    globalThis.fetch = mockFetch
 
     await read('res.partner', [1, 2], ['id'])
     const body = JSON.parse(mockFetch.mock.calls[0][1].body)
@@ -37,7 +38,7 @@ describe('api', () => {
       ok: true,
       json: () => Promise.resolve({ result: 'ok' }),
     })
-    global.fetch = mockFetch
+    globalThis.fetch = mockFetch
 
     await callKw('ir.model', 'search_read', [[], ['name']])
     expect(mockFetch.mock.calls[0][1].credentials).toBe('include')
@@ -48,7 +49,7 @@ describe('api', () => {
       ok: true,
       json: () => Promise.resolve({ result: {} }),
     })
-    global.fetch = mockFetch
+    globalThis.fetch = mockFetch
 
     await fieldsGet('res.partner', [], ['string', 'type'])
     const body = JSON.parse(mockFetch.mock.calls[0][1].body)

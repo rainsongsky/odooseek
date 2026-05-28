@@ -34,6 +34,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return (
     <BetterI18nProvider
       key={locale}
+      project="HL8-ORG/odooseek"
       locale={locale}
       messages={MESSAGES[locale]}
     >
