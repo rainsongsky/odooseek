@@ -10,6 +10,7 @@ interface ViewLoaderProps {
   viewId?: number
   domain?: unknown[]
   recordId?: number
+  onRowClick?: (recordId: number) => void
 }
 
 export function OdooViewLoader({
@@ -18,6 +19,7 @@ export function OdooViewLoader({
   viewId,
   domain,
   recordId: _recordId,
+  onRowClick,
 }: ViewLoaderProps) {
   const viewsToLoad: [number | false, string][] = [[viewId ?? false, viewType]]
 
@@ -66,7 +68,7 @@ export function OdooViewLoader({
   switch (viewType) {
     case 'list':
       return (
-        <OdooListRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+        <OdooListRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} onRowClick={onRowClick} />
       )
     case 'form':
       return (

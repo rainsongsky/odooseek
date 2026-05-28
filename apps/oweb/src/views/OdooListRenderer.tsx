@@ -9,9 +9,10 @@ interface ListRendererProps {
   arch: string
   fields: Record<string, OdooFieldMeta>
   domain?: unknown[]
+  onRowClick?: (recordId: number) => void
 }
 
-export function OdooListRenderer({ model, arch, fields, domain = [] }: ListRendererProps) {
+export function OdooListRenderer({ model, arch, fields, domain = [], onRowClick }: ListRendererProps) {
   const [page, setPage] = useState(0)
   const [order, setOrder] = useState('')
   const limit = 80
@@ -109,9 +110,10 @@ export function OdooListRenderer({ model, arch, fields, domain = [] }: ListRende
                 {data.map((record, i) => (
                   <tr
                     key={record.id as number}
+                    onClick={() => onRowClick?.(record.id as number)}
                     className={`border-b border-border-subtle transition-colors hover:bg-hover/50 ${
-                      i === data.length - 1 ? 'border-b-0' : ''
-                    }`}
+                      onRowClick ? 'cursor-pointer' : ''
+                    } ${i === data.length - 1 ? 'border-b-0' : ''}`}
                   >
                     {visibleColumns.map((col) => (
                       <td
