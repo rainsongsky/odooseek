@@ -1,6 +1,7 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { BarChart3, Home, LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
+import { useTranslations } from '@better-i18n/use-intl'
 import { useAuth } from '../lib/auth'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -11,38 +12,31 @@ interface NavItem {
   shortcut: string
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Home', icon: Home, shortcut: 'H' },
-  { to: '/menu', label: 'Apps', icon: Menu, shortcut: 'A' },
-  { to: '/dashboard', label: 'Dashboard', icon: BarChart3, shortcut: 'D' },
-]
-
 export function Navbar() {
+  const t = useTranslations()
   const navigate = useNavigate()
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
+  const { isAuthenticated, session, refetch } = useAuth()
+
+  const navItems: NavItem[] = [
+    { to: '/', label: t('nav.home'), icon: Home, shortcut: 'H' },
+    { to: '/menu', label: t('nav.apps'), icon: Menu, shortcut: 'A' },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: BarChart3, shortcut: 'D' },
+  ]
 
   const isActive = (item: NavItem) => {
     if (item.to === '/') return currentPath === '/'
     return currentPath.startsWith(item.to)
   }
 
-  const { isAuthenticated, session, refetch } = useAuth()
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.metaKey && !e.ctrlKey) return
       e.preventDefault()
-
-      const keyMap: Record<string, string> = {
-        h: '/',
-        d: '/dashboard',
-        ',': '/settings',
-      }
+      const keyMap: Record<string, string> = { h: '/', d: '/dashboard', ',': '/settings' }
       const target = keyMap[e.key]
-      if (target) {
-        navigate({ to: target })
-      }
+      if (target) navigate({ to: target })
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -53,17 +47,10 @@ export function Navbar() {
   return (
     <header className="flex items-center justify-between border-b border-dashed border-border-subtle bg-root px-5 py-3">
       <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2.5">
-          <svg className="h-7 w-7 text-accent" viewBox="0 0 32 32" fill="currentColor">
-            <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="2" fill="none" />
-            <circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.6" />
-            <circle cx="20" cy="20" r="4" fill="currentColor" />
-          </svg>
-          <span className="text-[15px] font-semibold tracking-tight text-accent">OdooSeek</span>
-        </div>
+        <span className="text-[15px] font-semibold tracking-tight text-accent">OdooSeek</span>
 
         <nav className="flex items-center gap-1">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item)
             const Icon = item.icon
             return (
@@ -89,20 +76,19 @@ export function Navbar() {
         {isAuthenticated ? (
           <>
             <span className="px-2.5 py-1.5 text-xs text-text-secondary">
-              {session.name ?? session.username ?? 'User'}
+              {session.name ?? session.username ?? t('nav.user')}
             </span>
             <Link
               to="/login"
               className="flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover hover:text-text-primary"
               onClick={() => {
-                fetch('/api/session/logout', {
-                  method: 'POST',
-                  credentials: 'include',
-                }).then(() => refetch())
+                fetch('/api/session/logout', { method: 'POST', credentials: 'include' }).then(() =>
+                  refetch(),
+                )
               }}
             >
               <LogOut className="h-4 w-4" />
-              <span>Logout</span>
+              <span>{t('nav.logout')}</span>
             </Link>
           </>
         ) : (
@@ -111,7 +97,7 @@ export function Navbar() {
             className="flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover hover:text-text-primary"
           >
             <LogIn className="h-4 w-4" />
-            <span>Connect</span>
+            <span>{t('nav.connect')}</span>
           </Link>
         )}
         <Link
@@ -123,7 +109,7 @@ export function Navbar() {
           }`}
         >
           <Settings className="h-4 w-4" />
-          <span>Settings</span>
+          <span>{t('nav.settings')}</span>
         </Link>
         <ThemeToggle />
       </div>

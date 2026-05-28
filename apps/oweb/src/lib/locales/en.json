@@ -1,0 +1,81 @@
+{
+  "nav": {
+    "home": "Home",
+    "apps": "Apps",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "connect": "Connect",
+    "logout": "Logout",
+    "user": "User"
+  },
+  "login": {
+    "title": "Connect to Odoo",
+    "database": "Database",
+    "username": "Email / Username",
+    "password": "Password",
+    "submit": "Authenticate",
+    "guest": "Continue as Guest",
+    "success": "Login successful",
+    "invalidCredentials": "Invalid credentials"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "notAuthenticated": "Not authenticated. Connect to an Odoo database to get started.",
+    "user": "User",
+    "db": "DB",
+    "uid": "UID",
+    "welcome": "Welcome to OdooSeek"
+  },
+  "menu": {
+    "title": "Applications",
+    "signInPrompt": "Sign in to view applications",
+    "signIn": "Sign in",
+    "failedToLoad": "Failed to load applications",
+    "noApps": "No applications available",
+    "menuGroup": "Menu group"
+  },
+  "web": {
+    "list": "List",
+    "form": "Form",
+    "kanban": "Kanban",
+    "comingSoon": "Coming soon"
+  },
+  "list": {
+    "records": "records",
+    "noRecords": "No records found",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page {page}",
+    "failedToLoad": "Failed to load data",
+    "retry": "Retry"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "search": "Search",
+    "reset": "Reset",
+    "advanced": "Advanced",
+    "simple": "Simple",
+    "filter": "Filter",
+    "contains": "contains",
+    "equals": "equals",
+    "notEqual": "not equal",
+    "greaterThan": "greater than",
+    "lessThan": "less than"
+  },
+  "session": {
+    "live": "Live",
+    "disconnected": "Disconnected"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "retry": "Try Again"
+  },
+  "settings": {
+    "title": "Settings",
+    "connection": "Odoo Connection",
+    "apiEndpoint": "API Endpoint",
+    "proxyMode": "Proxy Mode",
+    "authMethod": "Auth Method",
+    "technologyStack": "Technology Stack"
+  }
+}

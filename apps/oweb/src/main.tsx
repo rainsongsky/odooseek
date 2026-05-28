@@ -4,6 +4,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AuthProvider } from './lib/auth'
+import { I18nProvider } from './lib/i18n'
 import { ThemeProvider } from './themes'
 import { routeTree } from './routeTree.gen'
 import './index.css'
@@ -31,7 +32,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <RouterProvider router={router} />
+            <I18nProvider>
+              <RouterProvider router={router} />
+            </I18nProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>

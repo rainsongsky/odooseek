@@ -1,9 +1,11 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { useTranslations } from '@better-i18n/use-intl'
 import { useAuth } from '../lib/auth'
 
 function LoginPage() {
   const navigate = useNavigate()
+  const t = useTranslations()
   const { isAuthenticated, refetch } = useAuth()
   const [db, setDb] = useState('')
   const [login, setLogin] = useState('')
@@ -32,7 +34,7 @@ function LoginPage() {
       }
       const data = await res.json()
       if (!data.authenticated) {
-        throw new Error('Invalid credentials')
+        throw new Error(t('login.invalidCredentials'))
       }
       refetch()
       navigate({ to: '/dashboard' })
@@ -51,7 +53,7 @@ function LoginPage() {
     <div className="flex flex-1 items-center justify-center px-8">
       <div className="w-full max-w-sm">
         <h2 className="mb-8 text-center text-2xl font-semibold text-text-primary">
-          Connect to Odoo
+          {t('login.title')}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,7 +111,7 @@ function LoginPage() {
             disabled={loading}
             className="w-full cursor-pointer rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Connecting...' : 'Authenticate'}
+            {loading ? '...' : t('login.submit')}
           </button>
 
           <button
@@ -117,7 +119,7 @@ function LoginPage() {
             onClick={handleGuest}
             className="w-full cursor-pointer rounded-lg border border-border-default px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover"
           >
-            Continue as Guest
+            {t('login.guest')}
           </button>
         </form>
       </div>
