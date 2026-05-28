@@ -15,9 +15,15 @@ import { Route as MenuRouteImport } from './routes/menu'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SaleIndexRouteImport } from './routes/sale/index'
+import { Route as InventoryIndexRouteImport } from './routes/inventory/index'
 import { Route as CrmIndexRouteImport } from './routes/crm/index'
+import { Route as SaleOrdersRouteImport } from './routes/sale/orders'
+import { Route as InventoryPickingsRouteImport } from './routes/inventory/pickings'
 import { Route as CrmPipelineRouteImport } from './routes/crm/pipeline'
 import { Route as CrmLeadsRouteImport } from './routes/crm/leads'
+import { Route as SaleOrderIdRouteImport } from './routes/sale/order.$id'
+import { Route as InventoryPickingIdRouteImport } from './routes/inventory/picking.$id'
 import { Route as CrmLeadIdRouteImport } from './routes/crm/lead.$id'
 
 const WebRoute = WebRouteImport.update({
@@ -50,9 +56,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SaleIndexRoute = SaleIndexRouteImport.update({
+  id: '/sale/',
+  path: '/sale/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryIndexRoute = InventoryIndexRouteImport.update({
+  id: '/inventory/',
+  path: '/inventory/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CrmIndexRoute = CrmIndexRouteImport.update({
   id: '/crm/',
   path: '/crm/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaleOrdersRoute = SaleOrdersRouteImport.update({
+  id: '/sale/orders',
+  path: '/sale/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryPickingsRoute = InventoryPickingsRouteImport.update({
+  id: '/inventory/pickings',
+  path: '/inventory/pickings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrmPipelineRoute = CrmPipelineRouteImport.update({
@@ -63,6 +89,16 @@ const CrmPipelineRoute = CrmPipelineRouteImport.update({
 const CrmLeadsRoute = CrmLeadsRouteImport.update({
   id: '/crm/leads',
   path: '/crm/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SaleOrderIdRoute = SaleOrderIdRouteImport.update({
+  id: '/sale/order/$id',
+  path: '/sale/order/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryPickingIdRoute = InventoryPickingIdRouteImport.update({
+  id: '/inventory/picking/$id',
+  path: '/inventory/picking/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrmLeadIdRoute = CrmLeadIdRouteImport.update({
@@ -80,8 +116,14 @@ export interface FileRoutesByFullPath {
   '/web': typeof WebRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
+  '/inventory/pickings': typeof InventoryPickingsRoute
+  '/sale/orders': typeof SaleOrdersRoute
   '/crm/': typeof CrmIndexRoute
+  '/inventory/': typeof InventoryIndexRoute
+  '/sale/': typeof SaleIndexRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
+  '/inventory/picking/$id': typeof InventoryPickingIdRoute
+  '/sale/order/$id': typeof SaleOrderIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,8 +134,14 @@ export interface FileRoutesByTo {
   '/web': typeof WebRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
+  '/inventory/pickings': typeof InventoryPickingsRoute
+  '/sale/orders': typeof SaleOrdersRoute
   '/crm': typeof CrmIndexRoute
+  '/inventory': typeof InventoryIndexRoute
+  '/sale': typeof SaleIndexRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
+  '/inventory/picking/$id': typeof InventoryPickingIdRoute
+  '/sale/order/$id': typeof SaleOrderIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,8 +153,14 @@ export interface FileRoutesById {
   '/web': typeof WebRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
+  '/inventory/pickings': typeof InventoryPickingsRoute
+  '/sale/orders': typeof SaleOrdersRoute
   '/crm/': typeof CrmIndexRoute
+  '/inventory/': typeof InventoryIndexRoute
+  '/sale/': typeof SaleIndexRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
+  '/inventory/picking/$id': typeof InventoryPickingIdRoute
+  '/sale/order/$id': typeof SaleOrderIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,8 +173,14 @@ export interface FileRouteTypes {
     | '/web'
     | '/crm/leads'
     | '/crm/pipeline'
+    | '/inventory/pickings'
+    | '/sale/orders'
     | '/crm/'
+    | '/inventory/'
+    | '/sale/'
     | '/crm/lead/$id'
+    | '/inventory/picking/$id'
+    | '/sale/order/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,8 +191,14 @@ export interface FileRouteTypes {
     | '/web'
     | '/crm/leads'
     | '/crm/pipeline'
+    | '/inventory/pickings'
+    | '/sale/orders'
     | '/crm'
+    | '/inventory'
+    | '/sale'
     | '/crm/lead/$id'
+    | '/inventory/picking/$id'
+    | '/sale/order/$id'
   id:
     | '__root__'
     | '/'
@@ -143,8 +209,14 @@ export interface FileRouteTypes {
     | '/web'
     | '/crm/leads'
     | '/crm/pipeline'
+    | '/inventory/pickings'
+    | '/sale/orders'
     | '/crm/'
+    | '/inventory/'
+    | '/sale/'
     | '/crm/lead/$id'
+    | '/inventory/picking/$id'
+    | '/sale/order/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,8 +228,14 @@ export interface RootRouteChildren {
   WebRoute: typeof WebRoute
   CrmLeadsRoute: typeof CrmLeadsRoute
   CrmPipelineRoute: typeof CrmPipelineRoute
+  InventoryPickingsRoute: typeof InventoryPickingsRoute
+  SaleOrdersRoute: typeof SaleOrdersRoute
   CrmIndexRoute: typeof CrmIndexRoute
+  InventoryIndexRoute: typeof InventoryIndexRoute
+  SaleIndexRoute: typeof SaleIndexRoute
   CrmLeadIdRoute: typeof CrmLeadIdRoute
+  InventoryPickingIdRoute: typeof InventoryPickingIdRoute
+  SaleOrderIdRoute: typeof SaleOrderIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -204,11 +282,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sale/': {
+      id: '/sale/'
+      path: '/sale'
+      fullPath: '/sale/'
+      preLoaderRoute: typeof SaleIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory/': {
+      id: '/inventory/'
+      path: '/inventory'
+      fullPath: '/inventory/'
+      preLoaderRoute: typeof InventoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/crm/': {
       id: '/crm/'
       path: '/crm'
       fullPath: '/crm/'
       preLoaderRoute: typeof CrmIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sale/orders': {
+      id: '/sale/orders'
+      path: '/sale/orders'
+      fullPath: '/sale/orders'
+      preLoaderRoute: typeof SaleOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory/pickings': {
+      id: '/inventory/pickings'
+      path: '/inventory/pickings'
+      fullPath: '/inventory/pickings'
+      preLoaderRoute: typeof InventoryPickingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crm/pipeline': {
@@ -223,6 +329,20 @@ declare module '@tanstack/react-router' {
       path: '/crm/leads'
       fullPath: '/crm/leads'
       preLoaderRoute: typeof CrmLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sale/order/$id': {
+      id: '/sale/order/$id'
+      path: '/sale/order/$id'
+      fullPath: '/sale/order/$id'
+      preLoaderRoute: typeof SaleOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory/picking/$id': {
+      id: '/inventory/picking/$id'
+      path: '/inventory/picking/$id'
+      fullPath: '/inventory/picking/$id'
+      preLoaderRoute: typeof InventoryPickingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crm/lead/$id': {
@@ -244,8 +364,14 @@ const rootRouteChildren: RootRouteChildren = {
   WebRoute: WebRoute,
   CrmLeadsRoute: CrmLeadsRoute,
   CrmPipelineRoute: CrmPipelineRoute,
+  InventoryPickingsRoute: InventoryPickingsRoute,
+  SaleOrdersRoute: SaleOrdersRoute,
   CrmIndexRoute: CrmIndexRoute,
+  InventoryIndexRoute: InventoryIndexRoute,
+  SaleIndexRoute: SaleIndexRoute,
   CrmLeadIdRoute: CrmLeadIdRoute,
+  InventoryPickingIdRoute: InventoryPickingIdRoute,
+  SaleOrderIdRoute: SaleOrderIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

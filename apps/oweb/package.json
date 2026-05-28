@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "bun --bun node_modules/.bin/tsc -b && bun --bun node_modules/.bin/vite build",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome check ../../",
