@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { callKw } from '../lib/api'
+import { OdooFormRenderer } from './OdooFormRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
 import type { OdooFieldMeta } from './types'
 
@@ -68,7 +69,14 @@ export function OdooViewLoader({
         <OdooListRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
       )
     case 'form':
-      return <div className="p-6 text-sm text-text-muted">Form view coming soon</div>
+      return (
+        <OdooFormRenderer
+          model={model}
+          arch={activeView.arch}
+          fields={fields}
+          recordId={_recordId}
+        />
+      )
     case 'kanban':
       return <div className="p-6 text-sm text-text-muted">Kanban view coming soon</div>
   }
