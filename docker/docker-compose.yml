@@ -1,17 +1,4 @@
 services:
-  gateway:
-    image: nginx:1.27-alpine
-    depends_on:
-      - web
-    ports:
-      # 统一入口：访问 http://localhost:8080 进入 apps/oweb（同源代理 /api/odoo 到 Odoo）
-      - "8080:80"
-    volumes:
-      # Nginx 配置（同源代理 + SPA fallback）
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      # Oweb 静态资源（Vite build 产物）
-      - ../apps/oweb/dist:/usr/share/nginx/html:ro
-
   web:
     image: odoo:19.0
     depends_on:
