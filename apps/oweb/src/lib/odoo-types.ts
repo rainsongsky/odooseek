@@ -32,6 +32,11 @@ export interface ViewField {
   filter_domain?: unknown
   decoration_bf?: string
   decoration_it?: string
+  decoration_danger?: string
+  decoration_warning?: string
+  decoration_success?: string
+  decoration_info?: string
+  decoration_muted?: string
 }
 
 export interface ParsedListView {
@@ -41,6 +46,7 @@ export interface ParsedListView {
   create?: boolean
   delete?: boolean
   columns: ViewField[]
+  decorations: Record<string, string>
 }
 
 export interface ParsedFormView {
@@ -127,6 +133,7 @@ export interface ParsedSearchView {
   type: 'search'
   fields: ViewField[]
   filters: SearchFilter[]
+  groupByFilters: SearchGroupBy[]
 }
 
 export interface SearchFilter {
@@ -135,4 +142,39 @@ export interface SearchFilter {
   domain: unknown[]
   help?: string
   context?: string
+}
+
+export interface SearchGroupBy {
+  name: string
+  string: string
+  fieldName: string
+  interval?: string
+}
+
+export interface ReadGroupResult {
+  __domain: unknown[]
+  __context: unknown
+  [key: string]: unknown // grouped field values + _count suffixed fields
+}
+
+export interface ParsedPivotView {
+  type: 'pivot'
+  string: string
+  disableLinking?: boolean
+  defaultOrder?: string
+  rowFields: PivotField[]
+  colFields: PivotField[]
+  measures: PivotMeasure[]
+}
+
+export interface PivotField {
+  name: string
+  string?: string
+  interval?: string // day, week, month, quarter, year
+}
+
+export interface PivotMeasure {
+  name: string
+  string?: string
+  operator?: string // sum, avg, count
 }

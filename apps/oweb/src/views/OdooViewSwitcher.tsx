@@ -1,23 +1,24 @@
-import { Columns3, LayoutList, Table } from '@/lib/lucide-icons'
+import { BarChart3, Columns3, LayoutList, Table } from '@/lib/lucide-icons'
 
 interface ViewSwitcherProps {
-  currentView: 'list' | 'form' | 'kanban'
-  onSwitch: (view: 'list' | 'form' | 'kanban') => void
+  currentView: 'list' | 'form' | 'kanban' | 'pivot'
+  onSwitch: (view: 'list' | 'form' | 'kanban' | 'pivot') => void
 }
 
 const VIEWS: {
-  type: 'list' | 'form' | 'kanban'
+  type: 'list' | 'form' | 'kanban' | 'pivot'
   icon: React.ComponentType<{ className?: string }>
   label: string
 }[] = [
   { type: 'list', icon: Table, label: 'List' },
-  { type: 'form', icon: LayoutList, label: 'Form' },
+  { type: 'pivot', icon: BarChart3, label: 'Pivot' },
   { type: 'kanban', icon: Columns3, label: 'Kanban' },
+  { type: 'form', icon: LayoutList, label: 'Form' },
 ]
 
 export function OdooViewSwitcher({ currentView, onSwitch }: ViewSwitcherProps) {
   return (
-    <div className="flex items-center gap-1 border-b border-border-subtle bg-surface/30 px-4 py-1.5">
+    <div className="flex items-center justify-end gap-1">
       {VIEWS.map((v) => {
         const active = currentView === v.type
         const Icon = v.icon

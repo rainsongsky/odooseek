@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import '../styles/odoo-icons.css'
 
 interface MenuItem {
   id: number
@@ -12,9 +13,51 @@ interface MenuItem {
   web_icon?: string
 }
 
-function parseActionRef(
-  action: string | undefined,
-): { type: string; id: number } | null {
+function getMenuIconUrl(menu: MenuItem): string | null {
+  if (!menu.web_icon) return null
+
+  const w = menu.web_icon
+
+  // "module,path" format → /icons/module.png
+  const parts = w.split(',')
+  if (parts.length === 2 && !w.startsWith('fa-')) {
+    return `/icons/${parts[0]}.png`
+  }
+
+  // "/module/static/..." direct path → /icons/module.png
+  if (w.startsWith('/')) {
+    const segs = w.split('/')
+    if (segs.length > 1) return `/icons/${segs[1]}.png`
+  }
+
+  return null
+}
+
+const ICON_FALLBACK: Record<string, string> = {
+  CRM: 'oi oi-suitcase',
+  Sales: 'oi oi-suitcase-plus',
+  Inventory: 'oi oi-transfer',
+  Invoicing: 'oi oi-numpad',
+  Accounting: 'oi oi-numpad',
+  Purchase: 'oi oi-panel-right',
+  Contacts: 'oi oi-users',
+  Project: 'oi oi-star-plus',
+  Discuss: 'oi oi-activity',
+  Calendar: 'oi oi-schedule-today',
+  Settings: 'oi oi-settings-adjust',
+  Apps: 'oi oi-apps',
+}
+
+function getMenuIconClass(menu: MenuItem): string | null {
+  if (ICON_FALLBACK[menu.name]) return ICON_FALLBACK[menu.name]
+  for (const [name, icon] of Object.entries(ICON_FALLBACK)) {
+    if (menu.name.toLowerCase().includes(name.toLowerCase())) return icon
+  }
+  if (menu.web_icon?.startsWith('fa-')) return `fa ${menu.web_icon}`
+  return null
+}
+
+function parseActionRef(action: string | undefined): { type: string; id: number } | null {
   if (!action || action === 'False') return null
   const parts = action.split(',')
   const actionType = parts[0]?.trim()
@@ -28,7 +71,11 @@ function MenuPage() {
   const { isAuthenticated } = useAuth()
   const [expandedMenuId, setExpandedMenuId] = useState<number | null>(null)
 
-  const { data: menus, isLoading, error } = useQuery({
+  const {
+    data: menus,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['odoo', 'menu'],
     queryFn: async () => {
       const res = await fetch('/api/menu', { credentials: 'include' })
@@ -54,11 +101,10 @@ function MenuPage() {
   const { data: actionModels } = useQuery({
     queryKey: ['odoo', 'actions', actWindowIds],
     queryFn: () =>
-      callKw<Array<{ id: number; res_model: string }>>(
-        'ir.actions.act_window',
-        'read',
-        [actWindowIds, ['res_model']],
-      ),
+      callKw<Array<{ id: number; res_model: string }>>('ir.actions.act_window', 'read', [
+        actWindowIds,
+        ['res_model'],
+      ]),
     enabled: actWindowIds.length > 0,
     staleTime: 15 * 60_000,
   })
@@ -109,29 +155,12 @@ function MenuPage() {
   const { data: childActionModels } = useQuery({
     queryKey: ['odoo', 'actions', childActIds],
     queryFn: () =>
-      callKw<Array<{ id: number; res_model: string }>>(
-        'ir.actions.act_window',
-        'read',
-        [childActIds, ['res_model']],
-      ),
+      callKw<Array<{ id: number; res_model: string }>>('ir.actions.act_window', 'read', [
+        childActIds,
+        ['res_model'],
+      ]),
     enabled: childActIds.length > 0,
   })
-
-  // Find first actionable model from child menus
-  const resolveChildModel = (): string | null => {
-    if (!childMenus || !childActionModels) return null
-    const childModelMap = new Map<number, string>()
-    for (const action of childActionModels) {
-      childModelMap.set(action.id, action.res_model)
-    }
-    for (const child of childMenus) {
-      const ref = parseActionRef(child.action)
-      if (ref?.type === 'ir.actions.act_window' && childModelMap.has(ref.id)) {
-        return childModelMap.get(ref.id) ?? null
-      }
-    }
-    return null
-  }
 
   const handleMenuClick = async (menu: MenuItem) => {
     const ref = parseActionRef(menu.action)
@@ -154,10 +183,12 @@ function MenuPage() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            jsonrpc: '2.0', method: 'call', id: 1,
+            jsonrpc: '2.0',
+            method: 'call',
+            id: 1,
             params: { action_id: ref.id },
           }),
-        }).then(r => r.json())
+        }).then((r) => r.json())
         if (result.result?.res_model) {
           navigate({ to: '/web', search: { model: result.result.res_model } })
         } else if (result.result === false) {
@@ -177,14 +208,22 @@ function MenuPage() {
   // Navigate to first actionable child when children are loaded
   useEffect(() => {
     if (expandedMenuId && childMenus && childActionModels) {
-      const childModel = resolveChildModel()
+      const childModelMap = new Map<number, string>()
+      for (const action of childActionModels) childModelMap.set(action.id, action.res_model)
+      let childModel: string | null = null
+      for (const child of childMenus) {
+        const ref = parseActionRef(child.action)
+        if (ref?.type === 'ir.actions.act_window' && childModelMap.has(ref.id)) {
+          childModel = childModelMap.get(ref.id) ?? null
+          break
+        }
+      }
       if (childModel) {
         navigate({ to: '/web', search: { model: childModel } })
         setExpandedMenuId(null)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expandedMenuId, childMenus, childActionModels])
+  }, [expandedMenuId, childMenus, childActionModels, navigate])
 
   if (!isAuthenticated) {
     return (
@@ -227,6 +266,8 @@ function MenuPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {menus?.map((menu) => {
           const model = resolveModel(menu.action)
+          const iconUrl = getMenuIconUrl(menu)
+          const iconClass = getMenuIconClass(menu)
           return (
             <button
               key={menu.id}
@@ -236,8 +277,28 @@ function MenuPage() {
                 model ? 'hover:border-border-default hover:bg-surface' : ''
               }`}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                <span className="text-xl font-semibold">{menu.name[0]}</span>
+              {iconUrl && (
+                <img
+                  src={iconUrl}
+                  alt={menu.name}
+                  className="h-12 w-12 rounded-lg object-contain"
+                  onError={(e) => {
+                    const el = e.target as HTMLImageElement
+                    el.style.display = 'none'
+                    const fb = el.nextElementSibling as HTMLElement | null
+                    if (fb) fb.style.display = 'flex'
+                  }}
+                />
+              )}
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent"
+                style={{ display: iconUrl ? 'none' : 'flex' }}
+              >
+                {iconClass ? (
+                  <i className={`${iconClass} text-xl`} />
+                ) : (
+                  <span className="text-xl font-semibold">{menu.name[0]}</span>
+                )}
               </div>
               <span className="text-sm font-medium text-text-primary">{menu.name}</span>
               <span className="text-[10px] text-text-muted">

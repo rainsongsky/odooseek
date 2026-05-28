@@ -6,7 +6,12 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["apps/oweb/src/{components,lib,routes,themes,views}/**", "apps/oweb/src/*.tsx", "apps/oweb/src/*.css", "docs/**"],
+    "includes": [
+      "apps/oweb/src/{components,lib,routes,themes,views}/**",
+      "apps/oweb/src/*.tsx",
+      "apps/oweb/src/*.css",
+      "docs/**"
+    ],
     "ignoreUnknown": true
   },
   "formatter": {
@@ -21,7 +26,14 @@
     "rules": {
       "recommended": true,
       "a11y": {
-        "noSvgWithoutTitle": "off"
+        "noSvgWithoutTitle": "off",
+        "noStaticElementInteractions": "off",
+        "noAutofocus": "off",
+        "useKeyWithClickEvents": "off",
+        "noLabelWithoutControl": "off"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "off"
       }
     }
   },

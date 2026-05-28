@@ -5,8 +5,12 @@ import type {
   ParsedFormView,
   ParsedKanbanView,
   ParsedListView,
+  ParsedPivotView,
   ParsedSearchView,
+  PivotField,
+  PivotMeasure,
   SearchFilter,
+  SearchGroupBy,
   ViewField,
 } from './odoo-types'
 
@@ -84,6 +88,30 @@ function parseFormElements(container: Element): FormElement[] {
   return elements
 }
 
+const DECO_KEYS = ['bf', 'it', 'danger', 'warning', 'success', 'info', 'muted'] as const
+
+function parseDecorations(el: Element): Record<string, string> {
+  const decorations: Record<string, string> = {}
+  for (const key of DECO_KEYS) {
+    const val = el.getAttribute(`decoration-${key}`)
+    if (val) decorations[`decoration_${key}`] = val
+  }
+  return decorations
+}
+
+function parseFieldAttrs(el: Element): ViewField {
+  return {
+    name: el.getAttribute('name') ?? '',
+    string: el.getAttribute('string') ?? undefined,
+    widget: el.getAttribute('widget') ?? undefined,
+    invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
+    sum: el.getAttribute('sum') ?? undefined,
+    readonly: el.hasAttribute('readonly'),
+    required: el.hasAttribute('required'),
+    ...parseDecorations(el),
+  }
+}
+
 /** Parse Odoo <list> XML → ParsedListView */
 export function parseListXml(xml: string): ParsedListView {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
@@ -95,17 +123,8 @@ export function parseListXml(xml: string): ParsedListView {
     editable: root.getAttribute('editable') ?? undefined,
     create: root.getAttribute('create') !== 'false',
     delete: root.getAttribute('delete') !== 'false',
-    columns: Array.from(root.querySelectorAll('field')).map((el) => ({
-      name: el.getAttribute('name') ?? '',
-      string: el.getAttribute('string') ?? undefined,
-      widget: el.getAttribute('widget') ?? undefined,
-      invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
-      sum: el.getAttribute('sum') ?? undefined,
-      readonly: el.hasAttribute('readonly'),
-      required: el.hasAttribute('required'),
-      decoration_bf: el.getAttribute('decoration-bf') ?? undefined,
-      decoration_it: el.getAttribute('decoration-it') ?? undefined,
-    })),
+    decorations: parseDecorations(root),
+    columns: Array.from(root.querySelectorAll('field')).map(parseFieldAttrs),
   }
 }
 
@@ -137,7 +156,9 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
   const templateEl = root.querySelector('template')
   const templatesEl = root.querySelector('templates')
   const rawTemplate = templateEl
-    ? Array.from(templateEl.children).map((c) => serializer.serializeToString(c)).join('')
+    ? Array.from(templateEl.children)
+        .map((c) => serializer.serializeToString(c))
+        .join('')
     : templatesEl
       ? serializer.serializeToString(templatesEl)
       : ''
@@ -175,12 +196,17 @@ export function parseKanbanFields(templateXml: string): ViewField[] {
 export function parseKanbanTemplate(templateXml: string): KanbanTemplateNode[] {
   const doc = new DOMParser().parseFromString(templateXml, 'text/xml')
   const root = doc.documentElement
-  // <templates> or <template> is just a wrapper — parse its children directly
-  return mergeConditionChains(parseChildNodes(root))
+  // HTML <template> element stores children in .content (DocumentFragment)
+  // XML <templates> element uses direct childNodes
+  const isHtmlTemplate = root.tagName.toLowerCase() === 'template' && 'content' in root
+  const container = isHtmlTemplate
+    ? (root as unknown as { content: DocumentFragment }).content
+    : root
+  return mergeConditionChains(parseChildNodes(container))
 }
 
-/** Recursively parse child nodes of an element */
-function parseChildNodes(el: Element): KanbanTemplateNode[] {
+/** Recursively parse child nodes of an element or document fragment */
+function parseChildNodes(el: { childNodes: NodeListOf<ChildNode> }): KanbanTemplateNode[] {
   const result: KanbanTemplateNode[] = []
   for (const child of el.childNodes) {
     if (child.nodeName === 't' && !childIsQwebDirective(child as Element)) {
@@ -197,13 +223,43 @@ function parseChildNodes(el: Element): KanbanTemplateNode[] {
 }
 
 function childIsQwebDirective(el: Element): boolean {
-  return el.hasAttribute('t-if') || el.hasAttribute('t-elif') || el.hasAttribute('t-else') ||
-    el.hasAttribute('t-foreach') || el.hasAttribute('t-out')
+  return (
+    el.hasAttribute('t-if') ||
+    el.hasAttribute('t-elif') ||
+    el.hasAttribute('t-else') ||
+    el.hasAttribute('t-foreach') ||
+    el.hasAttribute('t-out')
+  )
 }
 
 const HTML_TAGS = new Set([
-  'div', 'span', 'a', 'p', 'strong', 'em', 'b', 'i', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'ul', 'ol', 'li', 'section', 'header', 'table', 'tr', 'td', 'th', 'br', 'hr', 'img',
+  'div',
+  'span',
+  'a',
+  'p',
+  'strong',
+  'em',
+  'b',
+  'i',
+  'u',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'ul',
+  'ol',
+  'li',
+  'section',
+  'header',
+  'table',
+  'tr',
+  'td',
+  'th',
+  'br',
+  'hr',
+  'img',
 ])
 
 function parseNode(node: ChildNode): KanbanTemplateNode | null {
@@ -303,7 +359,11 @@ function parseNode(node: ChildNode): KanbanTemplateNode | null {
 function mergeConditionChains(nodes: KanbanTemplateNode[]): KanbanTemplateNode[] {
   const result: KanbanTemplateNode[] = []
   for (const node of nodes) {
-    if (node.type === 'condition' && (node.elif || node.else) && result.length > 0) {
+    if (
+      node.type === 'condition' &&
+      (node.elif !== undefined || node.else !== undefined) &&
+      result.length > 0
+    ) {
       const last = result[result.length - 1]
       if (last?.type === 'condition' && last.if) {
         // Append as elif/else to the previous if-condition
@@ -316,6 +376,54 @@ function mergeConditionChains(nodes: KanbanTemplateNode[]): KanbanTemplateNode[]
   return result
 }
 
+// ── Domain string parser ────────────────────────────────────
+
+function parseDomainString(raw: string | null): unknown[] | null {
+  if (!raw) return []
+  const s = raw.trim()
+  if (!s) return []
+
+  // Decode XML entities (&lt; → <, &gt; → >, etc.)
+  const decoded = s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+
+  // Normalize Python syntax to JSON:
+  // 1. Replace single quotes with double quotes
+  // 2. Replace Python booleans/None with JSON literals
+  // 3. Replace parentheses with brackets (tuple → array)
+  const normalized = decoded
+    .replace(/'/g, '"')
+    .replace(/\bFalse\b/g, 'false')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\(/g, '[')
+    .replace(/\)/g, ']')
+
+  try {
+    return JSON.parse(normalized)
+  } catch {
+    // Domain contains Python expressions (uid, self, context_today(), etc.)
+    // that cannot be JSON-parsed client-side. Skip this filter.
+    return null
+  }
+}
+
+// ── GroupBy context parser ────────────────────────────────────
+
+function parseGroupByContext(context: string): { fieldName: string; interval?: string } | null {
+  const m = context.match(/group_by['"\]]*\s*:\s*['"]([^'"]+)['"]/)
+  if (!m) return null
+  const raw = m[1]
+  const colonIdx = raw.indexOf(':')
+  if (colonIdx > 0) {
+    return { fieldName: raw.slice(0, colonIdx), interval: raw.slice(colonIdx + 1) }
+  }
+  return { fieldName: raw }
+}
+
 /** Parse Odoo <search> XML → ParsedSearchView */
 export function parseSearchXml(xml: string): ParsedSearchView {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
@@ -323,26 +431,97 @@ export function parseSearchXml(xml: string): ParsedSearchView {
 
   const searchFields: ViewField[] = Array.from(root.querySelectorAll('field')).map((el) => {
     const filterDomainRaw = el.getAttribute('filter_domain')
+    const parsed = parseDomainString(filterDomainRaw)
     return {
       name: el.getAttribute('name') ?? '',
       string: el.getAttribute('string') ?? undefined,
       operator: el.getAttribute('operator') ?? 'ilike',
-      filter_domain: filterDomainRaw ? JSON.parse(filterDomainRaw.replace(/'/g, '"')) : undefined,
+      filter_domain: parsed ?? undefined,
     }
   })
 
-  const filters: SearchFilter[] = Array.from(root.querySelectorAll('filter, separator')).map(
-    (el) => {
-      const domainRaw = el.getAttribute('domain')
-      return {
-        name: el.getAttribute('name') ?? '',
-        string: el.getAttribute('string') ?? '',
-        domain: domainRaw ? JSON.parse(domainRaw.replace(/'/g, '"')) : [],
-        help: el.getAttribute('help') ?? undefined,
-        context: el.getAttribute('context') ?? undefined,
-      }
-    },
-  )
+  const allFilters: SearchFilter[] = []
+  const groupByFilters: SearchGroupBy[] = []
 
-  return { type: 'search', fields: searchFields, filters }
+  Array.from(root.querySelectorAll('filter, separator')).forEach((el) => {
+    const domainRaw = el.getAttribute('domain')
+    const contextStr = el.getAttribute('context')
+    const domain = parseDomainString(domainRaw)
+    const name = el.getAttribute('name') ?? ''
+    const string = el.getAttribute('string') ?? ''
+
+    const gb = contextStr ? parseGroupByContext(contextStr) : null
+
+    if (gb) {
+      groupByFilters.push({
+        name,
+        string: string || gb.fieldName,
+        fieldName: gb.fieldName,
+        interval: gb.interval,
+      })
+    }
+
+    // skip filters whose domain cannot be parsed client-side (e.g., containing uid/self)
+    if (domain === null) return
+
+    if (domain.length > 0) {
+      allFilters.push({
+        name,
+        string,
+        domain,
+        help: el.getAttribute('help') ?? undefined,
+        context: contextStr ?? undefined,
+      })
+    } else if (!gb) {
+      // separator or filter without domain/groupby
+      allFilters.push({
+        name,
+        string,
+        domain: [],
+        help: el.getAttribute('help') ?? undefined,
+        context: contextStr ?? undefined,
+      })
+    }
+  })
+
+  return { type: 'search', fields: searchFields, filters: allFilters, groupByFilters }
+}
+
+/** Parse Odoo <pivot> XML → ParsedPivotView */
+export function parsePivotXml(xml: string): ParsedPivotView {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml')
+  const root = doc.documentElement
+
+  const rowFields: PivotField[] = []
+  const colFields: PivotField[] = []
+  const measures: PivotMeasure[] = []
+
+  Array.from(root.querySelectorAll('field')).forEach((el) => {
+    const type = el.getAttribute('type') ?? 'measure'
+    const name = el.getAttribute('name') ?? ''
+    const string = el.getAttribute('string') ?? undefined
+    const interval = el.getAttribute('interval') ?? undefined
+
+    if (type === 'row') {
+      rowFields.push({ name, string, interval })
+    } else if (type === 'col') {
+      colFields.push({ name, string, interval })
+    } else if (type === 'measure') {
+      measures.push({ name, string, operator: el.getAttribute('operator') ?? undefined })
+    }
+  })
+
+  if (measures.length === 0) {
+    measures.push({ name: '__count', string: 'Count' })
+  }
+
+  return {
+    type: 'pivot',
+    string: root.getAttribute('string') ?? 'Pivot',
+    disableLinking: root.getAttribute('disable_linking') !== undefined,
+    defaultOrder: root.getAttribute('default_order') ?? undefined,
+    rowFields,
+    colFields,
+    measures,
+  }
 }

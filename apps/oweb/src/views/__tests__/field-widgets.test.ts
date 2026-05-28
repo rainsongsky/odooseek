@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { TYPE_WIDGETS, getFieldWidget } from '../field-widgets'
 import type { FieldElement } from '../../lib/odoo-types'
+import { getFieldWidget, TYPE_WIDGETS } from '../field-widgets'
 
 const baseField: FieldElement = {
   type: 'field',
@@ -55,10 +55,21 @@ describe('field-widgets', () => {
 
   test('all declared widget types exist', () => {
     const expectedTypes = [
-      'char', 'text', 'integer', 'float', 'monetary',
-      'boolean', 'date', 'datetime', 'selection',
-      'many2one', 'many2many', 'one2many',
-      'binary', 'html', 'reference',
+      'char',
+      'text',
+      'integer',
+      'float',
+      'monetary',
+      'boolean',
+      'date',
+      'datetime',
+      'selection',
+      'many2one',
+      'many2many',
+      'one2many',
+      'binary',
+      'html',
+      'reference',
     ]
     for (const type of expectedTypes) {
       expect(TYPE_WIDGETS[type]).toBeDefined()

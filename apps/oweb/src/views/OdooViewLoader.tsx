@@ -1,20 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { callKw } from '../lib/api'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { SearchBar } from '../components/SearchBar'
+import { callKw } from '../lib/api'
+import type { OdooFieldMeta } from '../lib/odoo-types'
 import { parseSearchXml } from '../lib/xml-parser'
 import { OdooFormRenderer } from './OdooFormRenderer'
 import { OdooKanbanRenderer } from './OdooKanbanRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
-import type { OdooFieldMeta } from '../lib/odoo-types'
+import { OdooPivotRenderer } from './OdooPivotRenderer'
+import { OdooViewSwitcher } from './OdooViewSwitcher'
 
 interface ViewLoaderProps {
   model: string
-  viewType: 'list' | 'form' | 'kanban'
+  viewType: 'list' | 'form' | 'kanban' | 'pivot'
   viewId?: number
   domain?: unknown[]
   recordId?: number
   onRowClick?: (recordId: number) => void
+  onBackToList?: () => void
+  onSwitchView?: (v: 'list' | 'form' | 'kanban' | 'pivot') => void
+  onCreateClick?: () => void
+  onRecordCreated?: (newId: number) => void
 }
 
 export function OdooViewLoader({
@@ -24,13 +31,17 @@ export function OdooViewLoader({
   domain: initialDomain = [],
   recordId: _recordId,
   onRowClick,
+  onBackToList,
+  onSwitchView,
+  onCreateClick,
+  onRecordCreated,
 }: ViewLoaderProps) {
   const viewsToLoad: [number | false, string][] = [
     [viewId ?? false, viewType],
     [false, 'search'], // always load search view
   ]
   const [domain, setDomain] = useState<unknown[]>(initialDomain)
-  const [keyword, setKeyword] = useState('')
+  const [groupBy, setGroupBy] = useState<string[]>([])
 
   const {
     data: viewData,
@@ -44,6 +55,14 @@ export function OdooViewLoader({
         models: Record<string, { fields: Record<string, OdooFieldMeta> }>
       }>(model, 'get_views', [viewsToLoad], { options: { toolbar: true } }),
     staleTime: 15 * 60_000,
+  })
+
+  const { data: recordNameData } = useQuery({
+    queryKey: ['odoo', 'read', model, _recordId, 'display_name'],
+    queryFn: () =>
+      callKw<Array<Record<string, unknown>>>(model, 'read', [[_recordId], ['display_name']]),
+    enabled: viewType === 'form' && !!_recordId,
+    staleTime: 30_000,
   })
 
   if (isLoading) {
@@ -76,42 +95,84 @@ export function OdooViewLoader({
     )
   }
 
-  const handleSearch = (newDomain: unknown[], kw: string) => {
+  const handleSearch = (newDomain: unknown[]) => {
     setDomain(newDomain)
-    setKeyword(kw)
   }
+
+  const handleGroupByChange = (groupBys: string[]) => {
+    setGroupBy(groupBys)
+  }
+
+  const arch = activeView?.arch ?? ''
+  const viewTitle = arch.match(/<[^ ]+\s+[^>]*string\s*=\s*"([^"]+)"/i)?.[1] || undefined
+  const recordName = (recordNameData?.[0]?.display_name as string) || undefined
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
-      {(viewType === 'list' || viewType === 'kanban') && (
+      <div className="flex items-center justify-between border-b border-border-subtle bg-surface/30 px-4 py-0">
+        <Breadcrumbs
+          model={model}
+          viewType={viewType}
+          viewTitle={viewTitle}
+          recordName={recordName}
+          onBackToList={onBackToList}
+        />
+        <div className="flex items-center gap-2">
+          {viewType !== 'form' && onCreateClick && (
+            <button
+              type="button"
+              onClick={onCreateClick}
+              className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90"
+            >
+              Create
+            </button>
+          )}
+          {onSwitchView && <OdooViewSwitcher currentView={viewType} onSwitch={onSwitchView} />}
+        </div>
+      </div>
+      {(viewType === 'list' || viewType === 'kanban' || viewType === 'pivot') && (
         <div className="border-b border-border-subtle p-4">
           <SearchBar
             onSearch={handleSearch}
+            onGroupByChange={handleGroupByChange}
             placeholder={`Search ${model}...`}
             searchFields={searchData?.fields}
+            filters={searchData?.filters}
+            groupByFilters={searchData?.groupByFilters}
           />
-          {keyword && (
-            <span className="mt-1 inline-block text-xs text-text-muted">
-              Filtered by: <span className="text-accent">"{keyword}"</span>
-              <button
-                type="button"
-                onClick={() => handleSearch(initialDomain, '')}
-                className="ml-2 cursor-pointer underline"
-              >
-                clear
-              </button>
-            </span>
-          )}
         </div>
       )}
       {viewType === 'list' && (
-        <OdooListRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} onRowClick={onRowClick} />
+        <OdooListRenderer
+          model={model}
+          arch={activeView.arch}
+          fields={fields}
+          domain={domain}
+          groupBy={groupBy}
+          onRowClick={onRowClick}
+        />
       )}
       {viewType === 'form' && (
-        <OdooFormRenderer model={model} arch={activeView.arch} fields={fields} recordId={_recordId} />
+        <OdooFormRenderer
+          model={model}
+          arch={activeView.arch}
+          fields={fields}
+          recordId={_recordId}
+          onRecordCreated={onRecordCreated}
+        />
       )}
       {viewType === 'kanban' && (
-        <OdooKanbanRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} onRecordClick={onRowClick} />
+        <OdooKanbanRenderer
+          model={model}
+          arch={activeView.arch}
+          fields={fields}
+          domain={domain}
+          groupBy={groupBy}
+          onRecordClick={onRowClick}
+        />
+      )}
+      {viewType === 'pivot' && (
+        <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
       )}
     </div>
   )

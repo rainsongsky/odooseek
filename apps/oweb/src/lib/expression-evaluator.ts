@@ -52,3 +52,61 @@ function splitExpr(expr: string, sep: string): string[] {
 export function getValue(expr: string, record: Record<string, unknown>): unknown {
   return resolveValue(expr, record)
 }
+
+// ── Modifier / Decoration expression evaluator ─────────────────
+
+export const DECORATION_MAP: Record<string, string> = {
+  bf: 'font-bold',
+  it: 'italic',
+  danger: 'text-red-400',
+  warning: 'text-yellow-400',
+  success: 'text-green-400',
+  info: 'text-blue-400',
+  muted: 'text-text-muted',
+}
+
+export function evalModifier(
+  expr: string | undefined | null,
+  record: Record<string, unknown> | undefined,
+): boolean {
+  if (!expr || !record) return false
+  if (expr === 'False' || expr === '0') return false
+  if (expr === 'True' || expr === '1') return true
+  try {
+    return evaluateModifierExpr(expr, record)
+  } catch {
+    return false
+  }
+}
+
+function evaluateModifierExpr(expr: string, record: Record<string, unknown>): boolean {
+  const inMatch = expr.match(/^(\w+)\s+in\s+\[(.+)\]$/)
+  if (inMatch) {
+    const val = record[inMatch[1]]
+    const items = inMatch[2].split(',').map((s) => s.trim().replace(/'/g, ''))
+    return items.includes(String(val))
+  }
+  const notInMatch = expr.match(/^(\w+)\s+not\s+in\s+\[(.+)\]$/)
+  if (notInMatch) {
+    const val = record[notInMatch[1]]
+    const items = notInMatch[2].split(',').map((s) => s.trim().replace(/'/g, ''))
+    return !items.includes(String(val))
+  }
+  const eqMatch = expr.match(/^(\w+)\s*==\s*'(.+)'$/)
+  if (eqMatch) return String(record[eqMatch[1]]) === eqMatch[2]
+  return !!record[expr]
+}
+
+/** Evaluate all decoration expressions for a field/row and return CSS class string */
+export function getDecorationClass(
+  el: Record<string, unknown>,
+  record: Record<string, unknown> | undefined,
+): string | undefined {
+  if (!record) return undefined
+  const classes: string[] = []
+  for (const [key, cls] of Object.entries(DECORATION_MAP)) {
+    const expr = el[`decoration_${key}`] ?? el[`decoration-${key}`]
+    if (expr && evalModifier(String(expr), record)) classes.push(cls)
+  }
+  return classes.length ? classes.join(' ') : undefined
+}

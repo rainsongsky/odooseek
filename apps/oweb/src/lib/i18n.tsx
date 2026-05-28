@@ -1,5 +1,5 @@
-import { IntlProvider } from 'use-intl'
 import type { ReactNode } from 'react'
+import { IntlProvider } from 'use-intl'
 import { useAuth } from './auth'
 import enMessages from './locales/en.json'
 import zhMessages from './locales/zh.json'

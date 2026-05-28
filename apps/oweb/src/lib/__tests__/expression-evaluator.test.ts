@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
-import { parseKanbanTemplate } from '../../lib/xml-parser'
 import { evalCondition, getValue } from '../../lib/expression-evaluator'
 import type { KanbanTemplateNode } from '../../lib/odoo-types'
+import { parseKanbanTemplate } from '../../lib/xml-parser'
 
 describe('parseKanbanTemplate', () => {
   test('parses simple field elements', () => {
@@ -13,13 +13,10 @@ describe('parseKanbanTemplate', () => {
     </templates>`
 
     const nodes = parseKanbanTemplate(xml)
-    expect(nodes).toHaveLength(1) // t element with fields
+    expect(nodes).toHaveLength(2) // transparent <t> flattened → 2 fields
 
-    const t = nodes[0] as KanbanTemplateNode & { type: 'html'; children: KanbanTemplateNode[] }
-    expect(t.type).toBe('html')
-    expect(t.children).toHaveLength(2)
-    expect(t.children[0]).toMatchObject({ type: 'field', name: 'name' })
-    expect(t.children[1]).toMatchObject({ type: 'field', name: 'expected_revenue', widget: 'monetary' })
+    expect(nodes[0]).toMatchObject({ type: 'field', name: 'name' })
+    expect(nodes[1]).toMatchObject({ type: 'field', name: 'expected_revenue', widget: 'monetary' })
   })
 
   test('parses t-if condition', () => {
@@ -35,17 +32,24 @@ describe('parseKanbanTemplate', () => {
     expect(nodes[0]).toMatchObject({ type: 'field', name: 'name' })
     expect(nodes[1]).toMatchObject({ type: 'condition', if: 'record.expected_revenue' })
 
-    const cond = nodes[1] as KanbanTemplateNode & { type: 'condition'; children: KanbanTemplateNode[] }
+    const cond = nodes[1] as KanbanTemplateNode & {
+      type: 'condition'
+      children: KanbanTemplateNode[]
+    }
     expect(cond.children).toHaveLength(1)
-    expect(cond.children[0]).toMatchObject({ type: 'field', name: 'expected_revenue', widget: 'monetary' })
+    expect(cond.children[0]).toMatchObject({
+      type: 'field',
+      name: 'expected_revenue',
+      widget: 'monetary',
+    })
   })
 
   test('parses t-elif / t-else chains', () => {
     const xml = `<template>
-      <t t-if="record.type == \'opportunity\'">
+      <t t-if="record.type == 'opportunity'">
         <field name="expected_revenue"/>
       </t>
-      <t t-elif="record.type == \'lead\'">
+      <t t-elif="record.type == 'lead'">
         <field name="contact_name"/>
       </t>
       <t t-else="">
@@ -57,7 +61,10 @@ describe('parseKanbanTemplate', () => {
     expect(nodes).toHaveLength(1) // single chain
     expect(nodes[0]).toMatchObject({ type: 'condition', if: "record.type == 'opportunity'" })
 
-    const root = nodes[0] as KanbanTemplateNode & { type: 'condition'; children: KanbanTemplateNode[] }
+    const root = nodes[0] as KanbanTemplateNode & {
+      type: 'condition'
+      children: KanbanTemplateNode[]
+    }
     // First child is the field, second is the elif, third is the else
     expect(root.children).toHaveLength(3)
     expect(root.children[0]).toMatchObject({ type: 'field', name: 'expected_revenue' })
@@ -78,7 +85,7 @@ describe('parseKanbanTemplate', () => {
 
     const loop = nodes[0] as KanbanTemplateNode & { type: 'loop'; children: KanbanTemplateNode[] }
     expect(loop.children).toHaveLength(1)
-    expect(loop.children[0]).toMatchObject({ type: 'html', tag: 'span' })
+    expect(loop.children[0]).toMatchObject({ type: 'output', expr: 'tag[1]' })
   })
 
   test('parses footer separately', () => {
@@ -93,9 +100,16 @@ describe('parseKanbanTemplate', () => {
     expect(nodes).toHaveLength(2)
     expect(nodes[1]).toMatchObject({ type: 'footer' })
 
-    const footer = nodes[1] as KanbanTemplateNode & { type: 'footer'; children: KanbanTemplateNode[] }
+    const footer = nodes[1] as KanbanTemplateNode & {
+      type: 'footer'
+      children: KanbanTemplateNode[]
+    }
     expect(footer.children).toHaveLength(1)
-    expect(footer.children[0]).toMatchObject({ type: 'field', name: 'priority', widget: 'priority' })
+    expect(footer.children[0]).toMatchObject({
+      type: 'field',
+      name: 'priority',
+      widget: 'priority',
+    })
   })
 })
 

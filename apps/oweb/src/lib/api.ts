@@ -75,6 +75,24 @@ export function getViews<T = unknown>(
   return callKw<T>(model, 'get_views', [views], { options })
 }
 
+/// read_group: server-side grouping with aggregation
+export function readGroup<T = unknown[]>(
+  model: string,
+  domain: unknown[] = [],
+  fields: string[] = [],
+  groupBy: string[] = [],
+  offset = 0,
+  limit = 80,
+  orderBy = '',
+): Promise<T> {
+  return callKw<T>(model, 'read_group', [domain, fields, groupBy], {
+    offset,
+    limit,
+    orderby: orderBy || undefined,
+    lazy: true,
+  })
+}
+
 /// Get model field metadata
 export function fieldsGet<T = unknown>(
   model: string,

@@ -66,9 +66,9 @@ export function OdooListView({
     retry: false,
   })
 
-  const handleSearch = (newDomain: unknown[], kw: string) => {
+  const handleSearch = (newDomain: unknown[]) => {
     setDomain(newDomain)
-    setKeyword(kw)
+    setKeyword('')
     setPage(0)
   }
 

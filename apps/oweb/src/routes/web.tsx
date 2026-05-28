@@ -1,7 +1,6 @@
 import { useSearch } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 import { OdooViewLoader } from '../views/OdooViewLoader'
-import { OdooViewSwitcher } from '../views/OdooViewSwitcher'
 
 interface WebSearch {
   model?: string
@@ -11,8 +10,8 @@ interface WebSearch {
 function WebPage() {
   const search = useSearch({ from: '/web' }) as WebSearch
   const model = search.model ?? 'res.partner'
-  const [viewType, setViewType] = useState<'list' | 'form' | 'kanban'>(
-    (search.viewType as 'list' | 'form' | 'kanban') ?? 'list',
+  const [viewType, setViewType] = useState<'list' | 'form' | 'kanban' | 'pivot'>(
+    (search.viewType as 'list' | 'form' | 'kanban' | 'pivot') ?? 'list',
   )
   const [recordId, setRecordId] = useState<number | undefined>()
 
@@ -21,19 +20,36 @@ function WebPage() {
     setViewType('form')
   }, [])
 
-  const handleSwitchView = useCallback((v: 'list' | 'form' | 'kanban') => {
+  const handleSwitchView = useCallback((v: 'list' | 'form' | 'kanban' | 'pivot') => {
     setViewType(v)
-    if (v === 'list') setRecordId(undefined)
+    if (v !== 'form') setRecordId(undefined)
+  }, [])
+
+  const handleBackToList = useCallback(() => {
+    setViewType('list')
+    setRecordId(undefined)
+  }, [])
+
+  const handleCreateClick = useCallback(() => {
+    setViewType('form')
+    setRecordId(undefined)
+  }, [])
+
+  const handleRecordCreated = useCallback((newId: number) => {
+    setRecordId(newId)
   }, [])
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
-      <OdooViewSwitcher currentView={viewType} onSwitch={handleSwitchView} />
       <OdooViewLoader
         model={model}
         viewType={viewType}
         recordId={recordId}
         onRowClick={handleRowClick}
+        onBackToList={handleBackToList}
+        onSwitchView={handleSwitchView}
+        onCreateClick={handleCreateClick}
+        onRecordCreated={handleRecordCreated}
       />
     </div>
   )

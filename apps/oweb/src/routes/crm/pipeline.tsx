@@ -2,7 +2,9 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { OdooViewLoader } from '../../views/OdooViewLoader'
 
 function CrmPipeline() {
-  return <OdooViewLoader model="crm.lead" viewType="kanban" domain={[['type', '=', 'opportunity']]} />
+  return (
+    <OdooViewLoader model="crm.lead" viewType="kanban" domain={[['type', '=', 'opportunity']]} />
+  )
 }
 
 export const Route = createFileRoute('/crm/pipeline')({

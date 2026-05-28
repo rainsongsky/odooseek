@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { createRouter, RouterProvider } from '@tanstack/react-router'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AuthProvider } from './lib/auth'
 import { I18nProvider } from './lib/i18n'
-import { ThemeProvider } from './themes'
 import { routeTree } from './routeTree.gen'
+import { ThemeProvider } from './themes'
 import './index.css'
+import './styles/odoo-icons.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import { describe, expect, test, vi } from 'vitest'
-import { callKw, searchRead, fieldsGet, read } from '../api'
+import { callKw, fieldsGet, read, searchRead } from '../api'
 
 describe('api', () => {
   test('searchRead generates correct args', async () => {

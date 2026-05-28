@@ -75,7 +75,9 @@ function BooleanWidget({ value, onChange, readOnly }: FieldWidgetProps) {
 
 function DateWidget({ value, onChange, readOnly }: FieldWidgetProps) {
   if (readOnly) {
-    return <span className="text-sm text-text-primary">{value ? String(value).slice(0, 10) : ''}</span>
+    return (
+      <span className="text-sm text-text-primary">{value ? String(value).slice(0, 10) : ''}</span>
+    )
   }
   return (
     <input
@@ -89,7 +91,9 @@ function DateWidget({ value, onChange, readOnly }: FieldWidgetProps) {
 
 function DatetimeWidget({ value, onChange, readOnly }: FieldWidgetProps) {
   if (readOnly) {
-    return <span className="text-sm text-text-primary">{value ? String(value).slice(0, 19) : ''}</span>
+    return (
+      <span className="text-sm text-text-primary">{value ? String(value).slice(0, 19) : ''}</span>
+    )
   }
   const dt = value ? String(value).slice(0, 19) : ''
   // Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM"
@@ -98,13 +102,19 @@ function DatetimeWidget({ value, onChange, readOnly }: FieldWidgetProps) {
     <input
       type="datetime-local"
       value={local}
-      onChange={(e) => onChange(e.target.value.replace('T', ' ') + ':00')}
+      onChange={(e) => onChange(`${e.target.value.replace('T', ' ')}:00`)}
       className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
     />
   )
 }
 
-function SelectionWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps & { meta?: { selection?: [string, string][] } }) {
+function SelectionWidget({
+  field: _field,
+  value,
+  onChange,
+  readOnly,
+  meta,
+}: FieldWidgetProps & { meta?: { selection?: [string, string][] } }) {
   if (readOnly) {
     return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
   }
@@ -119,32 +129,50 @@ function SelectionWidget({ field: _field, value, onChange, readOnly, meta }: Fie
     >
       <option value="">--</option>
       {meta.selection.map(([k, v]) => (
-        <option key={k} value={k}>{v}</option>
+        <option key={k} value={k}>
+          {v}
+        </option>
       ))}
     </select>
   )
 }
 
-function Many2OneWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps & { meta?: { relation?: string } }) {
+function Many2OneWidget({
+  field: _field,
+  value,
+  onChange,
+  readOnly,
+  meta,
+}: FieldWidgetProps & { meta?: { relation?: string } }) {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [results, setResults] = useState<Array<{ id: number; display_name: string }>>([])
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  const display = Array.isArray(value) && value.length === 2
-    ? `${value[1] ?? ''}` : value ? `#${value}` : ''
+  const display =
+    Array.isArray(value) && value.length === 2 ? `${value[1] ?? ''}` : value ? `#${value}` : ''
 
-  const doSearch = useCallback((q: string) => {
-    if (!meta?.relation || q.length < 1) { setResults([]); return }
-    clearTimeout(timer.current)
-    timer.current = setTimeout(async () => {
-      const res = await callKw<Array<{ id: number; display_name: string }>>(
-        meta.relation!, 'web_name_search', [],
-        { name: q, operator: 'ilike', limit: 8, specification: { display_name: {} } },
-      )
-      setResults(res ?? [])
-    }, 200)
-  }, [meta?.relation])
+  const doSearch = useCallback(
+    (q: string) => {
+      if (!meta?.relation || q.length < 1) {
+        setResults([])
+        return
+      }
+      clearTimeout(timer.current)
+      timer.current = setTimeout(async () => {
+        const relation = meta?.relation
+        if (!relation) return
+        const res = await callKw<Array<{ id: number; display_name: string }>>(
+          relation,
+          'web_name_search',
+          [],
+          { name: q, operator: 'ilike', limit: 8, specification: { display_name: {} } },
+        )
+        setResults(res ?? [])
+      }, 200)
+    },
+    [meta?.relation],
+  )
 
   if (readOnly) {
     return <span className="text-sm text-text-primary">{display || '—'}</span>
@@ -155,24 +183,51 @@ function Many2OneWidget({ field: _field, value, onChange, readOnly, meta }: Fiel
       <input
         type="text"
         value={open ? search : display}
-        onChange={(e) => { setSearch(e.target.value); doSearch(e.target.value) }}
-        onFocus={() => { setOpen(true); setSearch(''); doSearch('') }}
+        onChange={(e) => {
+          setSearch(e.target.value)
+          doSearch(e.target.value)
+        }}
+        onFocus={() => {
+          setOpen(true)
+          setSearch('')
+          doSearch('')
+        }}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
         placeholder={_field.placeholder || 'Search...'}
         className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
       />
-      {open && results.length > 0 && (
+      {open && (results.length > 0 || search.trim()) && (
         <div className="absolute z-10 mt-1 w-full rounded-lg border border-border-subtle bg-surface shadow-lg">
           {results.map((r) => (
             <button
               key={r.id}
               type="button"
-              onMouseDown={() => { onChange([r.id, r.display_name]); setOpen(false) }}
+              onMouseDown={() => {
+                onChange([r.id, r.display_name])
+                setOpen(false)
+              }}
               className="w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-hover/50"
             >
               {r.display_name}
             </button>
           ))}
+          {search.trim() &&
+            !results.some((r) => r.display_name.toLowerCase() === search.trim().toLowerCase()) && (
+              <button
+                type="button"
+                onMouseDown={async () => {
+                  if (!meta?.relation) return
+                  const newId = await callKw<number>(meta.relation, 'create', [
+                    { name: search.trim() },
+                  ])
+                  onChange([newId, search.trim()])
+                  setOpen(false)
+                }}
+                className="w-full border-t border-border-subtle px-3 py-1.5 text-left text-sm text-accent hover:bg-accent/10"
+              >
+                Create "{search.trim()}"
+              </button>
+            )}
         </div>
       )}
     </div>
@@ -194,6 +249,67 @@ function Many2ManyWidget({ value }: FieldWidgetProps) {
   return <span className="text-sm text-text-muted">—</span>
 }
 
+export function PriorityWidget({ value, readOnly, onChange }: FieldWidgetProps) {
+  const stars = Number(value) || 0
+  const max = 3
+  if (readOnly) {
+    return (
+      <span className="inline-flex gap-0.5 text-sm">
+        {Array.from({ length: max }, (_, i) => (
+          <span key={i} className={i < stars ? 'text-amber-500' : 'text-border-default'}>
+            ★
+          </span>
+        ))}
+      </span>
+    )
+  }
+  return (
+    <div className="inline-flex gap-0.5">
+      {Array.from({ length: max }, (_, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onChange(i + 1)}
+          className={`text-sm ${i < stars ? 'text-amber-500' : 'text-border-default hover:text-amber-400'}`}
+        >
+          {i < stars ? '★' : '☆'}
+        </button>
+      ))}
+      {stars > 0 && (
+        <button type="button" onClick={() => onChange(0)} className="ml-1 text-xs text-text-muted">
+          ✕
+        </button>
+      )}
+    </div>
+  )
+}
+
+function StateBadgeWidget({ value, meta }: FieldWidgetProps) {
+  const val = String(value ?? '')
+  if (!val) return <span className="text-sm text-text-muted">—</span>
+  const selection = meta?.selection ?? []
+  const pair = selection.find(([k]) => k === val)
+  const label = pair?.[1] ?? val
+  const colors: Record<string, string> = {
+    draft: 'bg-border-default text-text-secondary',
+    done: 'bg-emerald-500/10 text-emerald-500',
+    cancel: 'bg-red-500/10 text-red-500',
+    posted: 'bg-blue-500/10 text-blue-500',
+    confirmed: 'bg-blue-500/10 text-blue-500',
+    new: 'bg-border-default text-text-secondary',
+    assigned: 'bg-amber-500/10 text-amber-500',
+    won: 'bg-emerald-500/10 text-emerald-500',
+    lost: 'bg-red-500/10 text-red-500',
+  }
+  const color =
+    colors[val.toLowerCase()] ?? 'bg-surface text-text-primary border border-border-default'
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}>
+      {label}
+    </span>
+  )
+}
+
 export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>> = {
   char: CharWidget,
   text: TextWidget,
@@ -204,6 +320,8 @@ export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>>
   date: DateWidget,
   datetime: DatetimeWidget,
   selection: SelectionWidget,
+  priority: PriorityWidget,
+  state: StateBadgeWidget,
   many2one: Many2OneWidget,
   many2many: Many2ManyWidget,
   one2many: Many2ManyWidget,
@@ -216,5 +334,18 @@ export function getFieldWidget(
   field: FieldElement,
   type: string,
 ): React.ComponentType<FieldWidgetProps> {
+  // widget attribute from XML arch overrides type-based selection
+  if (field.widget && WIDGET_OVERRIDES[field.widget]) {
+    return WIDGET_OVERRIDES[field.widget]
+  }
+  if (field.widget && TYPE_WIDGETS[field.widget]) {
+    return TYPE_WIDGETS[field.widget]
+  }
   return TYPE_WIDGETS[type] ?? CharWidget
+}
+
+const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = {
+  priority: PriorityWidget,
+  state: StateBadgeWidget,
+  statusbar: StateBadgeWidget,
 }
