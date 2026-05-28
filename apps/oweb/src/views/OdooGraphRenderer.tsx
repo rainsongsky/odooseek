@@ -10,7 +10,6 @@ import {
   LineChart,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -93,10 +92,9 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
   return (
     <div className="p-4">
       <h3 className="mb-4 text-sm font-semibold text-text-primary">{graphView.string || model}</h3>
-      <div style={{ height: 320 }}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div style={{ width: '100%', height: 320 }}>
           {graphView.graphType === 'pie' ? (
-            <PieChart>
+            <PieChart width={600} height={320}>
               <Pie
                 data={chartData}
                 dataKey={measureKeys[0] ?? '__count'}
@@ -119,7 +117,7 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
               measures={graphView.measures}
             />
           ) : (
-            <BarChart data={chartData}>
+            <BarChart width={600} height={320} data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
@@ -136,7 +134,6 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
               ))}
             </BarChart>
           )}
-        </ResponsiveContainer>
       </div>
     </div>
   )
@@ -152,7 +149,7 @@ function LineChartContent({
   measures: { name: string; string?: string }[]
 }) {
   return (
-    <LineChart data={data}>
+    <LineChart width={600} height={320} data={data}>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
       <YAxis tick={{ fontSize: 11 }} />
