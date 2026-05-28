@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun --bun node_modules/.bin/vite",
     "build": "bun --bun node_modules/.bin/tsc -b && bun --bun node_modules/.bin/vite build",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "bun --bun node_modules/.bin/vitest run",
+    "test:watch": "bun --bun node_modules/.bin/vitest",
     "lint": "biome check ../../",
     "format": "biome format --write ../../",
-    "preview": "vite preview"
+    "preview": "bun --bun node_modules/.bin/vite preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
