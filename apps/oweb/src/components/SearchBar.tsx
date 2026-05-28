@@ -1,14 +1,31 @@
 import { useCallback, useState } from 'react'
+import type { ViewField } from '../views/types'
 
 interface SearchBarProps {
   onSearch: (domain: unknown[], keyword: string) => void
   placeholder?: string
+  searchFields?: ViewField[]
 }
 
-export function SearchBar({ onSearch, placeholder = 'Search...' }: SearchBarProps) {
+export function SearchBar({
+  onSearch,
+  placeholder = 'Search...',
+  searchFields,
+}: SearchBarProps) {
   const [keyword, setKeyword] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [field, setField] = useState('name')
+
+  // Use search view fields, fallback to model defaults
+  const advancedFields = searchFields?.length
+    ? searchFields.map((f) => ({ name: f.name, label: f.string || f.name }))
+    : [
+        { name: 'name', label: 'Name' },
+        { name: 'id', label: 'ID' },
+        { name: 'create_date', label: 'Created' },
+        { name: 'write_date', label: 'Updated' },
+      ]
+
+  const [field, setField] = useState(advancedFields[0]?.name ?? 'name')
   const [operator, setOperator] = useState('ilike')
   const [value, setValue] = useState('')
 
@@ -16,10 +33,7 @@ export function SearchBar({ onSearch, placeholder = 'Search...' }: SearchBarProp
     (e: React.FormEvent) => {
       e.preventDefault()
       const trimmed = keyword.trim()
-      if (!trimmed) {
-        onSearch([], '')
-        return
-      }
+      if (!trimmed) { onSearch([], ''); return }
       onSearch([[field, operator, trimmed]], trimmed)
     },
     [keyword, field, operator, onSearch],
@@ -35,10 +49,7 @@ export function SearchBar({ onSearch, placeholder = 'Search...' }: SearchBarProp
     (e: React.FormEvent) => {
       e.preventDefault()
       const trimmed = value.trim()
-      if (!trimmed) {
-        onSearch([], '')
-        return
-      }
+      if (!trimmed) { onSearch([], ''); return }
       onSearch([[field, operator, trimmed]], trimmed)
     },
     [field, operator, value, onSearch],
@@ -83,9 +94,9 @@ export function SearchBar({ onSearch, placeholder = 'Search...' }: SearchBarProp
             onChange={(e) => setField(e.target.value)}
             className="rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
           >
-            {['name', 'id', 'create_date', 'write_date'].map((f) => (
-              <option key={f} value={f}>
-                {f}
+            {advancedFields.map((f) => (
+              <option key={f.name} value={f.name}>
+                {f.label}
               </option>
             ))}
           </select>

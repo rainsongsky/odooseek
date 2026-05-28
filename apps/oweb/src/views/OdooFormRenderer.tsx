@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { callKw } from '../lib/api'
 import { parseFormXml } from './xml-parser'
 import { getFieldWidget } from './field-widgets'
@@ -49,6 +49,54 @@ interface NodeProps {
   level?: number
 }
 
+function NotebookRenderer({
+  pages,
+  record,
+  fields,
+  model,
+  level,
+}: {
+  pages: { string: string; elements: FormElement[] }[]
+  record?: Record<string, unknown>
+  fields: Record<string, OdooFieldMeta>
+  model: string
+  level: number
+}) {
+  const [activePage, setActivePage] = useState(0)
+
+  return (
+    <div className="mb-4">
+      <div className="flex gap-1 border-b border-border-subtle">
+        {pages.map((page, pi) => (
+          <button
+            key={pi}
+            type="button"
+            onClick={() => setActivePage(pi)}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              pi === activePage
+                ? 'border-b-2 border-accent text-accent'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            {page.string}
+          </button>
+        ))}
+      </div>
+      <div className="p-4">
+        {pages[activePage] && (
+          <FormLayoutNode
+            elements={pages[activePage].elements}
+            record={record}
+            fields={fields}
+            model={model}
+            level={level + 1}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
 function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProps) {
   return (
     <>
@@ -91,26 +139,14 @@ function FormLayoutNode({ elements, record, fields, model, level = 0 }: NodeProp
           }
           case 'notebook':
             return (
-              <div key={i} className="mb-4">
-                <div className="flex gap-1 border-b border-border-subtle">
-                  {el.pages.map((page, pi) => (
-                    <span key={pi} className="px-3 py-1.5 text-xs font-medium text-text-secondary">
-                      {page.string}
-                    </span>
-                  ))}
-                </div>
-                <div className="p-4">
-                  {el.pages[0] && (
-                    <FormLayoutNode
-                      elements={el.pages[0].elements}
-                      record={record}
-                      fields={fields}
-                      model={model}
-                      level={level + 1}
-                    />
-                  )}
-                </div>
-              </div>
+              <NotebookRenderer
+                key={i}
+                pages={el.pages}
+                record={record}
+                fields={fields}
+                model={model}
+                level={level}
+              />
             )
           case 'field': {
             const meta = fields[el.name]
