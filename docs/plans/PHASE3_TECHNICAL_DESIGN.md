@@ -1,249 +1,273 @@
 # Phase 3 技术方案与开发计划
 
-> **目标**：实现 Odoo 19 CE 首个业务模块 — CRM 客户关系管理，包括看板管道、线索/商机列表、商机详情表单。
+> **目标**：实现 Odoo 19 CE 首个业务模块 — CRM 客户关系管理，包括看板管道、线索/商机列表、商机详情表单。严格遵循 Odoo 19 CE 源码事实。
 
 ---
 
-## 一、背景
+## 一、基于 Odoo 19 CE 源码的事实校验
 
-Phase 2 已完成 Odoo 元数据驱动的通用视图引擎（List / Form / Kanban 解析器 + 渲染器）。Phase 3 在此基础上实现具体业务模块，验证视图引擎在真实 Odoo App 上的表现。
+以下所有字段名、API 签名、XML 结构均来自 `~/EA/odoo` 源码验证。
 
-选择 CRM 作为首个模块的理由：
-- 同时用到 **看板**（管道）和 **列表**（线索）两种核心视图
-- 看板的 `kanban` XML 视图是 Odoo 最复杂的视图类型之一
-- 商机详情表单包含 `many2one`、`selection`、`one2many` 等多种字段类型
-- CRM 是 Odoo 最常用的 App，验证价值高
+### 1.1 CRM 模型字段（精确）
 
----
+**`crm.lead`** (`odoo/addons/crm/models/crm_lead.py`):
 
-## 二、CRM 模块设计
+| 字段名 | 类型 | Odoo 标签 | 说明 |
+|--------|------|-----------|------|
+| `name` | Char | Opportunity | 计算字段，store=True |
+| `type` | Selection | Type | `lead` / `opportunity` — 核心区分 |
+| `partner_id` | Many2one(res.partner) | Customer | |
+| `contact_name` | Char | Contact Name | |
+| `email_from` | Char | Email | ⚠️ 不是 `email` |
+| `phone` | Char | Phone | |
+| `stage_id` | Many2one(crm.stage) | Stage | 看板分组依据 |
+| `user_id` | Many2one(res.users) | Salesperson | |
+| `team_id` | Many2one(crm.team) | Sales Team | |
+| `expected_revenue` | Monetary | Expected Revenue | |
+| `recurring_revenue` | Monetary | Recurring Revenues | |
+| `probability` | Float | Probability | |
+| `priority` | Selection | Priority | 0-3 stars |
+| `tag_ids` | Many2many(crm.tag) | Tags | `color_field='color'` |
+| `color` | Integer | Color Index | 看板 `highlight_color` |
+| `lost_reason_id` | Many2one(crm.lost.reason) | Lost Reason | ⚠️ 不是 `lost_reason` |
+| `won_status` | Selection | Won Status | `won` / `lost` / `pending` |
+| `active` | Boolean | Active | 归档标志 |
+| `activity_ids` | One2many(mail.activity) | Activities | |
+| `lead_properties` | Properties | Properties | |
+| `description` | Html | Notes | |
 
-### 2.1 模型概览
+**`crm.stage`** (`odoo/addons/crm/models/crm_stage.py`):
 
-| Odoo Model | 用途 | 主要字段 |
-|------------|------|----------|
-| `crm.lead` | 线索/商机 | name, partner_id, email, phone, stage_id, user_id, expected_revenue, probability, lost_reason, description |
-| `crm.stage` | 商机阶段 | name, sequence, probability, requirements |
-| `crm.team` | 销售团队 | name, user_id, member_ids |
-| `mail.activity` | 活动 | activity_type_id, summary, date_deadline, user_id, res_id, res_model |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `name` | Char | Stage Name (translate=True) |
+| `sequence` | Integer | 排序 |
+| `is_won` | Boolean | 标记为"赢单" |
+| `fold` | Boolean | 看板中折叠 |
+| `team_ids` | Many2many(crm.team) | 团队可见性 |
+| `requirements` | Text | 阶段要求 |
+| `color` | Integer | 阶段颜色 |
 
-### 2.2 页面规划
+> ❌ `crm.stage` **没有** `probability` 字段。
 
-| 路由 | 页面 | 默认视图 | Odoo Action |
-|------|------|----------|-------------|
-| `/crm` | CRM 首页 | 看板管道 | `crm.crm_lead_action_pipeline` |
-| `/crm/pipeline` | 商机管道 | kanban (按 stage 分组) | CRMPipeline |
-| `/crm/leads` | 线索列表 | list | `crm_lead_action_all_leads` |
-| `/crm/lead/$id` | 商机详情 | form | (从列表/看板点击进入) |
+### 1.2 CRM Kanban XML 视图（精确）
 
-### 2.3 路由架构
-
-```
-routes/crm/
-├── index.tsx          → /crm — 默认跳转到 pipeline
-├── pipeline.tsx       → /crm/pipeline — 看板视图
-├── leads.tsx          → /crm/leads — 列表视图
-└── lead.$id.tsx       → /crm/lead/$id — 表单视图
-```
-
-> 利用 TanStack Router 的文件路由，`$id` 自动捕获记录 ID。
-
----
-
-## 三、看板（Kanban）实现
-
-### 3.1 看板 XML 解析
-
-Odoo 的 `<kanban>` XML 结构：
+**来源**: `odoo/addons/crm/views/crm_lead_views.xml` 行 544
 
 ```xml
-<kanban default_group_by="stage_id" class="o_kanban_small_column">
-  <field name="name"/>
-  <field name="expected_revenue"/>
-  <field name="stage_id"/>
-  
-  <templates>
-    <t t-name="kanban-box">
-      <div class="oe_kanban_card">
-        <strong><field name="name"/></strong>
-        <div><field name="expected_revenue"/></div>
-      </div>
-    </t>
-  </templates>
+<kanban highlight_color="color" default_group_by="stage_id"
+    class="o_kanban_small_column o_opportunity_kanban"
+    on_create="quick_create" quick_create_view="crm.quick_create_opportunity_form"
+    archivable="false" sample="1" js_class="crm_kanban">
+    
+    <progressbar field="activity_state" .../>
+    
+    <templates>
+        <t t-name="card">                     <!-- ⚠️ 是 "card"，不是 "kanban-box" -->
+            <widget name="web_ribbon" .../>    <!-- 归档/丢失 ribbon -->
+            <field class="fw-bold fs-5" name="name"/>
+            <!-- 收入信息：条件渲染 regular + recurring -->
+            <div class="o_kanban_card_crm_lead_revenue">
+                <field name="expected_revenue" widget="monetary" .../>
+                <field name="recurring_revenue" widget="monetary" .../>
+                <field name="recurring_plan" .../>
+            </div>
+            <!-- 客户信息：条件渲染 -->
+            <field name="partner_id" widget="many2one_avatar" .../>
+            <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+            <field name="lead_properties" widget="properties"/>
+            <footer>                            <!-- ⚠️ 使用 <footer> 标签 -->
+                <field name="priority" widget="priority"/>
+                <field name="activity_ids" widget="kanban_activity"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+            </footer>
+        </t>
+    </templates>
 </kanban>
 ```
 
-关键属性：
-- `default_group_by` — 按哪个字段分组（CRM 按 `stage_id`）
-- `<field>` 元素 — 声明看板需要加载的字段
-- `<templates>` — QWeb 模板定义卡片外观
+**关键事实**:
+- ✅ `default_group_by="stage_id"` — 按阶段分组
+- ⚠️ 模板名是 `card`，不是 `kanban-box`
+- ⚠️ 使用 Bootstrap 5 类（`fw-bold`, `fs-5`），不是 `oe_kanban_card`
+- ⚠️ 收入金额使用 `t-if` 条件渲染（只有有值才显示）
+- 看板属性：`js_class="crm_kanban"`, `highlight_color="color"`, `on_create="quick_create"`, `archivable="false"`
+- Odoo 前端 JS 类 `crm_kanban` 负责拖拽和快速创建——在 OdooSeek 中忽略，用原生 HTML 实现
 
-### 3.2 OdooKanbanRenderer 设计
+### 1.3 API 事实
+
+**`read_group` 已废弃（Odoo 19.0）**:
+
+```python
+# odoo/orm/models.py:2749
+@api.deprecated("Since 19.0, read_group is deprecated. Please use _read_group...")
+def read_group(self, domain, fields, groupby, offset=0, limit=None, orderby=False, lazy=True):
+```
+
+**OdooSeek 策略**: 不调用 `read_group`。改用 `search_read` 获取所有记录，前端按 `stage_id` 分组渲染。理由：
+- `read_group` 不返回记录详情，需额外 `search_read`
+- 看板记录数通常 <200，全量加载可行
+- 避免依赖废弃 API
+
+### 1.4 CRM 动作与菜单
+
+| 用途 | 动作 XML ID | 模型 | 视图模式 | 说明 |
+|------|------------|------|----------|------|
+| 管道 | `crm_lead_action_pipeline` | crm.lead | kanban,... | `domain: [('type','=','opportunity')]` |
+| 线索 | `crm_lead_all_leads` | crm.lead | list,kanban,... | ⚠️ 无 `action_` 前缀 |
+
+---
+
+## 二、技术决策（基于源码对齐）
+
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| 看板数据获取 | **`search_read` 全量 + 前端分组** | `read_group` 已废弃且不返回记录 |
+| 看板卡片 | **渲染 `<field>` 元素为 React Widget** | 遵循声明式原则，不硬编码模板 |
+| 分组维度 | **从 `<kanban default_group_by>` 读取** | 元数据驱动 |
+| 拖拽实现 | **HTML5 Drag & Drop + `callKw('write')`** | 无需 Odoo JS 框架 |
+
+---
+
+## 三、模块设计
+
+### 3.1 OdooKanbanRenderer
+
+**架构**:
 
 ```
 OdooKanbanRenderer
-├── 解析 <kanban> XML → 获取 fields + default_group_by
-├── callKw(model, 'read_group', [domain, fields, groupBy, ...]) → 分组数据
+├── 解析 <kanban> XML → groupBy, template fields
+├── search_read 获取所有记录
+├── 前端按 stage_id 分组
 ├── 渲染列 (每列 = 一个 stage)
 │   └── 渲染卡片 (每卡片 = 一条记录)
-│       └── 卡片内容从 <templates> XML 提取
-└── 拖拽卡片到新列 → callKw(model, 'write', [[id], {stage_id: new_stage_id}])
+│       └── 卡片内容：renderFieldWidgets(card template fields)
+└── 拖拽卡片到新列 → callKw(write, [{[id], {stage_id: new_id}}])
 ```
 
-### 3.3 OdooKanbanRenderer 组件
+**组件接口**:
 
 ```typescript
 interface KanbanRendererProps {
   model: string
-  arch: string         // <kanban> XML
+  arch: string                    // <kanban> XML
   fields: Record<string, OdooFieldMeta>
   domain?: unknown[]
+  onRecordClick?: (id: number) => void
 }
+```
 
-export function OdooKanbanRenderer({ model, arch, fields, domain }: KanbanRendererProps) {
-  const kanbanView = useMemo(() => parseKanbanXml(arch), [arch])
-  const groupBy = kanbanView.default_group_by ?? 'stage_id'
-  
-  const { data: groups } = useQuery({
-    queryKey: ['odoo', 'read_group', model, domain, groupBy],
-    queryFn: () => callKw(model, 'read_group', [[domain], kanbanView.fields, [groupBy], {}]),
-  })
-  
+### 3.2 数据流
+
+```typescript
+// 1. 获取所有阶段（用于列标题和排序）
+const stages = await callKw('crm.stage', 'search_read', [[], ['name', 'sequence', 'color']], { order: 'sequence' })
+
+// 2. 获取所有记录
+const records = await callKw(model, 'search_read', [[domain], visibleFields], { limit: 200, order: 'stage_id' })
+
+// 3. 按 stage_id 分组
+const groups = new Map<number, Record[]>()
+for (const r of records) {
+  const stageId = (r.stage_id as [number, string])[0]
+  if (!groups.has(stageId)) groups.set(stageId, [])
+  groups.get(stageId)!.push(r)
+}
+```
+
+### 3.3 卡片渲染策略
+
+**遵循 Odoo 声明式原则** — 不硬编码卡片布局，从 `<kanban>` XML 的 `<templates>` 提取 `<field>` 列表：
+
+```xml
+<!-- 从 <templates><t t-name="card"> 中提取的字段序列 -->
+<field class="fw-bold fs-5" name="name"/>
+<field name="expected_revenue" widget="monetary"/>
+<field name="partner_id" widget="many2one_avatar"/>
+<field name="tag_ids" widget="many2multi_tags"/>
+```
+
+解析为：
+```typescript
+// 从 xml-parser 提取 <t t-name="card"> 内的所有 <field> 元素
+const cardFields = parseKanbanFields(kanbanView.template!)
+```
+
+卡片渲染：
+```typescript
+function KanbanCard({ record, cardFields, fields }: CardProps) {
   return (
-    <div className="flex gap-4 overflow-x-auto p-4">
-      {groups?.map((group: any) => (
-        <KanbanColumn
-          key={group[groupBy]?.[0] ?? group.__count}
-          title={group[groupBy]?.[1] ?? 'Unknown'}
-          count={group.__count}
-          records={group.__records ?? []}
-          fields={kanbanView.fields}
-          template={kanbanView.template}
-        />
+    <div className="rounded-lg border border-border-subtle bg-surface p-3">
+      {cardFields.map((f) => (
+        <FieldWidget field={f} value={record[f.name]} meta={fields[f.name]}/>
       ))}
     </div>
   )
 }
 ```
 
-### 3.4 read_group API
-
-Odoo 的 `read_group` 方法：
-```json
-{
-  "model": "crm.lead",
-  "method": "read_group",
-  "args": [[], ["name", "expected_revenue", "stage_id"], ["stage_id"], {}]
-}
-```
-
-返回格式：
-```json
-[
-  {
-    "__count": 5,
-    "__domain": [["stage_id", "=", 1]],
-    "stage_id": [1, "New"],
-    "name": "New",
-    "__records": [...]  // 需要请求 records 才返回
-  }
-]
-```
+> **对齐论证**: Odoo `<kanban>` XML 声明了字段和 widget。我们解析 XML 并映射到 React Widget——这就是"声明式渲染"哲学在 React 中的实现。卡片布局简化为线性排列（vs Odoo 的自由 QWeb 模板），这是合理的取舍。
 
 ---
 
-## 四、CRM 页面实现
+## 四、CRM 路由设计
 
-### 4.1 `/crm` — 默认跳转
-
-```typescript
-// routes/crm/index.tsx
-export const Route = createFileRoute('/crm')({
-  beforeLoad: () => { throw redirect({ to: '/crm/pipeline' }) },
-})
+```
+routes/crm/
+├── index.tsx          → /crm — 重定向到 /crm/pipeline
+├── pipeline.tsx       → /crm/pipeline — kanban (crm.lead, domain opportunity only)
+├── leads.tsx          → /crm/leads — list (crm.lead, domain lead only)
+└── lead.$id.tsx       → /crm/lead/$id — form
 ```
 
-### 4.2 `/crm/pipeline` — 看板视图
+**路由实现**:
 
 ```typescript
-// routes/crm/pipeline.tsx
+// pipeline.tsx
 function CrmPipeline() {
-  return <OdooViewLoader model="crm.lead" viewType="kanban" />
+  return <OdooViewLoader model="crm.lead" viewType="kanban" domain={[['type','=','opportunity']]}/>
 }
-```
 
-### 4.3 `/crm/leads` — 列表视图
-
-```typescript
-// routes/crm/leads.tsx  
+// leads.tsx
 function CrmLeads() {
-  return <OdooViewLoader model="crm.lead" viewType="list" />
-}
-```
-
-### 4.4 `/crm/lead/$id` — 商机详情
-
-```typescript
-// routes/crm/lead.$id.tsx
-function CrmLeadDetail() {
-  const { id } = useParams({ from: '/crm/lead/$id' })
-  return <OdooViewLoader model="crm.lead" viewType="form" recordId={Number(id)} />
+  return <OdooViewLoader model="crm.lead" viewType="list" domain={[['type','=','lead']]}/>
 }
 ```
 
 ---
 
-## 五、技术依赖
-
-| 层级 | 依赖 | 状态 |
-|------|------|:----:|
-| 看板 XML 解析 | `lib/xml-parser.ts` — `parseKanbanXml()` | ✅ 已实现 |
-| read_group API | `lib/api.ts` — 需新增 `readGroup()` | ⏳ 待添加 |
-| Kanban 渲染器 | `views/OdooViewLoader.tsx` — 需添加 kanban case | ⏳ 待添加 |
-| 文件路由 | TanStack Router file-based routing | ✅ 已配置 |
-
----
-
-## 六、任务分解
+## 五、任务分解
 
 | # | 任务 | 工时 | 产出 |
 |---|------|------|------|
-| 3.1 | api.ts 新增 `readGroup()` | 0.5 天 | `readGroup(model, domain, fields, groupBy, kwargs)` |
-| 3.2 | OdooKanbanRenderer 组件 | 1.5 天 | 分组查询 + 列/卡片渲染 |
-| 3.3 | OdooViewLoader kanban case | 0.5 天 | 分发 `<kanban>` 视图到 OdooKanbanRenderer |
-| 3.4 | CRM 路由 (4 条) | 0.5 天 | `/crm`, `/crm/pipeline`, `/crm/leads`, `/crm/lead/$id` |
-| 3.5 | 菜单集成 | 0.5 天 | CRM 菜单项 → 导航到 `/crm/pipeline` |
-| 3.6 | 卡片拖拽排序 + write | 1 天 | 乐观更新 + `callKw('write')` |
+| 3.1 | `xml-parser.ts` 扩展：提取 kanban card fields | 0.5 天 | `parseKanbanFields(template)` |
+| 3.2 | OdooKanbanRenderer 组件 | 1.5 天 | 分组 + 列 + 卡片渲染 |
+| 3.3 | OdooViewLoader kanban case | 0.5 天 | 分发 `<kanban>` 到 OdooKanbanRenderer |
+| 3.4 | CRM 路由 (4 条) | 0.5 天 | routes/crm/* |
+| 3.5 | 拖拽 → write stage | 0.5 天 | HTML5 Drag & Drop + 乐观更新 |
+| 3.6 | 菜单集成 | 0.5 天 | 从菜单导航到 /crm/pipeline |
 
-**总计**: 4.5 个工作日
-
----
-
-## 七、开发顺序
-
-```
-Day 1     [3.1] readGroup API → [3.2] KanbanRenderer
-Day 2     [3.3] ViewLoader kanban → [3.4] CRM routes
-Day 3     [3.5] Menu integration → [3.6] Drag & drop
-```
+**总计**: 4 天
 
 ---
 
-## 八、完成标准
+## 六、完成标准
 
 ```
-[ ] lib/api.ts: readGroup() 正常工作
-[ ] parseKanbanXml 解析真实 CRM <kanban> XML
-[ ] OdooKanbanRenderer 按 stage 分组显示卡片
+[ ] parseKanbanFields 提取 <t t-name="card"> 内所有 <field>
+[ ] 前端按 stage_id 分组渲染列
+[ ] 卡片显示 name, expected_revenue, partner_id 等字段
 [ ] /crm/pipeline 看板视图可用
 [ ] /crm/leads 列表视图可用
 [ ] /crm/lead/$id 表单视图可用
-[ ] 菜单"CRM"或"Sales"导航到 /crm/pipeline
-[ ] 拖拽卡片到新阶段 → Odoo 数据更新
+[ ] 拖拽卡片 → write stage_id 成功
+[ ] 菜单项可导航到 CRM
 ```
 
 ---
 
-**文档版本**: 1.0  
+**文档版本**: 2.0 (Odoo 19 CE 源码对齐)  
 **创建日期**: 2026-05-28  
+**更新**: 修正 `read_group` 废弃、字段名、动作 ID、看板模板结构  
 **维护团队**: OdooSeek
