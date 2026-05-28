@@ -11,3 +11,6 @@ thiserror.workspace = true
 tracing.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
+
+[dev-dependencies]
+temp-env = "0.3"

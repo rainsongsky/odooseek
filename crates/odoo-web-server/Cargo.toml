@@ -17,3 +17,8 @@ tracing-subscriber.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 futures.workspace = true
+
+[dev-dependencies]
+wiremock = "0.6"
+tower = { version = "0.5", features = ["util"] }
+tokio = { version = "1", features = ["test-util", "macros"] }

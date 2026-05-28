@@ -43,3 +43,42 @@ impl IntoResponse for AppError {
         (status, axum::Json(body)).into_response()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+    use odoo_core::error::OdooError;
+
+    use super::*;
+
+    #[test]
+    fn app_error_not_authenticated_is_401() {
+        let response = AppError::from(OdooError::NotAuthenticated).into_response();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[test]
+    fn app_error_http_is_502() {
+        let reqwest_err = reqwest::Proxy::all("not a url").unwrap_err();
+        let response = AppError(OdooError::Http(reqwest_err)).into_response();
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+    }
+
+    #[test]
+    fn app_error_api_is_200() {
+        let response = AppError::from(OdooError::Api {
+            code: 100,
+            message: "test".into(),
+            data: None,
+        })
+        .into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn app_error_generic_is_500() {
+        let response = AppError::from(OdooError::Config("test".into())).into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+}

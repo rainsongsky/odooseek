@@ -52,3 +52,33 @@ fn env_or(key: &str, default: &str) -> String {
 fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_values() {
+        let config = ServerConfig::default();
+        assert_eq!(config.host, "0.0.0.0");
+        assert_eq!(config.port, 3000);
+        assert_eq!(config.odoo_url, "http://localhost:8069");
+    }
+
+    #[test]
+    fn from_env_valid() {
+        temp_env::with_var("PORT", Some("4000"), || {
+            let config = ServerConfig::from_env().unwrap();
+            assert_eq!(config.port, 4000);
+        });
+    }
+
+    #[test]
+    fn from_env_missing_db() {
+        let no_db: Option<&str> = None;
+        temp_env::with_var("ODOO_DB", no_db, || {
+            let config = ServerConfig::from_env().unwrap();
+            assert!(config.odoo_db.is_none());
+        });
+    }
+}
