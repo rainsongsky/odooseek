@@ -18,13 +18,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SaleIndexRouteImport } from './routes/sale/index'
 import { Route as InventoryIndexRouteImport } from './routes/inventory/index'
 import { Route as CrmIndexRouteImport } from './routes/crm/index'
+import { Route as AccountingIndexRouteImport } from './routes/accounting/index'
 import { Route as SaleOrdersRouteImport } from './routes/sale/orders'
 import { Route as InventoryPickingsRouteImport } from './routes/inventory/pickings'
 import { Route as CrmPipelineRouteImport } from './routes/crm/pipeline'
 import { Route as CrmLeadsRouteImport } from './routes/crm/leads'
+import { Route as AccountingMovesRouteImport } from './routes/accounting/moves'
 import { Route as SaleOrderIdRouteImport } from './routes/sale/order.$id'
 import { Route as InventoryPickingIdRouteImport } from './routes/inventory/picking.$id'
 import { Route as CrmLeadIdRouteImport } from './routes/crm/lead.$id'
+import { Route as AccountingMoveIdRouteImport } from './routes/accounting/move.$id'
 
 const WebRoute = WebRouteImport.update({
   id: '/web',
@@ -71,6 +74,11 @@ const CrmIndexRoute = CrmIndexRouteImport.update({
   path: '/crm/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountingIndexRoute = AccountingIndexRouteImport.update({
+  id: '/accounting/',
+  path: '/accounting/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SaleOrdersRoute = SaleOrdersRouteImport.update({
   id: '/sale/orders',
   path: '/sale/orders',
@@ -91,6 +99,11 @@ const CrmLeadsRoute = CrmLeadsRouteImport.update({
   path: '/crm/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountingMovesRoute = AccountingMovesRouteImport.update({
+  id: '/accounting/moves',
+  path: '/accounting/moves',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SaleOrderIdRoute = SaleOrderIdRouteImport.update({
   id: '/sale/order/$id',
   path: '/sale/order/$id',
@@ -106,6 +119,11 @@ const CrmLeadIdRoute = CrmLeadIdRouteImport.update({
   path: '/crm/lead/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountingMoveIdRoute = AccountingMoveIdRouteImport.update({
+  id: '/accounting/move/$id',
+  path: '/accounting/move/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -114,13 +132,16 @@ export interface FileRoutesByFullPath {
   '/menu': typeof MenuRoute
   '/settings': typeof SettingsRoute
   '/web': typeof WebRoute
+  '/accounting/moves': typeof AccountingMovesRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
   '/inventory/pickings': typeof InventoryPickingsRoute
   '/sale/orders': typeof SaleOrdersRoute
+  '/accounting/': typeof AccountingIndexRoute
   '/crm/': typeof CrmIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/sale/': typeof SaleIndexRoute
+  '/accounting/move/$id': typeof AccountingMoveIdRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
   '/inventory/picking/$id': typeof InventoryPickingIdRoute
   '/sale/order/$id': typeof SaleOrderIdRoute
@@ -132,13 +153,16 @@ export interface FileRoutesByTo {
   '/menu': typeof MenuRoute
   '/settings': typeof SettingsRoute
   '/web': typeof WebRoute
+  '/accounting/moves': typeof AccountingMovesRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
   '/inventory/pickings': typeof InventoryPickingsRoute
   '/sale/orders': typeof SaleOrdersRoute
+  '/accounting': typeof AccountingIndexRoute
   '/crm': typeof CrmIndexRoute
   '/inventory': typeof InventoryIndexRoute
   '/sale': typeof SaleIndexRoute
+  '/accounting/move/$id': typeof AccountingMoveIdRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
   '/inventory/picking/$id': typeof InventoryPickingIdRoute
   '/sale/order/$id': typeof SaleOrderIdRoute
@@ -151,13 +175,16 @@ export interface FileRoutesById {
   '/menu': typeof MenuRoute
   '/settings': typeof SettingsRoute
   '/web': typeof WebRoute
+  '/accounting/moves': typeof AccountingMovesRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
   '/inventory/pickings': typeof InventoryPickingsRoute
   '/sale/orders': typeof SaleOrdersRoute
+  '/accounting/': typeof AccountingIndexRoute
   '/crm/': typeof CrmIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/sale/': typeof SaleIndexRoute
+  '/accounting/move/$id': typeof AccountingMoveIdRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
   '/inventory/picking/$id': typeof InventoryPickingIdRoute
   '/sale/order/$id': typeof SaleOrderIdRoute
@@ -171,13 +198,16 @@ export interface FileRouteTypes {
     | '/menu'
     | '/settings'
     | '/web'
+    | '/accounting/moves'
     | '/crm/leads'
     | '/crm/pipeline'
     | '/inventory/pickings'
     | '/sale/orders'
+    | '/accounting/'
     | '/crm/'
     | '/inventory/'
     | '/sale/'
+    | '/accounting/move/$id'
     | '/crm/lead/$id'
     | '/inventory/picking/$id'
     | '/sale/order/$id'
@@ -189,13 +219,16 @@ export interface FileRouteTypes {
     | '/menu'
     | '/settings'
     | '/web'
+    | '/accounting/moves'
     | '/crm/leads'
     | '/crm/pipeline'
     | '/inventory/pickings'
     | '/sale/orders'
+    | '/accounting'
     | '/crm'
     | '/inventory'
     | '/sale'
+    | '/accounting/move/$id'
     | '/crm/lead/$id'
     | '/inventory/picking/$id'
     | '/sale/order/$id'
@@ -207,13 +240,16 @@ export interface FileRouteTypes {
     | '/menu'
     | '/settings'
     | '/web'
+    | '/accounting/moves'
     | '/crm/leads'
     | '/crm/pipeline'
     | '/inventory/pickings'
     | '/sale/orders'
+    | '/accounting/'
     | '/crm/'
     | '/inventory/'
     | '/sale/'
+    | '/accounting/move/$id'
     | '/crm/lead/$id'
     | '/inventory/picking/$id'
     | '/sale/order/$id'
@@ -226,13 +262,16 @@ export interface RootRouteChildren {
   MenuRoute: typeof MenuRoute
   SettingsRoute: typeof SettingsRoute
   WebRoute: typeof WebRoute
+  AccountingMovesRoute: typeof AccountingMovesRoute
   CrmLeadsRoute: typeof CrmLeadsRoute
   CrmPipelineRoute: typeof CrmPipelineRoute
   InventoryPickingsRoute: typeof InventoryPickingsRoute
   SaleOrdersRoute: typeof SaleOrdersRoute
+  AccountingIndexRoute: typeof AccountingIndexRoute
   CrmIndexRoute: typeof CrmIndexRoute
   InventoryIndexRoute: typeof InventoryIndexRoute
   SaleIndexRoute: typeof SaleIndexRoute
+  AccountingMoveIdRoute: typeof AccountingMoveIdRoute
   CrmLeadIdRoute: typeof CrmLeadIdRoute
   InventoryPickingIdRoute: typeof InventoryPickingIdRoute
   SaleOrderIdRoute: typeof SaleOrderIdRoute
@@ -303,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accounting/': {
+      id: '/accounting/'
+      path: '/accounting'
+      fullPath: '/accounting/'
+      preLoaderRoute: typeof AccountingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sale/orders': {
       id: '/sale/orders'
       path: '/sale/orders'
@@ -331,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accounting/moves': {
+      id: '/accounting/moves'
+      path: '/accounting/moves'
+      fullPath: '/accounting/moves'
+      preLoaderRoute: typeof AccountingMovesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sale/order/$id': {
       id: '/sale/order/$id'
       path: '/sale/order/$id'
@@ -352,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmLeadIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accounting/move/$id': {
+      id: '/accounting/move/$id'
+      path: '/accounting/move/$id'
+      fullPath: '/accounting/move/$id'
+      preLoaderRoute: typeof AccountingMoveIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -362,13 +422,16 @@ const rootRouteChildren: RootRouteChildren = {
   MenuRoute: MenuRoute,
   SettingsRoute: SettingsRoute,
   WebRoute: WebRoute,
+  AccountingMovesRoute: AccountingMovesRoute,
   CrmLeadsRoute: CrmLeadsRoute,
   CrmPipelineRoute: CrmPipelineRoute,
   InventoryPickingsRoute: InventoryPickingsRoute,
   SaleOrdersRoute: SaleOrdersRoute,
+  AccountingIndexRoute: AccountingIndexRoute,
   CrmIndexRoute: CrmIndexRoute,
   InventoryIndexRoute: InventoryIndexRoute,
   SaleIndexRoute: SaleIndexRoute,
+  AccountingMoveIdRoute: AccountingMoveIdRoute,
   CrmLeadIdRoute: CrmLeadIdRoute,
   InventoryPickingIdRoute: InventoryPickingIdRoute,
   SaleOrderIdRoute: SaleOrderIdRoute,
