@@ -133,14 +133,45 @@ function MenuPage() {
     return null
   }
 
-  const handleMenuClick = (menu: MenuItem) => {
-    const model = resolveModel(menu.action)
-    if (model) {
-      navigate({ to: '/web', search: { model } })
-    } else {
-      // No direct action — expand children to find first actionable item
+  const handleMenuClick = async (menu: MenuItem) => {
+    const ref = parseActionRef(menu.action)
+    if (!ref) {
       setExpandedMenuId(expandedMenuId === menu.id ? null : menu.id)
+      return
     }
+
+    if (ref.type === 'ir.actions.act_window') {
+      const model = resolveModel(menu.action)
+      if (model) navigate({ to: '/web', search: { model } })
+      return
+    }
+
+    if (ref.type === 'ir.actions.server') {
+      // Run server action via /web/action/run
+      try {
+        const result = await fetch('/api/odoo/web/action/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            jsonrpc: '2.0', method: 'call', id: 1,
+            params: { action_id: ref.id },
+          }),
+        }).then(r => r.json())
+        if (result.result?.res_model) {
+          navigate({ to: '/web', search: { model: result.result.res_model } })
+        } else if (result.result === false) {
+          // Server action has no return action — show notification or reload
+          console.log('Server action completed')
+        }
+      } catch (err) {
+        console.error('Failed to run server action:', err)
+      }
+      return
+    }
+
+    // Other action types: attempt to resolve via action read
+    setExpandedMenuId(expandedMenuId === menu.id ? null : menu.id)
   }
 
   // Navigate to first actionable child when children are loaded

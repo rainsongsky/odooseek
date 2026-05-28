@@ -1,3 +1,5 @@
+import { useCallback, useRef, useState } from 'react'
+import { callKw } from '../lib/api'
 import type { FieldElement } from '../lib/odoo-types'
 
 export interface FieldWidgetProps {
@@ -123,13 +125,58 @@ function SelectionWidget({ field: _field, value, onChange, readOnly, meta }: Fie
   )
 }
 
-function Many2OneWidget({ value }: FieldWidgetProps) {
-  if (Array.isArray(value) && value.length === 2) {
-    return (
-      <span className="text-sm text-text-primary">{value[1] ? `${value[1]}` : `#${value[0]}`}</span>
-    )
+function Many2OneWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps & { meta?: { relation?: string } }) {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const [results, setResults] = useState<Array<{ id: number; display_name: string }>>([])
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  const display = Array.isArray(value) && value.length === 2
+    ? `${value[1] ?? ''}` : value ? `#${value}` : ''
+
+  const doSearch = useCallback((q: string) => {
+    if (!meta?.relation || q.length < 1) { setResults([]); return }
+    clearTimeout(timer.current)
+    timer.current = setTimeout(async () => {
+      const res = await callKw<Array<{ id: number; display_name: string }>>(
+        meta.relation!, 'web_name_search', [],
+        { name: q, operator: 'ilike', limit: 8, specification: { display_name: {} } },
+      )
+      setResults(res ?? [])
+    }, 200)
+  }, [meta?.relation])
+
+  if (readOnly) {
+    return <span className="text-sm text-text-primary">{display || '—'}</span>
   }
-  return <span className="text-sm text-text-muted">—</span>
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={open ? search : display}
+        onChange={(e) => { setSearch(e.target.value); doSearch(e.target.value) }}
+        onFocus={() => { setOpen(true); setSearch(''); doSearch('') }}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        placeholder={_field.placeholder || 'Search...'}
+        className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+      />
+      {open && results.length > 0 && (
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-border-subtle bg-surface shadow-lg">
+          {results.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onMouseDown={() => { onChange([r.id, r.display_name]); setOpen(false) }}
+              className="w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-hover/50"
+            >
+              {r.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function Many2ManyWidget({ value }: FieldWidgetProps) {
