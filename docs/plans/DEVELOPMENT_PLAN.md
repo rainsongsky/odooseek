@@ -17,7 +17,7 @@
 | **Phase 4** | 精工 | ✅ 已完成 (5/28) | 看板 QWeb 语义支持 + QWeb 引擎分析 |
 | **Phase 5** | 交互 | ✅ 已完成 (5/28) | 编辑模式、搜索/过滤、分组、装饰、图标移植 |
 | **Phase 6** | 磐石 | ✅ 已完成 (5/29) | 测试 143 个、Rust 后端测试、组件测试 |
-| **Phase 7** | 精进 | 📋 规划中 | 面包屑、Sheet 布局、Statusbar、Pivot |
+| **Phase 7** | 精进 | 📋 规划中 | 表单 Header/Action 按钮、Sheet 布局、分页器、Binary Widget、Graph 视图、m2m 标签选择器 |
 
 ---
 
