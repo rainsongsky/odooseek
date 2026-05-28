@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'use-intl'
 import { callKw } from '../lib/api'
 import type { OdooFieldMeta } from '../lib/odoo-types'
 import { parseListXml } from '../lib/xml-parser'
@@ -13,6 +14,7 @@ interface ListRendererProps {
 }
 
 export function OdooListRenderer({ model, arch, fields, domain = [], onRowClick }: ListRendererProps) {
+  const t = useTranslations()
   const [page, setPage] = useState(0)
   const [order, setOrder] = useState('')
   const limit = 80
@@ -74,13 +76,13 @@ export function OdooListRenderer({ model, arch, fields, domain = [], onRowClick 
 
       {error && (
         <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
-          {error instanceof Error ? error.message : 'Failed to load data'}
+          {error instanceof Error ? error.message : t('list.failedToLoad')}
         </div>
       )}
 
       {!isLoading && !error && data.length === 0 && (
         <div className="rounded-lg border border-border-subtle bg-surface/50 py-12 text-center text-sm text-text-muted">
-          No records found
+          {t('list.noRecords')}
         </div>
       )}
 
@@ -136,16 +138,16 @@ export function OdooListRenderer({ model, arch, fields, domain = [], onRowClick 
               disabled={page === 0}
               className="rounded-lg border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Prev
+              {t('list.prev')}
             </button>
-            <span className="text-xs text-text-muted">Page {page + 1}</span>
+            <span className="text-xs text-text-muted">{t('list.page', { page: page + 1 })}</span>
             <button
               type="button"
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasMore}
               className="rounded-lg border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Next
+              {t('list.next')}
             </button>
           </div>
         </>
