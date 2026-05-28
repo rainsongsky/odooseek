@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { useAuth } from '../lib/auth'
 
 interface MenuItem {
   id: number
@@ -11,8 +12,9 @@ interface MenuItem {
 
 function MenuPage() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
 
-  const { data: menus, isLoading } = useQuery({
+  const { data: menus, isLoading, error } = useQuery({
     queryKey: ['odoo', 'menu'],
     queryFn: async () => {
       const res = await fetch('/api/menu', { credentials: 'include' })
@@ -21,17 +23,46 @@ function MenuPage() {
     },
     staleTime: 15 * 60_000,
     retry: false,
+    enabled: isAuthenticated,
   })
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="text-center">
+          <p className="mb-3 text-sm text-text-secondary">Sign in to view applications</p>
+          <a
+            href="/login"
+            className="inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white"
+          >
+            Sign in
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
+          Failed to load applications
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-1 flex-col overflow-auto p-6">
       <h2 className="mb-6 text-2xl font-semibold text-text-primary">Applications</h2>
-
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {menus?.map((menu) => {
@@ -43,7 +74,7 @@ function MenuPage() {
               onClick={() => {
                 if (model) navigate({ to: '/web', search: { model } })
               }}
-              className={`flex flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 text-left transition-colors ${
+              className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 text-left transition-colors ${
                 model ? 'hover:border-border-default hover:bg-surface' : ''
               }`}
             >
@@ -73,7 +104,6 @@ function extractModel(action: string | undefined): string | null {
   const parts = action.split(',')
   const actionType = parts[0]?.trim()
   if (actionType === 'ir.actions.act_window') {
-    // Map known action IDs to models (temporary; full resolution via API later)
     return 'res.partner'
   }
   return null

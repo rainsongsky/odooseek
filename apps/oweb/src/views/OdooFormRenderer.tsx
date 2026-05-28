@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { callKw } from '../lib/api'
 import { parseFormXml } from './xml-parser'
 import { getFieldWidget } from './field-widgets'
-import type { FieldElement, FormElement, OdooFieldMeta } from './types'
+import type { FormElement, OdooFieldMeta } from './types'
 
 interface FormRendererProps {
   model: string

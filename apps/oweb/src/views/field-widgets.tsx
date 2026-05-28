@@ -123,7 +123,7 @@ export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>>
 }
 
 export function getFieldWidget(
-  field: FieldElement,
+  _field: FieldElement,
   type: string,
 ): React.ComponentType<FieldWidgetProps> {
   return TYPE_WIDGETS[type] ?? CharWidget

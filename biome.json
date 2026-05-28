@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["apps/oweb/src/**", "docs/**"],
+    "includes": ["apps/oweb/src/{components,lib,routes,themes,views}/**", "apps/oweb/src/*.tsx", "apps/oweb/src/*.css", "docs/**"],
     "ignoreUnknown": true
   },
   "formatter": {
