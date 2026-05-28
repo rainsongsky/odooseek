@@ -279,10 +279,12 @@ export function OdooListRenderer({
 }
 
 function renderCell(value: unknown, meta?: OdooFieldMeta): string {
-  if (value === null || value === undefined) return ''
+  if (value === null || value === undefined || value === false) return ''
   if (typeof value === 'boolean') return value ? '✓' : ''
   if (typeof value === 'string') {
-    // selection: look up display label
+    if (meta?.type === 'binary' || (value.length > 100 && /^[A-Za-z0-9+/=]+$/.test(value))) {
+      return '📎 File'
+    }
     if (meta?.selection) {
       const pair = meta.selection.find(([k]) => k === value)
       if (pair) return pair[1]
