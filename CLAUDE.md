@@ -1,106 +1,50 @@
+# Claude Code
 
-Default to using Bun instead of Node.js.
+## 重要约定（文档及 Issues 优先原则）
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+**新功能开发前，必须先有对应文档和 Issue。** 设计决策先写入 `docs/` 目录下的对应文档，确认后检查 GitHub Issues 是否有对应 Issue，如果没有应当及时创建，然后再开始编码。
 
-## APIs
+**此原则不适用于：测试、错误修复**
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+## Development Workflow
 
-## Testing
+### 仓库分工（Issue / PR 必须遵守）
 
-Use `bun test` to run tests.
+| 仓库 | 用途 | Issue | PR |
+|:---|:---|:---:|:---:|
+| **[HL8-ORG/odooseek](https://github.com/HL8-ORG/odooseek)** | 主开发仓（`origin`） | ✅ **唯一** | ✅ |
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+```bash
+gh issue create --repo HL8-ORG/odooseek ...
+gh pr create --repo HL8-ORG/odooseek ...
 ```
 
-## Frontend
+- **GitHub Flow**: main ← PR ← feature-branch, PR body references issues with `closes #N`
+- **Branch naming**: `feat/N-desc`, `fix/N-desc`, `refactor/N-desc`, `docs/N-desc`, `test/N-desc`, `perf/N-desc`
+- **Documentation language**: Chinese (中文)
+- **Keep main green**: main branch must always build and pass all tests
+- **Commit format**: `type: description (refs #N)` — types: feat, fix, docs, refactor, test, perf, chore
+- **PR format**: title uses `(refs #N)`, body contains `closes #N` for auto-close on merge
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+### 提交前必须本地执行 CI 预检测
 
-Server:
+提交代码或创建 PR 前，**必须**在本地运行以下检查，全部通过后才能提交：
 
-```ts#index.ts
-import index from "./index.html"
+**前端 (apps/oweb)**:
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
+```bash
+cd apps/oweb
+bun run build    # tsc -b && vite build (类型检查 + 构建)
+bun run lint     # biome check
+bun run format   # biome format --write
 ```
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+**后端 (crates/)**:
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
+```bash
+RUSTFLAGS="-D warnings" cargo fmt --check --all
+RUSTFLAGS="-D warnings" cargo clippy --all-targets --no-deps
+RUSTFLAGS="-D warnings" cargo build --workspace
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
+RUSTFLAGS="-D warnings" cargo test --workspace -- --test-threads=1
 ```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-// import .css files directly and it works
-import './index.css';
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
