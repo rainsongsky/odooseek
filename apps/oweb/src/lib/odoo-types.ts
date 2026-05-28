@@ -56,13 +56,32 @@ export interface ParsedFormView {
 }
 
 export type FormElement =
+  | HeaderElement
   | SheetElement
   | GroupElement
   | NotebookElement
   | FieldElement
+  | ButtonElement
   | SeparatorElement
   | NewlineElement
   | LabelElement
+
+export interface HeaderElement {
+  type: 'header'
+  buttons: ButtonElement[]
+}
+
+export interface ButtonElement {
+  type: 'button'
+  name: string
+  string?: string
+  buttonType?: 'object' | 'action' | 'edit'
+  class?: string
+  icon?: string
+  invisible?: string
+  states?: string
+  confirm?: string
+}
 
 export interface SheetElement {
   type: 'sheet'

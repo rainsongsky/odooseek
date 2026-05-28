@@ -1,4 +1,5 @@
 import type {
+  ButtonElement,
   FieldElement,
   FormElement,
   KanbanTemplateNode,
@@ -43,13 +44,32 @@ function parseChildren(parent: Element, tag: string): Element[] {
   return Array.from(parent.children).filter((c) => c.tagName === tag)
 }
 
+function parseButtonElement(el: Element): ButtonElement {
+  return {
+    type: 'button',
+    name: el.getAttribute('name') ?? '',
+    string: el.getAttribute('string') ?? undefined,
+    buttonType: (el.getAttribute('type') as 'object' | 'action' | 'edit') ?? undefined,
+    class: el.getAttribute('class') ?? undefined,
+    icon: el.getAttribute('icon') ?? undefined,
+    invisible: el.getAttribute('invisible') ?? undefined,
+    states: el.getAttribute('states') ?? undefined,
+    confirm: el.getAttribute('confirm') ?? undefined,
+  }
+}
+
 function parseFormElements(container: Element): FormElement[] {
   const elements: FormElement[] = []
 
   for (const child of Array.from(container.children)) {
     const tag = child.tagName
 
-    if (tag === 'field') {
+    if (tag === 'header') {
+      const buttons = parseChildren(child, 'button').map(parseButtonElement)
+      elements.push({ type: 'header', buttons })
+    } else if (tag === 'button') {
+      elements.push(parseButtonElement(child))
+    } else if (tag === 'field') {
       elements.push(parseFieldElement(child))
     } else if (tag === 'sheet') {
       elements.push({

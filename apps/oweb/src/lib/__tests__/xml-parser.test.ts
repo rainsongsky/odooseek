@@ -126,6 +126,84 @@ describe('parseFormXml', () => {
     expect(group.col).toBe(4)
     expect(group.elements).toHaveLength(1)
   })
+
+  test('parses header with buttons', () => {
+    const xml = `<form string="Lead">
+      <header>
+        <button name="action_set_won" type="object" string="Mark as Won" class="btn-primary"/>
+        <button name="action_set_lost" type="object" string="Mark as Lost"/>
+      </header>
+      <sheet><field name="name"/></sheet>
+    </form>`
+
+    const result = parseFormXml(xml)
+    expect(result.elements).toHaveLength(2)
+    const header = result.elements[0] as {
+      type: 'header'
+      buttons: {
+        type: 'button'
+        name: string
+        string?: string
+        buttonType?: string
+        class?: string
+      }[]
+    }
+    expect(header.type).toBe('header')
+    expect(header.buttons).toHaveLength(2)
+    expect(header.buttons[0].name).toBe('action_set_won')
+    expect(header.buttons[0].buttonType).toBe('object')
+    expect(header.buttons[0].string).toBe('Mark as Won')
+    expect(header.buttons[0].class).toBe('btn-primary')
+    expect(header.buttons[1].name).toBe('action_set_lost')
+  })
+
+  test('parses button with states and confirm attributes', () => {
+    const xml = `<form>
+      <header>
+        <button name="action_confirm" type="object" string="Confirm" states="draft,sent" confirm="Are you sure?"/>
+      </header>
+    </form>`
+
+    const result = parseFormXml(xml)
+    const header = result.elements[0] as {
+      type: 'header'
+      buttons: { type: 'button'; states?: string; confirm?: string }[]
+    }
+    expect(header.buttons[0].states).toBe('draft,sent')
+    expect(header.buttons[0].confirm).toBe('Are you sure?')
+  })
+
+  test('parses button with action type', () => {
+    const xml = `<form>
+      <header>
+        <button name="42" type="action" string="View Report"/>
+      </header>
+    </form>`
+
+    const result = parseFormXml(xml)
+    const header = result.elements[0] as {
+      type: 'header'
+      buttons: { type: 'button'; name: string; buttonType?: string }[]
+    }
+    expect(header.buttons[0].buttonType).toBe('action')
+    expect(header.buttons[0].name).toBe('42')
+  })
+
+  test('parses standalone button inside sheet', () => {
+    const xml = `<form>
+      <sheet>
+        <button name="btn_method" type="object" string="Click Me"/>
+      </sheet>
+    </form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: { type: string; name: string }[]
+    }
+    expect(sheet.elements[0].type).toBe('button')
+    expect(sheet.elements[0].name).toBe('btn_method')
+  })
 })
 
 describe('parseSearchXml', () => {
