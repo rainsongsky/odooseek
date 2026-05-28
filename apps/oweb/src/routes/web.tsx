@@ -10,8 +10,8 @@ interface WebSearch {
 function WebPage() {
   const search = useSearch({ from: '/web' }) as WebSearch
   const model = search.model ?? 'res.partner'
-  const [viewType, setViewType] = useState<'list' | 'form' | 'kanban' | 'pivot'>(
-    (search.viewType as 'list' | 'form' | 'kanban' | 'pivot') ?? 'list',
+  const [viewType, setViewType] = useState<'list' | 'form' | 'kanban' | 'pivot' | 'graph'>(
+    (search.viewType as 'list' | 'form' | 'kanban' | 'pivot' | 'graph') ?? 'list',
   )
   const [recordId, setRecordId] = useState<number | undefined>()
 
@@ -20,7 +20,7 @@ function WebPage() {
     setViewType('form')
   }, [])
 
-  const handleSwitchView = useCallback((v: 'list' | 'form' | 'kanban' | 'pivot') => {
+  const handleSwitchView = useCallback((v: 'list' | 'form' | 'kanban' | 'pivot' | 'graph') => {
     setViewType(v)
     if (v !== 'form') setRecordId(undefined)
   }, [])

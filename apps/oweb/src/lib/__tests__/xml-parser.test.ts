@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   parseFormXml,
+  parseGraphXml,
   parseKanbanXml,
   parseListXml,
   parsePivotXml,
@@ -368,5 +369,69 @@ describe('parsePivotXml', () => {
     expect(result.rowFields).toHaveLength(2)
     expect(result.rowFields[0].name).toBe('a')
     expect(result.rowFields[1].name).toBe('b')
+  })
+})
+
+describe('parseGraphXml', () => {
+  test('parses basic bar graph', () => {
+    const xml = `<graph string="Sales Analysis">
+      <field name="stage_id" type="row"/>
+      <field name="amount" type="measure" operator="sum"/>
+    </graph>`
+
+    const result = parseGraphXml(xml)
+    expect(result.type).toBe('graph')
+    expect(result.string).toBe('Sales Analysis')
+    expect(result.graphType).toBe('bar')
+    expect(result.rowFields).toHaveLength(1)
+    expect(result.rowFields[0].name).toBe('stage_id')
+    expect(result.measures).toHaveLength(1)
+    expect(result.measures[0].operator).toBe('sum')
+  })
+
+  test('parses pie graph', () => {
+    const xml = `<graph string="Pipeline" type="pie">
+      <field name="stage_id" type="row"/>
+    </graph>`
+
+    const result = parseGraphXml(xml)
+    expect(result.graphType).toBe('pie')
+  })
+
+  test('defaults to bar when type not specified', () => {
+    const xml = `<graph><field name="x" type="row"/></graph>`
+    const result = parseGraphXml(xml)
+    expect(result.graphType).toBe('bar')
+  })
+
+  test('parses line graph with stacked and order', () => {
+    const xml = `<graph type="line" stacked="True" order="amount desc">
+      <field name="stage_id" type="row"/>
+      <field name="amount" type="measure"/>
+    </graph>`
+
+    const result = parseGraphXml(xml)
+    expect(result.graphType).toBe('line')
+    expect(result.stacked).toBe(true)
+    expect(result.orderBy).toBe('amount desc')
+  })
+
+  test('adds default __count measure when none defined', () => {
+    const xml = `<graph><field name="stage_id" type="row"/></graph>`
+    const result = parseGraphXml(xml)
+    expect(result.measures).toEqual([{ name: '__count', string: 'Count' }])
+  })
+
+  test('parses multiple measures', () => {
+    const xml = `<graph>
+      <field name="stage_id" type="row"/>
+      <field name="amount" type="measure" operator="sum"/>
+      <field name="quantity" type="measure" operator="sum"/>
+    </graph>`
+
+    const result = parseGraphXml(xml)
+    expect(result.measures).toHaveLength(2)
+    expect(result.measures[0].name).toBe('amount')
+    expect(result.measures[1].name).toBe('quantity')
   })
 })

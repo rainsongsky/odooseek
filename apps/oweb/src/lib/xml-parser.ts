@@ -2,8 +2,11 @@ import type {
   ButtonElement,
   FieldElement,
   FormElement,
+  GraphField,
+  GraphMeasure,
   KanbanTemplateNode,
   ParsedFormView,
+  ParsedGraphView,
   ParsedKanbanView,
   ParsedListView,
   ParsedPivotView,
@@ -543,5 +546,48 @@ export function parsePivotXml(xml: string): ParsedPivotView {
     rowFields,
     colFields,
     measures,
+  }
+}
+
+/** Parse Odoo <graph> XML → ParsedGraphView */
+export function parseGraphXml(xml: string): ParsedGraphView {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml')
+  const root = doc.documentElement
+
+  const rowFields: GraphField[] = []
+  const colFields: GraphField[] = []
+  const measures: GraphMeasure[] = []
+
+  Array.from(root.querySelectorAll('field')).forEach((el) => {
+    const type = el.getAttribute('type') ?? 'measure'
+    const name = el.getAttribute('name') ?? ''
+    const string = el.getAttribute('string') ?? undefined
+    const interval = el.getAttribute('interval') ?? undefined
+
+    if (type === 'row') {
+      rowFields.push({ name, string, interval })
+    } else if (type === 'col') {
+      colFields.push({ name, string, interval })
+    } else if (type === 'measure') {
+      measures.push({ name, string, operator: el.getAttribute('operator') ?? undefined })
+    }
+  })
+
+  if (measures.length === 0) {
+    measures.push({ name: '__count', string: 'Count' })
+  }
+
+  const rawType = root.getAttribute('type') ?? 'bar'
+  const graphType = rawType === 'line' || rawType === 'pie' ? rawType : 'bar'
+
+  return {
+    type: 'graph',
+    string: root.getAttribute('string') ?? '',
+    graphType,
+    rowFields,
+    colFields,
+    measures,
+    stacked: root.getAttribute('stacked') === 'True' || undefined,
+    orderBy: root.getAttribute('order') ?? undefined,
   }
 }

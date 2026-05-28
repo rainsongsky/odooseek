@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
+import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { OdooFieldMeta } from '../../lib/odoo-types'
 import { OdooPivotRenderer } from '../OdooPivotRenderer'

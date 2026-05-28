@@ -6,6 +6,7 @@ import { callKw } from '../lib/api'
 import type { OdooFieldMeta } from '../lib/odoo-types'
 import { parseSearchXml } from '../lib/xml-parser'
 import { OdooFormRenderer } from './OdooFormRenderer'
+import { OdooGraphRenderer } from './OdooGraphRenderer'
 import { OdooKanbanRenderer } from './OdooKanbanRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
 import { OdooPivotRenderer } from './OdooPivotRenderer'
@@ -13,13 +14,13 @@ import { OdooViewSwitcher } from './OdooViewSwitcher'
 
 interface ViewLoaderProps {
   model: string
-  viewType: 'list' | 'form' | 'kanban' | 'pivot'
+  viewType: 'list' | 'form' | 'kanban' | 'pivot' | 'graph'
   viewId?: number
   domain?: unknown[]
   recordId?: number
   onRowClick?: (recordId: number) => void
   onBackToList?: () => void
-  onSwitchView?: (v: 'list' | 'form' | 'kanban' | 'pivot') => void
+  onSwitchView?: (v: 'list' | 'form' | 'kanban' | 'pivot' | 'graph') => void
   onCreateClick?: () => void
   onRecordCreated?: (newId: number) => void
 }
@@ -130,7 +131,10 @@ export function OdooViewLoader({
           {onSwitchView && <OdooViewSwitcher currentView={viewType} onSwitch={onSwitchView} />}
         </div>
       </div>
-      {(viewType === 'list' || viewType === 'kanban' || viewType === 'pivot') && (
+      {(viewType === 'list' ||
+        viewType === 'kanban' ||
+        viewType === 'pivot' ||
+        viewType === 'graph') && (
         <div className="border-b border-border-subtle p-4">
           <SearchBar
             onSearch={handleSearch}
@@ -173,6 +177,9 @@ export function OdooViewLoader({
       )}
       {viewType === 'pivot' && (
         <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+      )}
+      {viewType === 'graph' && (
+        <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
       )}
     </div>
   )

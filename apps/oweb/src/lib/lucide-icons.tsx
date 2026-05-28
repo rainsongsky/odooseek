@@ -17,4 +17,5 @@ export {
   Sun,
   Table,
   Terminal,
+  TrendingUp,
 } from 'lucide-react'

@@ -197,3 +197,26 @@ export interface PivotMeasure {
   string?: string
   operator?: string // sum, avg, count
 }
+
+export interface GraphField {
+  name: string
+  string?: string
+  interval?: string
+}
+
+export interface GraphMeasure {
+  name: string
+  string?: string
+  operator?: string
+}
+
+export interface ParsedGraphView {
+  type: 'graph'
+  string: string
+  graphType: 'bar' | 'line' | 'pie'
+  rowFields: GraphField[]
+  colFields: GraphField[]
+  measures: GraphMeasure[]
+  stacked?: boolean
+  orderBy?: string
+}

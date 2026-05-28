@@ -1,17 +1,18 @@
-import { BarChart3, Columns3, LayoutList, Table } from '@/lib/lucide-icons'
+import { BarChart3, Columns3, LayoutList, Table, TrendingUp } from '@/lib/lucide-icons'
 
 interface ViewSwitcherProps {
-  currentView: 'list' | 'form' | 'kanban' | 'pivot'
-  onSwitch: (view: 'list' | 'form' | 'kanban' | 'pivot') => void
+  currentView: 'list' | 'form' | 'kanban' | 'pivot' | 'graph'
+  onSwitch: (view: 'list' | 'form' | 'kanban' | 'pivot' | 'graph') => void
 }
 
 const VIEWS: {
-  type: 'list' | 'form' | 'kanban' | 'pivot'
+  type: 'list' | 'form' | 'kanban' | 'pivot' | 'graph'
   icon: React.ComponentType<{ className?: string }>
   label: string
 }[] = [
   { type: 'list', icon: Table, label: 'List' },
   { type: 'pivot', icon: BarChart3, label: 'Pivot' },
+  { type: 'graph', icon: TrendingUp, label: 'Graph' },
   { type: 'kanban', icon: Columns3, label: 'Kanban' },
   { type: 'form', icon: LayoutList, label: 'Form' },
 ]
