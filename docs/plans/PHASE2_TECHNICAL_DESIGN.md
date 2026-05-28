@@ -501,27 +501,35 @@ interface AuthState {
 
 ---
 
-## 七、Phase 2 完成标准（修正后）
+## 七、Phase 2 完成标准 (2026-05-28)
 
 ```
-[ ] ws.rs 修正: 使用 /websocket/peek_notifications
-[ ] session.rs 修正: 返回完整 session_info (name, partner_id, companies, ...)
-[ ] GET /api/menu → JSON 菜单树
-[ ] lib/api.ts: callKw(model, method, args, kwargs)
-[ ] xml-parser.ts: 解析 <list> <form> <kanban> <search> XML
-[ ] field-widgets.tsx: 12+ 字段类型 Widget
-[ ] OdooViewLoader: 一次 call_kw(get_views) 获取全部视图+字段
-[ ] OdooListRenderer: <list> XML → 动态列定义 + TanStack Query 渲染
-[ ] OdooFormRenderer: <form> XML → 递归渲染 sheet/group/notebook/field
-[ ] OdooViewSwitcher: list/form/kanban 视图切换
-[ ] EventPanel: WebSocket 连接 + 自动刷新相关模型
-[ ] MenuPage: ir.ui.menu 动态导航
-[ ] cargo clippy + cargo build + bun build 全部通过
+[✅] ws.rs 修正: 使用 /websocket/peek_notifications
+[✅] session.rs 修正: 返回完整 session_info (name, partner_id, companies, ...)
+[✅] GET /api/menu → JSON 菜单树
+[✅] lib/api.ts: callKw(model, method, args, kwargs)
+[✅] xml-parser.ts: 解析 <list> <form> <kanban> <search> XML
+[✅] field-widgets.tsx: 15 字段类型 Widget
+[✅] OdooViewLoader: 一次 call_kw(get_views) 获取全部视图+字段
+[✅] OdooListRenderer: <list> XML → 动态列定义 + TanStack Query 渲染
+[✅] OdooFormRenderer: <form> XML → 递归渲染 sheet/group/notebook/field
+[✅] OdooViewSwitcher: list/form/kanban 视图切换
+[✅] EventPanel: WebSocket 连接 + 自动刷新相关模型
+[✅] MenuPage: ir.ui.menu 动态导航
+[✅] cargo clippy + cargo build + bun build 全部通过
 ```
 
 ---
 
-**文档版本**: 2.0  
+**未纳入本次验收（后续阶段）**：
+- ⏳ OdooKanbanRenderer — 看板视图
+- ⏳ OdooSearchPanel — 搜索面板（当前用 SearchBar 组件替代）
+- ⏳ OdooFormRenderer 编辑模式 — 当前只读，write/update 待实现
+- ⏳ 菜单 action 解析 — 当前硬编码映射，待从 ir.actions 表动态获取模型名
+
+**文档版本**: 2.1 (验收完成)  
 **创建日期**: 2026-05-28  
+**验收日期**: 2026-05-28  
+**维护团队**: OdooSeek**创建日期**: 2026-05-28  
 **更新**: 基于 Odoo 19 CE 源码真实 API 修正  
 **维护团队**: OdooSeek
