@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { evalCondition, getValue } from '../../lib/expression-evaluator'
+import {
+  evalCondition,
+  evalModifier,
+  getDecorationClass,
+  getValue,
+} from '../../lib/expression-evaluator'
 import type { KanbanTemplateNode } from '../../lib/odoo-types'
 import { parseKanbanTemplate } from '../../lib/xml-parser'
 
@@ -156,5 +161,66 @@ describe('getValue', () => {
 
   test('returns undefined for missing field', () => {
     expect(getValue('record.nonexistent', { name: 'Test' })).toBeUndefined()
+  })
+})
+
+describe('evalModifier', () => {
+  test("evaluates 'in' operator", () => {
+    expect(evalModifier("state in ['draft', 'sent']", { state: 'draft' })).toBe(true)
+  })
+
+  test("evaluates 'in' operator — no match", () => {
+    expect(evalModifier("state in ['done']", { state: 'draft' })).toBe(false)
+  })
+
+  test("evaluates 'not in' operator", () => {
+    expect(evalModifier("state not in ['cancel']", { state: 'done' })).toBe(true)
+  })
+
+  test("evaluates 'not in' — matches", () => {
+    expect(evalModifier("state not in ['cancel']", { state: 'cancel' })).toBe(false)
+  })
+
+  test("evaluates '==' operator", () => {
+    expect(evalModifier("type == 'opportunity'", { type: 'opportunity' })).toBe(true)
+  })
+
+  test("evaluates '==' — no match", () => {
+    expect(evalModifier("type == 'lead'", { type: 'opportunity' })).toBe(false)
+  })
+
+  test('returns false for undefined expr', () => {
+    expect(evalModifier(undefined, {})).toBe(false)
+  })
+
+  test("returns true for '1' and false for '0'", () => {
+    expect(evalModifier('1', {})).toBe(true)
+    expect(evalModifier('0', {})).toBe(false)
+  })
+})
+
+describe('getDecorationClass', () => {
+  test('returns bold class when decoration_bf matches', () => {
+    const result = getDecorationClass({ decoration_bf: "state=='draft'" }, { state: 'draft' })
+    expect(result).toContain('font-bold')
+  })
+
+  test('returns danger class when decoration_danger matches', () => {
+    const result = getDecorationClass({ decoration_danger: "state=='cancel'" }, { state: 'cancel' })
+    expect(result).toContain('text-red-400')
+  })
+
+  test('returns multiple classes for multiple matching decorations', () => {
+    const result = getDecorationClass(
+      { decoration_bf: "state=='open'", decoration_success: "state=='open'" },
+      { state: 'open' },
+    )
+    expect(result).toContain('font-bold')
+    expect(result).toContain('text-green-400')
+  })
+
+  test('returns undefined when no decorations match', () => {
+    const result = getDecorationClass({ decoration_bf: "state=='draft'" }, { state: 'done' })
+    expect(result).toBeUndefined()
   })
 })

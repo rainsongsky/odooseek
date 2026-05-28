@@ -1,6 +1,8 @@
+import { render, screen } from '@testing-library/react'
+import { createElement } from 'react'
 import { describe, expect, test } from 'vitest'
 import type { FieldElement } from '../../lib/odoo-types'
-import { getFieldWidget, TYPE_WIDGETS } from '../field-widgets'
+import { getFieldWidget, PriorityWidget, TYPE_WIDGETS } from '../field-widgets'
 
 const baseField: FieldElement = {
   type: 'field',
@@ -74,5 +76,103 @@ describe('field-widgets', () => {
     for (const type of expectedTypes) {
       expect(TYPE_WIDGETS[type]).toBeDefined()
     }
+  })
+
+  test('resolves widget=priority via WIDGET_OVERRIDES', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'priority' }, 'integer')
+    expect(Widget).toBe(PriorityWidget)
+    expect(Widget).not.toBe(TYPE_WIDGETS.integer)
+  })
+
+  test('resolves widget=statusbar via WIDGET_OVERRIDES', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'statusbar' }, 'char')
+    expect(Widget).toBe(TYPE_WIDGETS.state)
+  })
+
+  test('resolves widget=state via WIDGET_OVERRIDES', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'state' }, 'char')
+    expect(Widget).toBe(TYPE_WIDGETS.state)
+  })
+
+  test('TYPE_WIDGETS includes priority type', () => {
+    expect(TYPE_WIDGETS.priority).toBeDefined()
+    expect(TYPE_WIDGETS.priority).toBe(PriorityWidget)
+  })
+
+  test('TYPE_WIDGETS includes state type', () => {
+    expect(TYPE_WIDGETS.state).toBeDefined()
+  })
+
+  test('CharWidget renders input with value', () => {
+    const CharWidget = TYPE_WIDGETS.char
+    render(
+      createElement(CharWidget, {
+        field: baseField,
+        value: 'hello',
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.getByDisplayValue('hello')).toBeTruthy()
+  })
+
+  test('BooleanWidget renders checkbox', () => {
+    const BooleanWidget = TYPE_WIDGETS.boolean
+    render(
+      createElement(BooleanWidget, {
+        field: baseField,
+        value: true,
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
+    expect(checkbox.checked).toBe(true)
+  })
+
+  test('SelectionWidget renders options', () => {
+    const SelectionWidget = TYPE_WIDGETS.selection
+    render(
+      createElement(SelectionWidget, {
+        field: baseField,
+        value: 'draft',
+        onChange: () => {},
+        readOnly: false,
+        meta: {
+          selection: [
+            ['draft', 'Draft'],
+            ['done', 'Done'],
+          ],
+        },
+      }),
+    )
+    expect(screen.getByText('Draft')).toBeTruthy()
+    expect(screen.getByText('Done')).toBeTruthy()
+  })
+
+  test('DatetimeWidget converts format', () => {
+    const DatetimeWidget = TYPE_WIDGETS.datetime
+    render(
+      createElement(DatetimeWidget, {
+        field: baseField,
+        value: '2024-01-15 10:30:00',
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.getByDisplayValue('2024-01-15T10:30')).toBeTruthy()
+  })
+
+  test('DateWidget renders in readOnly mode', () => {
+    const DateWidget = TYPE_WIDGETS.date
+    render(
+      createElement(DateWidget, {
+        field: baseField,
+        value: '2024-01-15',
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('2024-01-15')).toBeTruthy()
   })
 })
