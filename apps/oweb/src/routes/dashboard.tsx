@@ -1,7 +1,7 @@
 import { useAuth } from '../lib/auth'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 
-export function DashboardPage() {
+function DashboardPage() {
   const { isAuthenticated, session } = useAuth()
 
   if (!isAuthenticated) {

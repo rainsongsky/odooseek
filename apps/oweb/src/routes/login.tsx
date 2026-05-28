@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 
-export function LoginPage() {
+function LoginPage() {
   const navigate = useNavigate()
   const { isAuthenticated, refetch } = useAuth()
   const [db, setDb] = useState('')

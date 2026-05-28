@@ -8,7 +8,7 @@ interface WebSearch {
   viewType?: string
 }
 
-export function WebPage() {
+function WebPage() {
   const search = useSearch({ from: '/web' }) as WebSearch
   const model = search.model ?? 'res.partner'
   const [viewType, setViewType] = useState<string>(search.viewType ?? 'list')

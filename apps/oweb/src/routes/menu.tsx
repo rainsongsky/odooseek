@@ -9,7 +9,7 @@ interface MenuItem {
   web_icon?: string
 }
 
-export function MenuPage() {
+function MenuPage() {
   const navigate = useNavigate()
 
   const { data: menus, isLoading } = useQuery({
