@@ -230,4 +230,49 @@ describe('field-widgets', () => {
     expect(img).toBeInTheDocument()
     expect(img.getAttribute('src')).toContain('data:image/png;base64,')
   })
+
+  test('Many2ManyWidget renders tags in readOnly mode', () => {
+    const Many2ManyWidget = TYPE_WIDGETS.many2many
+    render(
+      createElement(Many2ManyWidget, {
+        field: baseField,
+        value: [
+          [1, 'Tag A'],
+          [2, 'Tag B'],
+        ],
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('Tag A')).toBeInTheDocument()
+    expect(screen.getByText('Tag B')).toBeInTheDocument()
+  })
+
+  test('Many2ManyWidget renders dash for empty value in readOnly', () => {
+    const Many2ManyWidget = TYPE_WIDGETS.many2many
+    render(
+      createElement(Many2ManyWidget, {
+        field: baseField,
+        value: [],
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  test('Many2ManyWidget renders remove buttons in edit mode', () => {
+    const Many2ManyWidget = TYPE_WIDGETS.many2many
+    render(
+      createElement(Many2ManyWidget, {
+        field: baseField,
+        value: [[1, 'Tag A']],
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.getByText('Tag A')).toBeInTheDocument()
+    expect(screen.getByText('×')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Add a tag...')).toBeInTheDocument()
+  })
 })

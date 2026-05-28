@@ -295,19 +295,136 @@ function BinaryWidget({ field, value, onChange, readOnly, meta }: FieldWidgetPro
   )
 }
 
-function Many2ManyWidget({ value }: FieldWidgetProps) {
-  if (Array.isArray(value)) {
+function Many2ManyWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const [results, setResults] = useState<Array<[number, string]>>([])
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  const tags = normalizeM2mValue(value)
+
+  const doSearch = useCallback(
+    (q: string) => {
+      if (!meta?.relation || q.length < 1) {
+        setResults([])
+        return
+      }
+      clearTimeout(timer.current)
+      timer.current = setTimeout(async () => {
+        const relation = meta?.relation
+        if (!relation) return
+        const res = await callKw<Array<{ id: number; display_name: string }>>(
+          relation,
+          'web_name_search',
+          [],
+          { name: q, operator: 'ilike', limit: 8, specification: { display_name: {} } },
+        )
+        setResults((res ?? []).map((r) => [r.id, r.display_name] as [number, string]))
+      }, 200)
+    },
+    [meta?.relation],
+  )
+
+  if (readOnly) {
+    if (tags.length === 0) return <span className="text-sm text-text-muted">—</span>
     return (
       <div className="flex flex-wrap gap-1">
-        {value.map((id, i) => (
-          <span key={i} className="rounded bg-surface px-2 py-0.5 text-xs text-text-primary">
-            #{Array.isArray(id) && id[1] ? id[1] : id}
+        {tags.map(([id, name]) => (
+          <span
+            key={id}
+            className="rounded bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
+          >
+            {name || `#${id}`}
           </span>
         ))}
       </div>
     )
   }
-  return <span className="text-sm text-text-muted">—</span>
+
+  const addTag = (id: number, name: string) => {
+    if (tags.some(([tid]) => tid === id)) return
+    const newTags = [...tags, [id, name] as [number, string]]
+    onChange(encodeM2mValue(newTags))
+    setSearch('')
+    setOpen(false)
+  }
+
+  const removeTag = (id: number) => {
+    const newTags = tags.filter(([tid]) => tid !== id)
+    onChange(encodeM2mValue(newTags))
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-1">
+        {tags.map(([id, name]) => (
+          <span
+            key={id}
+            className="inline-flex items-center gap-1 rounded bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
+          >
+            {name || `#${id}`}
+            <button
+              type="button"
+              onClick={() => removeTag(id)}
+              className="ml-0.5 text-accent/60 hover:text-accent"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            doSearch(e.target.value)
+          }}
+          onFocus={() => {
+            setOpen(true)
+          }}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Add a tag..."
+          className="w-full rounded-lg border border-border-default bg-surface px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+        />
+        {open && results.length > 0 && (
+          <div className="absolute z-10 mt-1 w-full rounded-lg border border-border-subtle bg-surface shadow-lg">
+            {results.map(([id, name]) => (
+              <button
+                key={id}
+                type="button"
+                onMouseDown={() => addTag(id, name)}
+                className="w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-hover/50"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function normalizeM2mValue(value: unknown): [number, string][] {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    if (value.length === 0) return []
+    if (Array.isArray(value[0])) return value as [number, string][]
+    const pairs: [number, string][] = []
+    for (let i = 0; i < value.length - 1; i += 2) {
+      if (typeof value[i] === 'number') {
+        pairs.push([value[i] as number, String(value[i + 1] ?? '')])
+      }
+    }
+    return pairs
+  }
+  return []
+}
+
+function encodeM2mValue(tags: [number, string][]): unknown {
+  return [[6, 0, tags.map(([id]) => id)]]
 }
 
 export function PriorityWidget({ value, readOnly, onChange }: FieldWidgetProps) {
