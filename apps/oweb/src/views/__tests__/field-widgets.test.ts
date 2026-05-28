@@ -70,6 +70,7 @@ describe('field-widgets', () => {
       'many2many',
       'one2many',
       'binary',
+      'image',
       'html',
       'reference',
     ]
@@ -174,5 +175,59 @@ describe('field-widgets', () => {
       }),
     )
     expect(screen.getByText('2024-01-15')).toBeTruthy()
+  })
+
+  test('maps binary type to BinaryWidget', () => {
+    const Widget = getFieldWidget(baseField, 'binary')
+    expect(Widget).toBe(TYPE_WIDGETS.binary)
+    expect(Widget).not.toBe(TYPE_WIDGETS.many2one)
+  })
+
+  test('maps image widget to BinaryWidget', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'image' }, 'binary')
+    expect(Widget).toBe(TYPE_WIDGETS.image)
+  })
+
+  test('BinaryWidget renders file input in edit mode', () => {
+    const BinaryWidget = TYPE_WIDGETS.binary
+    render(
+      createElement(BinaryWidget, {
+        field: baseField,
+        value: null,
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.queryByRole('button', { name: /clear/i })).not.toBeInTheDocument()
+    expect(document.querySelector('input[type="file"]')).toBeInTheDocument()
+  })
+
+  test('BinaryWidget renders dash for empty value in readOnly', () => {
+    const BinaryWidget = TYPE_WIDGETS.binary
+    render(
+      createElement(BinaryWidget, {
+        field: baseField,
+        value: false,
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('—')).toBeTruthy()
+  })
+
+  test('BinaryWidget renders image preview for image widget', () => {
+    const BinaryWidget = TYPE_WIDGETS.image
+    render(
+      createElement(BinaryWidget, {
+        field: { ...baseField, widget: 'image' },
+        value:
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    const img = screen.getByRole('img')
+    expect(img).toBeInTheDocument()
+    expect(img.getAttribute('src')).toContain('data:image/png;base64,')
   })
 })

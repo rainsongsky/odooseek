@@ -7,7 +7,7 @@ export interface FieldWidgetProps {
   value: unknown
   onChange: (value: unknown) => void
   readOnly?: boolean
-  meta?: { selection?: [string, string][] }
+  meta?: { selection?: [string, string][]; type?: string; relation?: string }
 }
 
 function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
@@ -108,13 +108,7 @@ function DatetimeWidget({ value, onChange, readOnly }: FieldWidgetProps) {
   )
 }
 
-function SelectionWidget({
-  field: _field,
-  value,
-  onChange,
-  readOnly,
-  meta,
-}: FieldWidgetProps & { meta?: { selection?: [string, string][] } }) {
+function SelectionWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps) {
   if (readOnly) {
     return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
   }
@@ -137,13 +131,7 @@ function SelectionWidget({
   )
 }
 
-function Many2OneWidget({
-  field: _field,
-  value,
-  onChange,
-  readOnly,
-  meta,
-}: FieldWidgetProps & { meta?: { relation?: string } }) {
+function Many2OneWidget({ field: _field, value, onChange, readOnly, meta }: FieldWidgetProps) {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [results, setResults] = useState<Array<{ id: number; display_name: string }>>([])
@@ -230,6 +218,79 @@ function Many2OneWidget({
             )}
         </div>
       )}
+    </div>
+  )
+}
+
+function BinaryWidget({ field, value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const isImage =
+    field.widget === 'image' ||
+    (meta?.type === 'binary' &&
+      (field.name?.includes('image') ||
+        field.name?.includes('photo') ||
+        field.name?.includes('avatar')))
+
+  const filenameField = (field.options as Record<string, unknown>)?.filename as string | undefined
+  const base64 = value as string | false | null | undefined
+  const hasValue = base64 != null && base64 !== false && base64 !== ''
+
+  if (readOnly) {
+    if (isImage && hasValue) {
+      return (
+        <img
+          src={`data:image/png;base64,${base64}`}
+          alt={field.string || field.name}
+          className="max-h-32 max-w-32 rounded border border-border-subtle object-contain"
+        />
+      )
+    }
+    if (hasValue) {
+      return (
+        <span className="text-sm text-text-primary">
+          {filenameField ? `📎 ${filenameField}` : '📎 File attached'}
+        </span>
+      )
+    }
+    return <span className="text-sm text-text-muted">—</span>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {isImage && hasValue && (
+        <img
+          src={`data:image/png;base64,${base64}`}
+          alt={field.string || field.name}
+          className="max-h-32 max-w-32 rounded border border-border-subtle object-contain"
+        />
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            const reader = new FileReader()
+            reader.onload = () => {
+              const dataUrl = reader.result as string
+              const b64 = dataUrl.split(',')[1]
+              onChange(b64)
+            }
+            reader.readAsDataURL(file)
+          }}
+          className="text-sm text-text-secondary file:mr-2 file:rounded file:border-0 file:bg-accent/10 file:px-3 file:py-1 file:text-xs file:font-medium file:text-accent hover:file:bg-accent/20"
+        />
+        {hasValue && (
+          <button
+            type="button"
+            onClick={() => onChange(false)}
+            className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary hover:bg-hover"
+          >
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -325,7 +386,8 @@ export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>>
   many2one: Many2OneWidget,
   many2many: Many2ManyWidget,
   one2many: Many2ManyWidget,
-  binary: Many2OneWidget,
+  binary: BinaryWidget,
+  image: BinaryWidget,
   html: TextWidget,
   reference: Many2OneWidget,
 }
