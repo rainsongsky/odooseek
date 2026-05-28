@@ -245,4 +245,148 @@ describe('OdooFormRenderer', () => {
     expect(screen.getByText('General')).toBeInTheDocument()
     expect(screen.getByText('Sales')).toBeInTheDocument()
   })
+
+  test('renders header action buttons', async () => {
+    const headerArch = `<form string="Lead">
+      <header>
+        <button name="action_confirm" type="object" string="Confirm" class="btn-primary"/>
+        <button name="action_cancel" type="object" string="Cancel"/>
+      </header>
+      <sheet><field name="name"/></sheet>
+    </form>`
+
+    mockCallKw.mockResolvedValue(readResult)
+    render(<OdooFormRenderer model="crm.lead" arch={headerArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Confirm')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Cancel')).toBeInTheDocument()
+  })
+
+  test('hides button when states does not match', async () => {
+    const statesArch = `<form string="Lead">
+      <header>
+        <button name="action_confirm" type="object" string="Confirm" states="draft"/>
+        <button name="action_done" type="object" string="Done" states="confirmed"/>
+      </header>
+      <sheet><field name="name"/></sheet>
+    </form>`
+
+    mockCallKw.mockResolvedValue([{ id: 1, name: 'Test', email: 't@e.com', state: 'confirmed' }])
+    render(<OdooFormRenderer model="crm.lead" arch={statesArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Done')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Confirm')).not.toBeInTheDocument()
+  })
+
+  test('clicking object button calls callKw with method', async () => {
+    const user = userEvent.setup()
+    const headerArch = `<form string="Lead">
+      <header>
+        <button name="action_won" type="object" string="Mark as Won"/>
+      </header>
+      <sheet><field name="name"/></sheet>
+    </form>`
+
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'action_won') return Promise.resolve(true)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="crm.lead" arch={headerArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Mark as Won')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Mark as Won'))
+
+    await waitFor(() => {
+      const actionCall = mockCallKw.mock.calls.find((c: any[]) => c[1] === 'action_won')
+      expect(actionCall).toBeDefined()
+      expect(actionCall?.[0]).toBe('crm.lead')
+      expect(actionCall?.[2]).toEqual([[1]])
+    })
+  })
+
+  test('clicking action button calls ir.actions.server run', async () => {
+    const user = userEvent.setup()
+    const headerArch = `<form string="Lead">
+      <header>
+        <button name="42" type="action" string="Run Report"/>
+      </header>
+      <sheet><field name="name"/></sheet>
+    </form>`
+
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'run') return Promise.resolve(true)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="crm.lead" arch={headerArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Run Report')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Run Report'))
+
+    await waitFor(() => {
+      const actionCall = mockCallKw.mock.calls.find(
+        (c: any[]) => c[0] === 'ir.actions.server' && c[1] === 'run',
+      )
+      expect(actionCall).toBeDefined()
+      expect(actionCall?.[2]).toEqual([[42]])
+    })
+  })
+
+  test('sheet uses max-w-[860px] for layout', async () => {
+    mockCallKw.mockResolvedValue(readResult)
+    const { container } = render(
+      <OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+
+    const sheet = container.querySelector('.o_form_sheet')
+    expect(sheet).toBeInTheDocument()
+    expect(sheet?.className).toContain('max-w-[860px]')
+  })
+
+  test('header with statusbar and buttons renders in header area', async () => {
+    const fullArch = `<form string="Lead">
+      <header>
+        <button name="action_confirm" type="object" string="Confirm" states="draft" class="btn-primary"/>
+      </header>
+      <sheet><field name="name"/></sheet>
+    </form>`
+
+    mockCallKw.mockResolvedValue([{ id: 1, name: 'Test', email: 't@e.com', state: 'draft' }])
+    render(<OdooFormRenderer model="crm.lead" arch={fullArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Confirm')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Draft')).toBeInTheDocument()
+    expect(screen.getByText('Confirmed')).toBeInTheDocument()
+    expect(screen.getByText('Done')).toBeInTheDocument()
+  })
 })
