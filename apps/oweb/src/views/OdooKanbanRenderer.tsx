@@ -31,10 +31,12 @@ export function OdooKanbanRenderer({
   const groupBy = kanbanView.defaultGroupBy ?? 'stage_id'
   const highlightColor = kanbanView.highlightColor
 
-  // Ensure groupBy field is always included in search_read
-  const searchFields = kanbanView.fields.includes(groupBy)
-    ? kanbanView.fields
-    : [...kanbanView.fields, groupBy]
+  // Ensure groupBy + name always in search_read fields
+  const searchFields = [groupBy]
+  for (const f of kanbanView.fields) {
+    if (!searchFields.includes(f)) searchFields.push(f)
+  }
+  if (!searchFields.includes('name')) searchFields.push('name')
 
   // 1. Fetch all records
   const { data: records, isLoading } = useQuery({
