@@ -54,7 +54,10 @@ pub async fn poll_odoo_bus(
             .and_then(|n| n.as_array())
             && !notifications.is_empty()
         {
-            debug!("Broadcasting {} Odoo Bus notification(s)", notifications.len());
+            debug!(
+                "Broadcasting {} Odoo Bus notification(s)",
+                notifications.len()
+            );
             last = notifications
                 .iter()
                 .filter_map(|n| n.get("id").and_then(|id| id.as_i64()))

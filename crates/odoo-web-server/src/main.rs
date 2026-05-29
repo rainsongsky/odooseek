@@ -108,6 +108,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
         .route("/api/menu", get(menu::get_menu))
+        .route("/api/menus", get(menu::get_menus))
         .route("/api/session", get(get_session_info))
         .route("/api/session/login", post(session_login))
         .route("/api/session/logout", post(session_logout))

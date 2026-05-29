@@ -1,26 +1,31 @@
-import { BarChart3, Columns3, LayoutList, Table, TrendingUp } from '@/lib/lucide-icons'
+import { BarChart3, CalendarDays, Columns3, LayoutList, Table, TrendingUp } from '@/lib/lucide-icons'
+
+type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
 interface ViewSwitcherProps {
-  currentView: 'list' | 'form' | 'kanban' | 'pivot' | 'graph'
-  onSwitch: (view: 'list' | 'form' | 'kanban' | 'pivot' | 'graph') => void
+  currentView: ViewType
+  onSwitch: (view: ViewType) => void
+  availableViews?: ViewType[]
 }
 
 const VIEWS: {
-  type: 'list' | 'form' | 'kanban' | 'pivot' | 'graph'
+  type: ViewType
   icon: React.ComponentType<{ className?: string }>
   label: string
 }[] = [
   { type: 'list', icon: Table, label: 'List' },
+  { type: 'calendar', icon: CalendarDays, label: 'Calendar' },
   { type: 'pivot', icon: BarChart3, label: 'Pivot' },
   { type: 'graph', icon: TrendingUp, label: 'Graph' },
   { type: 'kanban', icon: Columns3, label: 'Kanban' },
   { type: 'form', icon: LayoutList, label: 'Form' },
 ]
 
-export function OdooViewSwitcher({ currentView, onSwitch }: ViewSwitcherProps) {
+export function OdooViewSwitcher({ currentView, onSwitch, availableViews }: ViewSwitcherProps) {
+  const visible = availableViews ? VIEWS.filter((v) => availableViews.includes(v.type)) : VIEWS
   return (
     <div className="flex items-center justify-end gap-1">
-      {VIEWS.map((v) => {
+      {visible.map((v) => {
         const active = currentView === v.type
         const Icon = v.icon
         return (

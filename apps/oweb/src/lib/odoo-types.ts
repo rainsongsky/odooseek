@@ -111,7 +111,32 @@ export interface FieldElement {
   readonly?: boolean
   nolabel?: boolean
   placeholder?: string
+  mode?: string
+  subViews?: {
+    list?: O2mSubView
+    form?: O2mFormSubView
+  }
 }
+
+export interface O2mSubView {
+  columns: ViewField[]
+  editable?: string
+  decorations: Record<string, string>
+  create?: boolean
+  delete?: boolean
+}
+
+export interface O2mFormSubView {
+  elements: FormElement[]
+}
+
+export type O2mCommand =
+  | [0, number, Record<string, unknown>]
+  | [1, number, Record<string, unknown>]
+  | [2, number]
+  | [4, number]
+  | [5, 0]
+  | [6, 0, number[]]
 
 export interface SeparatorElement {
   type: 'separator'
@@ -219,4 +244,32 @@ export interface ParsedGraphView {
   measures: GraphMeasure[]
   stacked?: boolean
   orderBy?: string
+}
+
+export interface ParsedCalendarView {
+  type: 'calendar'
+  string: string
+  dateStart: string
+  dateStop?: string
+  colorField?: string
+  mode: 'day' | 'week' | 'month'
+  fields: string[]
+  avatarField?: string
+  eventLimit?: number
+  quickCreate?: boolean
+  hideTime?: boolean
+}
+
+export interface ToolbarAction {
+  id: number
+  name: string
+  type?: string
+  binding_view_types?: string
+  domain?: string
+  sequence?: number
+}
+
+export interface ViewToolbar {
+  print: ToolbarAction[]
+  action: ToolbarAction[]
 }

@@ -6,6 +6,7 @@ import { OdooViewSwitcher } from '../OdooViewSwitcher'
 vi.mock('@/lib/lucide-icons', () => ({
   Table: (_p: any) => <span>Table</span>,
   BarChart3: (_p: any) => <span>BarChart3</span>,
+  CalendarDays: (_p: any) => <span>CalendarDays</span>,
   Columns3: (_p: any) => <span>Columns3</span>,
   LayoutList: (_p: any) => <span>LayoutList</span>,
   TrendingUp: (_p: any) => <span>TrendingUp</span>,
@@ -15,6 +16,7 @@ describe('OdooViewSwitcher', () => {
   test('renders all view buttons', () => {
     render(<OdooViewSwitcher currentView="list" onSwitch={vi.fn()} />)
     expect(screen.getByText('List')).toBeInTheDocument()
+    expect(screen.getByText('Calendar')).toBeInTheDocument()
     expect(screen.getByText('Pivot')).toBeInTheDocument()
     expect(screen.getByText('Graph')).toBeInTheDocument()
     expect(screen.getByText('Kanban')).toBeInTheDocument()

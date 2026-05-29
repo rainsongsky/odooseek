@@ -275,4 +275,9 @@ describe('field-widgets', () => {
     expect(screen.getByText('×')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Add a tag...')).toBeInTheDocument()
   })
+
+  test('maps one2many to One2ManyWidget (not Many2ManyWidget)', () => {
+    expect(TYPE_WIDGETS.one2many).toBeDefined()
+    expect(TYPE_WIDGETS.one2many).not.toBe(TYPE_WIDGETS.many2many)
+  })
 })

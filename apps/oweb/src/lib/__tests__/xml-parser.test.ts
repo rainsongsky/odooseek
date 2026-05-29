@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  parseCalendarXml,
   parseFormXml,
   parseGraphXml,
   parseKanbanXml,
@@ -204,6 +205,77 @@ describe('parseFormXml', () => {
     }
     expect(sheet.elements[0].type).toBe('button')
     expect(sheet.elements[0].name).toBe('btn_method')
+  })
+
+  test('parses field with nested tree sub-view (o2m)', () => {
+    const xml = `<form><sheet>
+      <field name="order_line">
+        <tree editable="bottom">
+          <field name="product_id"/>
+          <field name="quantity"/>
+          <field name="price_unit"/>
+        </tree>
+      </field>
+    </sheet></form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: { type: 'field'; name: string; subViews?: { list?: { columns: { name: string }[]; editable?: string } } }[]
+    }
+    const field = sheet.elements[0]
+    expect(field.type).toBe('field')
+    expect(field.name).toBe('order_line')
+    expect(field.subViews?.list).toBeDefined()
+    expect(field.subViews?.list?.columns).toHaveLength(3)
+    expect(field.subViews?.list?.columns[0].name).toBe('product_id')
+    expect(field.subViews?.list?.editable).toBe('bottom')
+  })
+
+  test('parses field with nested tree and form sub-views', () => {
+    const xml = `<form><sheet>
+      <field name="order_line" mode="list">
+        <tree>
+          <field name="product_id"/>
+        </tree>
+        <form>
+          <group>
+            <field name="product_id"/>
+            <field name="quantity"/>
+          </group>
+        </form>
+      </field>
+    </sheet></form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: {
+        type: 'field'
+        name: string
+        mode?: string
+        subViews?: {
+          list?: { columns: { name: string }[] }
+          form?: { elements: { type: string; name?: string }[] }
+        }
+      }[]
+    }
+    const field = sheet.elements[0]
+    expect(field.mode).toBe('list')
+    expect(field.subViews?.list?.columns).toHaveLength(1)
+    expect(field.subViews?.form).toBeDefined()
+    expect(field.subViews?.form?.elements).toHaveLength(1) // group
+  })
+
+  test('parses field with mode attribute', () => {
+    const xml = `<form><sheet><field name="lines" mode="kanban"/></sheet></form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: { type: 'field'; mode?: string }[]
+    }
+    expect(sheet.elements[0].mode).toBe('kanban')
   })
 })
 
@@ -433,5 +505,55 @@ describe('parseGraphXml', () => {
     expect(result.measures).toHaveLength(2)
     expect(result.measures[0].name).toBe('amount')
     expect(result.measures[1].name).toBe('quantity')
+  })
+})
+
+describe('parseCalendarXml', () => {
+  test('parses basic calendar attributes', () => {
+    const xml = `<calendar string="Meetings" date_start="start" date_stop="stop" color="partner_id" mode="week">
+      <field name="name"/>
+      <field name="partner_id"/>
+    </calendar>`
+
+    const result = parseCalendarXml(xml)
+    expect(result.type).toBe('calendar')
+    expect(result.string).toBe('Meetings')
+    expect(result.dateStart).toBe('start')
+    expect(result.dateStop).toBe('stop')
+    expect(result.colorField).toBe('partner_id')
+    expect(result.mode).toBe('week')
+    expect(result.fields).toEqual(expect.arrayContaining(['name', 'partner_id']))
+  })
+
+  test('defaults to month mode', () => {
+    const xml = `<calendar date_start="start"><field name="name"/></calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.mode).toBe('month')
+  })
+
+  test('parses avatar_field attribute', () => {
+    const xml = `<calendar date_start="start">
+      <field name="partner_id" avatar_field="avatar_128"/>
+    </calendar>`
+
+    const result = parseCalendarXml(xml)
+    expect(result.avatarField).toBe('avatar_128')
+  })
+
+  test('handles empty calendar', () => {
+    const xml = `<calendar date_start="start_date"/>`
+    const result = parseCalendarXml(xml)
+    expect(result.fields).toEqual([])
+    expect(result.dateStart).toBe('start_date')
+    expect(result.quickCreate).toBe(true)
+    expect(result.hideTime).toBe(false)
+  })
+
+  test('parses event_limit and hide_time', () => {
+    const xml = `<calendar date_start="start" event_limit="3" hide_time="1" quick_create="0"/>`
+    const result = parseCalendarXml(xml)
+    expect(result.eventLimit).toBe(3)
+    expect(result.hideTime).toBe(true)
+    expect(result.quickCreate).toBe(false)
   })
 })

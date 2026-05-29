@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Breadcrumbs } from '../components/Breadcrumbs'
+import { ControlPanel } from '../components/ControlPanel'
 import { SearchBar } from '../components/SearchBar'
 import { callKw } from '../lib/api'
-import type { OdooFieldMeta } from '../lib/odoo-types'
+import type { OdooFieldMeta, ViewToolbar } from '../lib/odoo-types'
 import { parseSearchXml } from '../lib/xml-parser'
+import { OdooCalendarRenderer } from './OdooCalendarRenderer'
 import { OdooFormRenderer } from './OdooFormRenderer'
 import { OdooGraphRenderer } from './OdooGraphRenderer'
 import { OdooKanbanRenderer } from './OdooKanbanRenderer'
@@ -12,15 +14,18 @@ import { OdooListRenderer } from './OdooListRenderer'
 import { OdooPivotRenderer } from './OdooPivotRenderer'
 import { OdooViewSwitcher } from './OdooViewSwitcher'
 
+type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
+
 interface ViewLoaderProps {
   model: string
-  viewType: 'list' | 'form' | 'kanban' | 'pivot' | 'graph'
+  viewType: ViewType
   viewId?: number
   domain?: unknown[]
   recordId?: number
+  availableViews?: ViewType[]
   onRowClick?: (recordId: number) => void
   onBackToList?: () => void
-  onSwitchView?: (v: 'list' | 'form' | 'kanban' | 'pivot' | 'graph') => void
+  onSwitchView?: (v: ViewType) => void
   onCreateClick?: () => void
   onRecordCreated?: (newId: number) => void
 }
@@ -31,6 +36,7 @@ export function OdooViewLoader({
   viewId,
   domain: initialDomain = [],
   recordId: _recordId,
+  availableViews,
   onRowClick,
   onBackToList,
   onSwitchView,
@@ -52,7 +58,7 @@ export function OdooViewLoader({
     queryKey: ['odoo', 'get_views', model, viewsToLoad],
     queryFn: () =>
       callKw<{
-        views: Record<string, { arch: string; id: number }>
+        views: Record<string, { arch: string; id: number; toolbar?: ViewToolbar }>
         models: Record<string, { fields: Record<string, OdooFieldMeta> }>
       }>(model, 'get_views', [viewsToLoad], { options: { toolbar: true } }),
     staleTime: 15 * 60_000,
@@ -107,6 +113,7 @@ export function OdooViewLoader({
   const arch = activeView?.arch ?? ''
   const viewTitle = arch.match(/<[^ ]+\s+[^>]*string\s*=\s*"([^"]+)"/i)?.[1] || undefined
   const recordName = (recordNameData?.[0]?.display_name as string) || undefined
+  const toolbar = activeView?.toolbar
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
@@ -119,6 +126,7 @@ export function OdooViewLoader({
           onBackToList={onBackToList}
         />
         <div className="flex items-center gap-2">
+          <ControlPanel toolbar={toolbar} />
           {viewType !== 'form' && onCreateClick && (
             <button
               type="button"
@@ -128,13 +136,14 @@ export function OdooViewLoader({
               Create
             </button>
           )}
-          {onSwitchView && <OdooViewSwitcher currentView={viewType} onSwitch={onSwitchView} />}
+          {onSwitchView && <OdooViewSwitcher currentView={viewType} onSwitch={onSwitchView} availableViews={availableViews} />}
         </div>
       </div>
       {(viewType === 'list' ||
         viewType === 'kanban' ||
         viewType === 'pivot' ||
-        viewType === 'graph') && (
+        viewType === 'graph' ||
+        viewType === 'calendar') && (
         <div className="border-b border-border-subtle p-4">
           <SearchBar
             onSearch={handleSearch}
@@ -180,6 +189,15 @@ export function OdooViewLoader({
       )}
       {viewType === 'graph' && (
         <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+      )}
+      {viewType === 'calendar' && (
+        <OdooCalendarRenderer
+          model={model}
+          arch={activeView.arch}
+          fields={fields}
+          domain={domain}
+          onRecordClick={onRowClick}
+        />
       )}
     </div>
   )

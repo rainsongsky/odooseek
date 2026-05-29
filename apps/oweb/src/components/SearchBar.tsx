@@ -194,7 +194,7 @@ export function SearchBar({
               </span>
             ))}
             {activeGroupByFacets.map((gb, i) => {
-              const ref = gb.interval ? `${gb.fieldName}:${gb.interval}` : gb.fieldName
+              const _ref = gb.interval ? `${gb.fieldName}:${gb.interval}` : gb.fieldName
               return (
                 <span
                   key={`facet-gb-${i}`}

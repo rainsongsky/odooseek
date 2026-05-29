@@ -33,9 +33,9 @@ pub async fn proxy_odoo(
     }
 
     let response = request.send().await.map_err(|e| {
-            tracing::warn!("Odoo unreachable at {odoo_url}: {e}");
-            OdooError::Unreachable(format!("Odoo not reachable: {e}"))
-        })?;
+        tracing::warn!("Odoo unreachable at {odoo_url}: {e}");
+        OdooError::Unreachable(format!("Odoo not reachable: {e}"))
+    })?;
 
     let status = response.status();
     let odoo_headers = response.headers().clone();

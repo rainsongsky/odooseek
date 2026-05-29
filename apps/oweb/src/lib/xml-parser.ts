@@ -5,6 +5,7 @@ import type {
   GraphField,
   GraphMeasure,
   KanbanTemplateNode,
+  ParsedCalendarView,
   ParsedFormView,
   ParsedGraphView,
   ParsedKanbanView,
@@ -32,6 +33,7 @@ function parseFieldElement(el: Element): FieldElement {
     options: el.getAttribute('options')
       ? parseOptions(el.getAttribute('options') ?? '')
       : undefined,
+    mode: el.getAttribute('mode') ?? undefined,
   }
 }
 
@@ -73,7 +75,32 @@ function parseFormElements(container: Element): FormElement[] {
     } else if (tag === 'button') {
       elements.push(parseButtonElement(child))
     } else if (tag === 'field') {
-      elements.push(parseFieldElement(child))
+      const fieldEl = parseFieldElement(child)
+
+      // Parse nested sub-views for o2m/o2m fields
+      const treeChild = Array.from(child.children).find(
+        (c) => c.tagName === 'tree' || c.tagName === 'list',
+      )
+      const formChild = Array.from(child.children).find((c) => c.tagName === 'form')
+
+      if (treeChild) {
+        fieldEl.subViews = {
+          list: {
+            columns: Array.from(treeChild.querySelectorAll('field')).map(parseFieldAttrs),
+            editable: treeChild.getAttribute('editable') ?? undefined,
+            decorations: parseDecorations(treeChild),
+            create: treeChild.getAttribute('create') !== 'false',
+            delete: treeChild.getAttribute('delete') !== 'false',
+          },
+        }
+        if (formChild) {
+          fieldEl.subViews.form = { elements: parseFormElements(formChild) }
+        }
+      } else if (formChild) {
+        fieldEl.subViews = { form: { elements: parseFormElements(formChild) } }
+      }
+
+      elements.push(fieldEl)
     } else if (tag === 'sheet') {
       elements.push({
         type: 'sheet',
@@ -589,5 +616,32 @@ export function parseGraphXml(xml: string): ParsedGraphView {
     measures,
     stacked: root.getAttribute('stacked') === 'True' || undefined,
     orderBy: root.getAttribute('order') ?? undefined,
+  }
+}
+
+/** Parse Odoo <calendar> XML → ParsedCalendarView */
+export function parseCalendarXml(xml: string): ParsedCalendarView {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml')
+  const root = doc.documentElement
+
+  const fields = [...new Set(Array.from(root.querySelectorAll('field')).map((el) => el.getAttribute('name') ?? ''))]
+
+  const avatarEl = Array.from(root.querySelectorAll('field')).find((el) => el.hasAttribute('avatar_field'))
+
+  const rawMode = root.getAttribute('mode') ?? 'month'
+  const mode: 'day' | 'week' | 'month' = rawMode === 'day' || rawMode === 'week' ? rawMode : 'month'
+
+  return {
+    type: 'calendar',
+    string: root.getAttribute('string') ?? '',
+    dateStart: root.getAttribute('date_start') ?? '',
+    dateStop: root.getAttribute('date_stop') ?? undefined,
+    colorField: root.getAttribute('color') ?? undefined,
+    mode,
+    fields,
+    avatarField: avatarEl?.getAttribute('avatar_field') ?? undefined,
+    eventLimit: root.getAttribute('event_limit') ? Number(root.getAttribute('event_limit')) : undefined,
+    quickCreate: root.getAttribute('quick_create') !== '0',
+    hideTime: root.getAttribute('hide_time') === '1',
   }
 }

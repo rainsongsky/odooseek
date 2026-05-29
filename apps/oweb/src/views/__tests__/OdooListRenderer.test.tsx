@@ -168,3 +168,171 @@ describe('OdooListRenderer', () => {
     })
   })
 })
+
+describe('OdooListRenderer — inline editing', () => {
+  const editableArch = `<list string="Items" editable="bottom">
+    <field name="name"/>
+    <field name="qty"/>
+  </list>`
+
+  const editableFields: Record<string, OdooFieldMeta> = {
+    name: {
+      name: 'name',
+      type: 'char',
+      string: 'Name',
+      required: false,
+      readonly: false,
+      store: true,
+      searchable: true,
+      sortable: true,
+    },
+    qty: {
+      name: 'qty',
+      type: 'integer',
+      string: 'Qty',
+      required: false,
+      readonly: false,
+      store: true,
+      searchable: true,
+      sortable: true,
+    },
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    createWrapper()
+  })
+
+  test('editable list shows Add button', async () => {
+    mockCallKw.mockResolvedValueOnce([]).mockResolvedValueOnce(0)
+
+    render(<OdooListRenderer model="test.model" arch={editableArch} fields={editableFields} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Add')).toBeInTheDocument()
+    })
+  })
+
+  test('clicking row in editable list enters edit mode', async () => {
+    mockCallKw
+      .mockResolvedValueOnce([{ id: 1, name: 'Widget', qty: 5 }])
+      .mockResolvedValueOnce(1)
+
+    render(<OdooListRenderer model="test.model" arch={editableArch} fields={editableFields} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Widget')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Widget').closest('tr')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeInTheDocument()
+      expect(screen.getByText('Cancel')).toBeInTheDocument()
+    })
+  })
+
+  test('clicking Save calls write for existing record', async () => {
+    mockCallKw
+      .mockResolvedValueOnce([{ id: 1, name: 'Widget', qty: 5 }]) // search_read
+      .mockResolvedValueOnce(1) // search_count
+      .mockResolvedValueOnce(undefined) // write
+      .mockResolvedValueOnce([{ id: 1, name: 'Widget Updated', qty: 5 }]) // refetch search_read
+      .mockResolvedValueOnce(1) // refetch count
+
+    render(<OdooListRenderer model="test.model" arch={editableArch} fields={editableFields} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Widget')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Widget').closest('tr')!)
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      // 3rd call should be write (after search_read and search_count)
+      const calls = mockCallKw.mock.calls
+      const writeCall = calls.find((c: any[]) => c[1] === 'write')
+      expect(writeCall).toBeTruthy()
+      expect(writeCall![0]).toBe('test.model')
+      expect(writeCall![2][0]).toEqual([1])
+    })
+  })
+
+  test('clicking Add then Save calls create', async () => {
+    mockCallKw
+      .mockResolvedValueOnce([]) // search_read (empty)
+      .mockResolvedValueOnce(0) // count
+      .mockResolvedValueOnce(42) // create returns id
+      .mockResolvedValueOnce([{ id: 42, name: '', qty: 0 }]) // refetch search_read
+      .mockResolvedValueOnce(1) // refetch count
+
+    render(<OdooListRenderer model="test.model" arch={editableArch} fields={editableFields} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Add')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Add'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      const calls = mockCallKw.mock.calls
+      const createCall = calls.find((c: any[]) => c[1] === 'create')
+      expect(createCall).toBeTruthy()
+      expect(createCall![0]).toBe('test.model')
+    })
+  })
+
+  test('non-editable list does not show Add button', async () => {
+    mockCallKw.mockResolvedValueOnce([{ id: 1, name: 'A' }]).mockResolvedValueOnce(1)
+
+    render(<OdooListRenderer model="res.partner" arch={listArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Name')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('Add')).not.toBeInTheDocument()
+  })
+
+  test('non-editable list clicking row triggers onRowClick', async () => {
+    const onRowClick = vi.fn()
+    mockCallKw.mockResolvedValueOnce([{ id: 1, name: 'A' }]).mockResolvedValueOnce(1)
+
+    render(
+      <OdooListRenderer
+        model="res.partner"
+        arch={listArch}
+        fields={fields}
+        onRowClick={onRowClick}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('A')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('A').closest('tr')!)
+    expect(onRowClick).toHaveBeenCalledWith(1)
+  })
+})

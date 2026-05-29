@@ -1,37 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
-import { callKw } from '../lib/api'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../lib/auth'
+import {
+  fetchMenus,
+  getAppSections,
+  getApps,
+  type MenusData,
+  type OdooMenuEntry,
+} from '../lib/menu-service'
 import '../styles/odoo-icons.css'
-
-interface MenuItem {
-  id: number
-  name: string
-  action?: string
-  sequence: number
-  web_icon?: string
-}
-
-function getMenuIconUrl(menu: MenuItem): string | null {
-  if (!menu.web_icon) return null
-
-  const w = menu.web_icon
-
-  // "module,path" format → /icons/module.png
-  const parts = w.split(',')
-  if (parts.length === 2 && !w.startsWith('fa-')) {
-    return `/icons/${parts[0]}.png`
-  }
-
-  // "/module/static/..." direct path → /icons/module.png
-  if (w.startsWith('/')) {
-    const segs = w.split('/')
-    if (segs.length > 1) return `/icons/${segs[1]}.png`
-  }
-
-  return null
-}
 
 const ICON_FALLBACK: Record<string, string> = {
   CRM: 'oi oi-suitcase',
@@ -48,182 +25,43 @@ const ICON_FALLBACK: Record<string, string> = {
   Apps: 'oi oi-apps',
 }
 
-function getMenuIconClass(menu: MenuItem): string | null {
-  if (ICON_FALLBACK[menu.name]) return ICON_FALLBACK[menu.name]
+function getAppIconClass(app: OdooMenuEntry): string | null {
+  if (ICON_FALLBACK[app.name]) return ICON_FALLBACK[app.name]
   for (const [name, icon] of Object.entries(ICON_FALLBACK)) {
-    if (menu.name.toLowerCase().includes(name.toLowerCase())) return icon
+    if (app.name.toLowerCase().includes(name.toLowerCase())) return icon
   }
-  if (menu.web_icon?.startsWith('fa-')) return `fa ${menu.web_icon}`
   return null
-}
-
-function parseActionRef(action: string | undefined): { type: string; id: number } | null {
-  if (!action || action === 'False') return null
-  const parts = action.split(',')
-  const actionType = parts[0]?.trim()
-  const actionId = Number(parts[1]?.trim())
-  if (!actionType || !actionId) return null
-  return { type: actionType, id: actionId }
 }
 
 function MenuPage() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
-  const [expandedMenuId, setExpandedMenuId] = useState<number | null>(null)
 
   const {
     data: menus,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ['odoo', 'menu'],
-    queryFn: async () => {
-      const res = await fetch('/api/menu', { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to load menu')
-      return res.json() as Promise<MenuItem[]>
-    },
+  } = useQuery<MenusData>({
+    queryKey: ['odoo', 'menus'],
+    queryFn: fetchMenus,
     staleTime: 15 * 60_000,
     retry: false,
     enabled: isAuthenticated,
   })
 
-  // Resolve action refs to model names
-  const actWindowIds = useMemo(() => {
-    const ids: number[] = []
-    if (!menus) return ids
-    for (const menu of menus) {
-      const ref = parseActionRef(menu.action)
-      if (ref?.type === 'ir.actions.act_window') ids.push(ref.id)
-    }
-    return [...new Set(ids)]
-  }, [menus])
+  const apps = menus ? getApps(menus) : []
 
-  const { data: actionModels } = useQuery({
-    queryKey: ['odoo', 'actions', actWindowIds],
-    queryFn: () =>
-      callKw<Array<{ id: number; res_model: string }>>('ir.actions.act_window', 'read', [
-        actWindowIds,
-        ['res_model'],
-      ]),
-    enabled: actWindowIds.length > 0,
-    staleTime: 15 * 60_000,
-  })
-
-  const modelMap = useMemo(() => {
-    const map = new Map<number, string>()
-    if (actionModels) {
-      for (const action of actionModels) {
-        map.set(action.id, action.res_model)
+  const handleAppClick = (app: OdooMenuEntry) => {
+    if (app.actionID) {
+      navigate({ to: '/web', search: { action: app.actionID } })
+    } else if (app.children.length > 0 && menus) {
+      const sections = getAppSections(menus, app.id as number)
+      const firstWithAction = sections.find((s) => s.actionID)
+      if (firstWithAction?.actionID) {
+        navigate({ to: '/web', search: { action: firstWithAction.actionID } })
       }
     }
-    return map
-  }, [actionModels])
-
-  const resolveModel = (action: string | undefined): string | null => {
-    const ref = parseActionRef(action)
-    if (!ref) return null
-    if (ref.type === 'ir.actions.act_window') {
-      return modelMap.get(ref.id) ?? null
-    }
-    return null
   }
-
-  // Fetch children of expanded menu
-  const { data: childMenus } = useQuery({
-    queryKey: ['odoo', 'menu_children', expandedMenuId],
-    queryFn: () =>
-      callKw<Array<MenuItem & { action?: string }>>(
-        'ir.ui.menu',
-        'search_read',
-        [[['parent_id', '=', expandedMenuId]], ['id', 'name', 'action', 'sequence']],
-        { order: 'sequence' },
-      ),
-    enabled: !!expandedMenuId,
-  })
-
-  // Resolve child menu actions
-  const childActIds = useMemo(() => {
-    const ids: number[] = []
-    if (!childMenus) return ids
-    for (const menu of childMenus) {
-      const ref = parseActionRef(menu.action)
-      if (ref?.type === 'ir.actions.act_window') ids.push(ref.id)
-    }
-    return [...new Set(ids)]
-  }, [childMenus])
-
-  const { data: childActionModels } = useQuery({
-    queryKey: ['odoo', 'actions', childActIds],
-    queryFn: () =>
-      callKw<Array<{ id: number; res_model: string }>>('ir.actions.act_window', 'read', [
-        childActIds,
-        ['res_model'],
-      ]),
-    enabled: childActIds.length > 0,
-  })
-
-  const handleMenuClick = async (menu: MenuItem) => {
-    const ref = parseActionRef(menu.action)
-    if (!ref) {
-      setExpandedMenuId(expandedMenuId === menu.id ? null : menu.id)
-      return
-    }
-
-    if (ref.type === 'ir.actions.act_window') {
-      const model = resolveModel(menu.action)
-      if (model) navigate({ to: '/web', search: { model } })
-      return
-    }
-
-    if (ref.type === 'ir.actions.server') {
-      // Run server action via /web/action/run
-      try {
-        const result = await fetch('/api/odoo/web/action/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'call',
-            id: 1,
-            params: { action_id: ref.id },
-          }),
-        }).then((r) => r.json())
-        if (result.result?.res_model) {
-          navigate({ to: '/web', search: { model: result.result.res_model } })
-        } else if (result.result === false) {
-          // Server action has no return action — show notification or reload
-          console.log('Server action completed')
-        }
-      } catch (err) {
-        console.error('Failed to run server action:', err)
-      }
-      return
-    }
-
-    // Other action types: attempt to resolve via action read
-    setExpandedMenuId(expandedMenuId === menu.id ? null : menu.id)
-  }
-
-  // Navigate to first actionable child when children are loaded
-  useEffect(() => {
-    if (expandedMenuId && childMenus && childActionModels) {
-      const childModelMap = new Map<number, string>()
-      for (const action of childActionModels) childModelMap.set(action.id, action.res_model)
-      let childModel: string | null = null
-      for (const child of childMenus) {
-        const ref = parseActionRef(child.action)
-        if (ref?.type === 'ir.actions.act_window' && childModelMap.has(ref.id)) {
-          childModel = childModelMap.get(ref.id) ?? null
-          break
-        }
-      }
-      if (childModel) {
-        navigate({ to: '/web', search: { model: childModel } })
-        setExpandedMenuId(null)
-      }
-    }
-  }, [expandedMenuId, childMenus, childActionModels, navigate])
 
   if (!isAuthenticated) {
     return (
@@ -264,52 +102,40 @@ function MenuPage() {
       <h2 className="mb-6 text-2xl font-semibold text-text-primary">Applications</h2>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {menus?.map((menu) => {
-          const model = resolveModel(menu.action)
-          const iconUrl = getMenuIconUrl(menu)
-          const iconClass = getMenuIconClass(menu)
+        {apps.map((app) => {
+          const iconClass = getAppIconClass(app)
           return (
             <button
-              key={menu.id}
+              key={String(app.id)}
               type="button"
-              onClick={() => handleMenuClick(menu)}
-              className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 text-left transition-colors ${
-                model ? 'hover:border-border-default hover:bg-surface' : ''
-              }`}
+              onClick={() => handleAppClick(app)}
+              className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 text-left transition-colors hover:border-border-default hover:bg-surface"
             >
-              {iconUrl && (
+              {app.webIconData ? (
                 <img
-                  src={iconUrl}
-                  alt={menu.name}
+                  src={app.webIconData}
+                  alt={app.name}
                   className="h-12 w-12 rounded-lg object-contain"
-                  onError={(e) => {
-                    const el = e.target as HTMLImageElement
-                    el.style.display = 'none'
-                    const fb = el.nextElementSibling as HTMLElement | null
-                    if (fb) fb.style.display = 'flex'
-                  }}
                 />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                  {iconClass ? (
+                    <i className={`${iconClass} text-xl`} />
+                  ) : (
+                    <span className="text-xl font-semibold">{app.name[0]}</span>
+                  )}
+                </div>
               )}
-              <div
-                className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent"
-                style={{ display: iconUrl ? 'none' : 'flex' }}
-              >
-                {iconClass ? (
-                  <i className={`${iconClass} text-xl`} />
-                ) : (
-                  <span className="text-xl font-semibold">{menu.name[0]}</span>
-                )}
-              </div>
-              <span className="text-sm font-medium text-text-primary">{menu.name}</span>
-              <span className="text-[10px] text-text-muted">
-                {model ?? (expandedMenuId === menu.id ? 'Loading...' : 'Menu group')}
-              </span>
+              <span className="text-sm font-medium text-text-primary">{app.name}</span>
+              {app.actionID && (
+                <span className="text-[10px] text-text-muted">#{app.actionID}</span>
+              )}
             </button>
           )
         })}
       </div>
 
-      {menus?.length === 0 && (
+      {apps.length === 0 && (
         <div className="rounded-lg border border-border-subtle bg-surface/50 py-12 text-center text-sm text-text-muted">
           No applications available
         </div>
@@ -317,8 +143,6 @@ function MenuPage() {
     </div>
   )
 }
-
-import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/menu')({
   component: MenuPage,

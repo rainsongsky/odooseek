@@ -43,9 +43,7 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
     f.interval ? `${f.name}:${f.interval}` : f.name,
   )
 
-  const aggregateFields = graphView.measures
-    .filter((m) => m.name !== '__count')
-    .map((m) => m.name)
+  const aggregateFields = graphView.measures.filter((m) => m.name !== '__count').map((m) => m.name)
   if (aggregateFields.length === 0) aggregateFields.push('__count')
 
   const fieldsToQuery = [...groupByFields, ...aggregateFields]
@@ -93,47 +91,47 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
     <div className="p-4">
       <h3 className="mb-4 text-sm font-semibold text-text-primary">{graphView.string || model}</h3>
       <div style={{ width: '100%', height: 320 }}>
-          {graphView.graphType === 'pie' ? (
-            <PieChart width={600} height={320}>
-              <Pie
-                data={chartData}
-                dataKey={measureKeys[0] ?? '__count'}
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={120}
-              >
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          ) : graphView.graphType === 'line' ? (
-            <LineChartContent
+        {graphView.graphType === 'pie' ? (
+          <PieChart width={600} height={320}>
+            <Pie
               data={chartData}
-              measureKeys={measureKeys}
-              measures={graphView.measures}
-            />
-          ) : (
-            <BarChart width={600} height={320} data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend />
-              {measureKeys.map((key, i) => (
-                <Bar
-                  key={key}
-                  dataKey={key}
-                  name={graphView.measures[i]?.string || key}
-                  stackId={graphView.stacked ? 'stack' : undefined}
-                  fill={COLORS[i % COLORS.length]}
-                />
+              dataKey={measureKeys[0] ?? '__count'}
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={120}
+            >
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
-            </BarChart>
-          )}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        ) : graphView.graphType === 'line' ? (
+          <LineChartContent
+            data={chartData}
+            measureKeys={measureKeys}
+            measures={graphView.measures}
+          />
+        ) : (
+          <BarChart width={600} height={320} data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip />
+            <Legend />
+            {measureKeys.map((key, i) => (
+              <Bar
+                key={key}
+                dataKey={key}
+                name={graphView.measures[i]?.string || key}
+                stackId={graphView.stacked ? 'stack' : undefined}
+                fill={COLORS[i % COLORS.length]}
+              />
+            ))}
+          </BarChart>
+        )}
       </div>
     </div>
   )

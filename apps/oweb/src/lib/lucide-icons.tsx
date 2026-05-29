@@ -2,6 +2,7 @@ export {
   ArrowUpDown,
   BarChart3,
   Bug,
+  CalendarDays,
   ChevronDown,
   ChevronRight,
   Columns3,

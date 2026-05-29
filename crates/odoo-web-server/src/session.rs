@@ -3,17 +3,17 @@
 use axum::http::HeaderMap;
 use axum::response::Response;
 
-use crate::error::AppError;
 use crate::AppState;
+use crate::error::AppError;
 use odoo_core::error::OdooError;
 use odoo_core::types::{LoginRequest, SessionInfo};
 
 /// GET /api/session — calls Odoo /web/session/get_session_info
-pub async fn get_session_info(
-    state: AppState,
-    headers: HeaderMap,
-) -> Result<Response, AppError> {
-    let odoo_url = format!("{}/web/session/get_session_info", state.odoo_url.trim_end_matches('/'));
+pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Response, AppError> {
+    let odoo_url = format!(
+        "{}/web/session/get_session_info",
+        state.odoo_url.trim_end_matches('/')
+    );
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",
@@ -31,9 +31,10 @@ pub async fn get_session_info(
         req = req.header("cookie", cookie_str);
     }
 
-    let response = req.send().await.map_err(|e| {
-        OdooError::Unreachable(format!("Odoo get_session_info failed: {e}"))
-    })?;
+    let response = req
+        .send()
+        .await
+        .map_err(|e| OdooError::Unreachable(format!("Odoo get_session_info failed: {e}")))?;
 
     let resp_headers = response.headers().clone();
     let json_body: serde_json::Value = response.json().await?;
@@ -43,18 +44,36 @@ pub async fn get_session_info(
         Some(result) => SessionInfo {
             authenticated: true,
             uid: result.get("uid").and_then(|v| v.as_i64()),
-            name: result.get("name").and_then(|v| v.as_str()).map(String::from),
-            username: result.get("username").and_then(|v| v.as_str()).map(String::from),
+            name: result
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            username: result
+                .get("username")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             db: result.get("db").and_then(|v| v.as_str()).map(String::from),
             is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
             is_system: result.get("is_system").and_then(|v| v.as_bool()),
             partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
-            partner_display_name: result.get("partner_display_name").and_then(|v| v.as_str()).map(String::from),
-            server_version: result.get("server_version").and_then(|v| v.as_str()).map(String::from),
-            server_version_info: result.get("server_version_info").cloned().and_then(|v| v.as_array().cloned()),
+            partner_display_name: result
+                .get("partner_display_name")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            server_version: result
+                .get("server_version")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            server_version_info: result
+                .get("server_version_info")
+                .cloned()
+                .and_then(|v| v.as_array().cloned()),
             user_context: result.get("user_context").cloned(),
             user_companies: result.get("user_companies").cloned(),
-            web_base_url: result.get("web.base.url").and_then(|v| v.as_str()).map(String::from),
+            web_base_url: result
+                .get("web.base.url")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             home_action_id: result.get("home_action_id").cloned(),
             active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
             max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
@@ -66,7 +85,9 @@ pub async fn get_session_info(
 
     let mut builder = Response::builder().status(200);
     for (key, value) in resp_headers.iter() {
-        if key.as_str().eq_ignore_ascii_case("set-cookie") && let Ok(v) = value.to_str() {
+        if key.as_str().eq_ignore_ascii_case("set-cookie")
+            && let Ok(v) = value.to_str()
+        {
             builder = builder.header("Set-Cookie", v);
         }
     }
@@ -80,10 +101,7 @@ pub async fn get_session_info(
 }
 
 /// POST /api/session/login — calls Odoo /web/session/authenticate
-pub async fn login(
-    state: AppState,
-    body: LoginRequest,
-) -> Result<Response, AppError> {
+pub async fn login(state: AppState, body: LoginRequest) -> Result<Response, AppError> {
     let odoo_url = format!(
         "{}/web/session/authenticate",
         state.odoo_url.trim_end_matches('/')
@@ -116,7 +134,11 @@ pub async fn login(
     if let Some(err) = json_body.get("error") {
         return Err(AppError(OdooError::Api {
             code: err.get("code").and_then(|c| c.as_i64()).unwrap_or(0),
-            message: err.get("message").and_then(|m| m.as_str()).unwrap_or("unknown").into(),
+            message: err
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("unknown")
+                .into(),
             data: err.get("data").cloned(),
         }));
     }
@@ -126,18 +148,33 @@ pub async fn login(
         Some(result) => SessionInfo {
             authenticated: result.get("uid").and_then(|v| v.as_i64()).is_some(),
             uid: result.get("uid").and_then(|v| v.as_i64()),
-            name: result.get("name").and_then(|v| v.as_str()).map(String::from),
+            name: result
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             username: Some(body.login),
             db: Some(body.db),
             is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
             is_system: result.get("is_system").and_then(|v| v.as_bool()),
             partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
-            partner_display_name: result.get("partner_display_name").and_then(|v| v.as_str()).map(String::from),
-            server_version: result.get("server_version").and_then(|v| v.as_str()).map(String::from),
-            server_version_info: result.get("server_version_info").cloned().and_then(|v| v.as_array().cloned()),
+            partner_display_name: result
+                .get("partner_display_name")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            server_version: result
+                .get("server_version")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            server_version_info: result
+                .get("server_version_info")
+                .cloned()
+                .and_then(|v| v.as_array().cloned()),
             user_context: result.get("user_context").cloned(),
             user_companies: result.get("user_companies").cloned(),
-            web_base_url: result.get("web.base.url").and_then(|v| v.as_str()).map(String::from),
+            web_base_url: result
+                .get("web.base.url")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             home_action_id: result.get("home_action_id").cloned(),
             active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
             max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
@@ -149,7 +186,9 @@ pub async fn login(
 
     let mut builder = Response::builder().status(200);
     for (key, value) in resp_headers.iter() {
-        if key.as_str().eq_ignore_ascii_case("set-cookie") && let Ok(v) = value.to_str() {
+        if key.as_str().eq_ignore_ascii_case("set-cookie")
+            && let Ok(v) = value.to_str()
+        {
             builder = builder.header("Set-Cookie", v);
         }
     }
@@ -163,11 +202,11 @@ pub async fn login(
 }
 
 /// POST /api/session/logout — calls Odoo /web/session/destroy
-pub async fn logout(
-    state: AppState,
-    headers: HeaderMap,
-) -> Result<Response, AppError> {
-    let odoo_url = format!("{}/web/session/destroy", state.odoo_url.trim_end_matches('/'));
+pub async fn logout(state: AppState, headers: HeaderMap) -> Result<Response, AppError> {
+    let odoo_url = format!(
+        "{}/web/session/destroy",
+        state.odoo_url.trim_end_matches('/')
+    );
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",
@@ -183,15 +222,18 @@ pub async fn logout(
         req = req.header("cookie", cookie_str);
     }
 
-    let response = req.send().await.map_err(|e| {
-        OdooError::Unreachable(format!("Odoo session destroy failed: {e}"))
-    })?;
+    let response = req
+        .send()
+        .await
+        .map_err(|e| OdooError::Unreachable(format!("Odoo session destroy failed: {e}")))?;
 
     let resp_headers = response.headers().clone();
 
     let mut builder = Response::builder().status(200);
     for (key, value) in resp_headers.iter() {
-        if key.as_str().eq_ignore_ascii_case("set-cookie") && let Ok(v) = value.to_str() {
+        if key.as_str().eq_ignore_ascii_case("set-cookie")
+            && let Ok(v) = value.to_str()
+        {
             builder = builder.header("Set-Cookie", v);
         }
     }

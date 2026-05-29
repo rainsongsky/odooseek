@@ -108,3 +108,60 @@ export function fieldsGet<T = unknown>(
 ): Promise<T> {
   return callKw<T>(model, 'fields_get', [allfields], { attributes })
 }
+
+/// Resolve an action ID to its target model name and view settings.
+/// Handles both ir.actions.act_window and ir.actions.server types.
+export async function resolveAction(
+  actionId: number,
+): Promise<{ model: string; viewMode: string; domain: unknown[]; context: Record<string, unknown> }> {
+  // Step 1: determine action type via base model
+  const [base] = await callKw<Array<{ type: string }>>('ir.actions.actions', 'read', [
+    [actionId],
+    ['type'],
+  ])
+  const actionType = base?.type
+
+  // Step 2: server actions need execution to get the actual act_window
+  if (actionType === 'ir.actions.server') {
+    const action = await jsonRpc<{
+      res_model?: string
+      view_mode?: string
+      domain?: unknown[] | string
+      context?: Record<string, unknown> | string
+    }>('/api/odoo/web/action/run', { action_id: actionId })
+
+    if (!action?.res_model) {
+      throw new Error(`Server action ${actionId} returned no res_model`)
+    }
+    return {
+      model: action.res_model,
+      viewMode: action.view_mode || 'list',
+      domain: Array.isArray(action.domain) ? action.domain : [],
+      context: typeof action.context === 'object' && action.context !== null ? action.context : {},
+    }
+  }
+
+  // Step 3: act_window — read directly
+  const [action] = await callKw<
+    Array<{
+      res_model: string
+      view_mode: string
+      domain: unknown[] | string
+      context: Record<string, unknown> | string
+    }>
+  >('ir.actions.act_window', 'read', [
+    [actionId],
+    ['res_model', 'view_mode', 'domain', 'context'],
+  ])
+
+  if (!action?.res_model) {
+    throw new Error(`Action ${actionId} has no res_model`)
+  }
+
+  return {
+    model: action.res_model,
+    viewMode: action.view_mode || 'list',
+    domain: Array.isArray(action.domain) ? action.domain : [],
+    context: typeof action.context === 'object' && action.context !== null ? action.context : {},
+  }
+}

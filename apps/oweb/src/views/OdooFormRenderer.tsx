@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityPanel } from '../components/ActivityPanel'
+import { Chatter } from '../components/Chatter'
 import { callKw } from '../lib/api'
 import { evalModifier, getDecorationClass as getDecoClass } from '../lib/expression-evaluator'
 import type { ButtonElement, FormElement, HeaderElement, OdooFieldMeta } from '../lib/odoo-types'
@@ -228,6 +230,10 @@ export function OdooFormRenderer({
             editMode={editMode}
             onChange={handleChange}
           />
+        </div>
+        <div className="mx-auto max-w-[860px]">
+          <ActivityPanel model={model} recordId={recordId} />
+          <Chatter model={model} recordId={recordId} />
         </div>
       </div>
     </div>
