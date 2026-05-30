@@ -11,6 +11,10 @@ export interface FieldWidgetProps {
   meta?: { selection?: [string, string][]; type?: string; relation?: string }
 }
 
+// Odoo 19 style: edit mode = bottom border only, read-only = no border
+const FIELD_INPUT_CLASS =
+  'w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none read-only:border-b-0'
+
 function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
   return (
     <input
@@ -19,7 +23,7 @@ function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
       onChange={(e) => onChange(e.target.value)}
       readOnly={readOnly}
       placeholder={field.placeholder}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none read-only:bg-transparent read-only:text-text-secondary"
+      className={FIELD_INPUT_CLASS}
     />
   )
 }
@@ -32,7 +36,7 @@ function TextWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
       readOnly={readOnly}
       placeholder={field.placeholder}
       rows={3}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none read-only:bg-transparent read-only:text-text-secondary"
+      className={FIELD_INPUT_CLASS}
     />
   )
 }
@@ -44,7 +48,7 @@ function IntegerWidget({ field: _field, value, onChange, readOnly }: FieldWidget
       value={value != null ? Number(value) : ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
       readOnly={readOnly}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none read-only:bg-transparent read-only:text-text-secondary"
+      className={FIELD_INPUT_CLASS}
     />
   )
 }
@@ -57,7 +61,7 @@ function FloatWidget({ field: _field, value, onChange, readOnly }: FieldWidgetPr
       value={value != null ? Number(value) : ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
       readOnly={readOnly}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none read-only:bg-transparent read-only:text-text-secondary"
+      className={FIELD_INPUT_CLASS}
     />
   )
 }
@@ -119,7 +123,7 @@ function DateWidget({ value, onChange, readOnly }: FieldWidgetProps) {
       type="date"
       value={value ? String(value).slice(0, 10) : ''}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+      className="w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
     />
   )
 }
@@ -138,7 +142,7 @@ function DatetimeWidget({ value, onChange, readOnly }: FieldWidgetProps) {
       type="datetime-local"
       value={local}
       onChange={(e) => onChange(`${e.target.value.replace('T', ' ')}:00`)}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+      className="w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
     />
   )
 }
@@ -154,7 +158,7 @@ function SelectionWidget({ field: _field, value, onChange, readOnly, meta }: Fie
     <select
       value={String(value ?? '')}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+      className="w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
     >
       <option value="">--</option>
       {meta.selection.map(([k, v]) => (
@@ -217,7 +221,7 @@ function Many2OneWidget({ field: _field, value, onChange, readOnly, meta }: Fiel
         }}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
         placeholder={_field.placeholder || 'Search...'}
-        className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+        className="w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary focus:border-accent focus:outline-none placeholder:text-text-muted"
       />
       {open && (results.length > 0 || search.trim()) && (
         <div className="absolute z-10 mt-1 w-full rounded-lg border border-border-subtle bg-surface shadow-lg">
