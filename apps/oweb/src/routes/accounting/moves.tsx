@@ -1,4 +1,5 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { requireAuth } from '../../lib/auth'
 import { OdooViewLoader } from '../../views/OdooViewLoader'
 
 function AccountingMoves() {
@@ -7,14 +8,5 @@ function AccountingMoves() {
 
 export const Route = createFileRoute('/accounting/moves')({
   component: AccountingMoves,
-  beforeLoad: async () => {
-    try {
-      const res = await fetch('/api/session', { credentials: 'include' })
-      if (!res.ok) throw redirect({ to: '/login' })
-      if (!(await res.json()).authenticated) throw redirect({ to: '/login' })
-    } catch (e) {
-      if (e instanceof Response || e instanceof redirect) throw e
-      throw redirect({ to: '/login' })
-    }
-  },
+  beforeLoad: requireAuth,
 })

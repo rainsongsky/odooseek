@@ -1,4 +1,5 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { requireAuth } from '../../lib/auth'
 import { OdooViewLoader } from '../../views/OdooViewLoader'
 
 function CrmPipeline() {
@@ -9,15 +10,5 @@ function CrmPipeline() {
 
 export const Route = createFileRoute('/crm/pipeline')({
   component: CrmPipeline,
-  beforeLoad: async () => {
-    try {
-      const res = await fetch('/api/session', { credentials: 'include' })
-      if (!res.ok) throw redirect({ to: '/login' })
-      const data = await res.json()
-      if (!data.authenticated) throw redirect({ to: '/login' })
-    } catch (e) {
-      if (e instanceof Response || e instanceof redirect) throw e
-      throw redirect({ to: '/login' })
-    }
-  },
+  beforeLoad: requireAuth,
 })

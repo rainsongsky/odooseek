@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, type ReactNode, useContext } from 'react'
+import { redirect } from '@tanstack/react-router'
 
 interface AuthState {
   authenticated: boolean
@@ -71,4 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext)
+}
+
+/** Route guard — call from `beforeLoad` to redirect unauthenticated users. */
+export async function requireAuth(): Promise<void> {
+  try {
+    const res = await fetch('/api/session', { credentials: 'include' })
+    if (!res.ok) throw redirect({ to: '/login' })
+    const data = await res.json()
+    if (!data.authenticated) throw redirect({ to: '/login' })
+  } catch (e) {
+    if (e instanceof Response || (e as { message?: string }).message?.includes('Redirect')) throw e
+    throw redirect({ to: '/login' })
+  }
 }
