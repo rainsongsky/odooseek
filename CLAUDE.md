@@ -12,11 +12,11 @@
 
 | 仓库 | 用途 | Issue | PR |
 |:---|:---|:---:|:---:|
-| **[HL8-ORG/odooseek](https://github.com/HL8-ORG/odooseek)** | 主开发仓（`origin`） | ✅ **唯一** | ✅ |
+| **[FDE-GROUP/odooseek](https://github.com/FDE-GROUP/odooseek)** | 主开发仓（`origin`） | ✅ **唯一** | ✅ |
 
 ```bash
-gh issue create --repo HL8-ORG/odooseek ...
-gh pr create --repo HL8-ORG/odooseek ...
+gh issue create --repo FDE-GROUP/odooseek ...
+gh pr create --repo FDE-GROUP/odooseek ...
 ```
 
 - **GitHub Flow**: main ← PR ← feature-branch, PR body references issues with `closes #N`

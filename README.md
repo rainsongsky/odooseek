@@ -98,7 +98,7 @@ odooseek/
 ### 安装
 
 ```bash
-git clone https://github.com/HL8-ORG/odooseek.git
+git clone https://github.com/FDE-GROUP/odooseek.git
 cd odooseek
 
 # 安装前端依赖
