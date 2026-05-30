@@ -13,7 +13,14 @@ import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { callKw } from '../lib/api'
 import { evalModifier, getDecorationClass as getDecoClass } from '../lib/expression-evaluator'
-import type { ButtonElement, FormElement, HeaderElement, OdooFieldMeta } from '../lib/odoo-types'
+import type {
+  ButtonBoxElement,
+  ButtonElement,
+  FormElement,
+  HeaderElement,
+  OdooFieldMeta,
+  StatButtonElement,
+} from '../lib/odoo-types'
 import { parseFormXml } from '../lib/xml-parser'
 import { getFieldWidget } from './field-widgets'
 
@@ -44,6 +51,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   const [warning, setWarning] = useState<{ title: string; message: string } | null>(null)
   const onchangeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const baselineRef = useRef<Record<string, unknown>>({})
+  const formRef = useRef<HTMLDivElement>(null)
   const newRecordId = !recordId ? 0 : recordId
 
   const headerElement = formLayout.elements.find((e): e is HeaderElement => e.type === 'header')
@@ -89,13 +97,13 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           [newRecordId ? [newRecordId] : [], values, fieldNames, fieldsSpec],
           {},
         )
-        if (result.value) {
+        if (result?.value) {
           const normalized: Record<string, unknown> = {}
           for (const [k, v] of Object.entries(result.value))
             normalized[k] = normalizeOnchangeValue(v, fields[k]?.type)
           setFormValues((prev) => ({ ...prev, ...normalized }))
         }
-        if (result.warning) {
+        if (result?.warning) {
           setWarning(result.warning)
           setTimeout(() => setWarning(null), 5000)
         }
@@ -158,7 +166,47 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     await saveMutation.mutateAsync(formValues)
   }, [fields, formValues, saveMutation])
 
+  const handleCancel = useCallback(() => {
+    setFormValues({ ...baselineRef.current })
+    setEditMode(false)
+  }, [])
+
   useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave])
+
+  // Keyboard shortcuts: Ctrl+S save, Escape cancel
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (editMode && !saveMutation.isPending) handleSave()
+      }
+      if (e.key === 'Escape' && editMode) {
+        e.preventDefault()
+        handleCancel()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [editMode, saveMutation.isPending, handleSave, handleCancel])
+
+  // beforeUnload: warn when leaving with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  // Autofocus first editable field on new record
+  useEffect(() => {
+    if (!editMode || !formRef.current) return
+    const first = formRef.current.querySelector<HTMLInputElement>(
+      'input[type="text"], textarea, select',
+    )
+    if (first) first.focus()
+  }, [editMode])
 
   const handleActionButton = useCallback(
     (btn: ButtonElement) => {
@@ -209,6 +257,18 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     [model, newRecordId, record, recordId, queryClient, confirmDialog],
   )
 
+  const handleStatusChange = useCallback(
+    async (value: string) => {
+      if (!recordId) return
+      const stateField = fields.state
+      if (!stateField) return
+      const writeVal = stateField.type === 'many2one' ? Number(value) : value
+      await callKw(model, 'write', [[recordId], { state: writeVal }])
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
+    },
+    [model, recordId, fields.state, queryClient],
+  )
+
   if (!formLayout)
     return <div className="p-6 text-sm text-text-muted">Failed to parse form XML</div>
 
@@ -221,6 +281,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         stateField={fields.state}
         currentRecord={currentRecord}
         onAction={handleActionButton}
+        onStatusChange={handleStatusChange}
         editMode={editMode}
         isDirty={isDirty}
         justSaved={justSaved}
@@ -232,10 +293,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           }
         }}
         onSave={handleSave}
-        onCancel={() => {
-          setFormValues({ ...baselineRef.current })
-          setEditMode(false)
-        }}
+        onCancel={handleCancel}
         isSaving={saveMutation.isPending}
       />
 
@@ -250,13 +308,14 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         </div>
       )}
 
-      <div className="flex-1 overflow-auto px-6 py-0">
+      <div ref={formRef} className="flex-1 overflow-auto px-6 py-0">
         <div className="o_form_sheet mx-auto max-w-[860px] border-y border-border-subtle bg-surface px-6 py-5">
           <FormLayoutNode
             elements={nonHeaderElements}
             record={currentRecord}
             fields={fields}
             model={model}
+            recordId={recordId}
             editMode={editMode}
             onChange={handleChange}
           />
@@ -275,6 +334,7 @@ function HeaderBar({
   stateField,
   currentRecord,
   onAction,
+  onStatusChange,
   editMode,
   isDirty,
   justSaved,
@@ -288,6 +348,7 @@ function HeaderBar({
   stateField?: OdooFieldMeta
   currentRecord?: Record<string, unknown>
   onAction: (btn: ButtonElement) => void
+  onStatusChange?: (value: string) => void
   editMode: boolean
   isDirty: boolean
   justSaved: boolean
@@ -340,17 +401,20 @@ function HeaderBar({
                 const isLast = i === stateSelection.length - 1
                 return (
                   <div key={key} className="flex items-center">
-                    <span
+                    <button
+                      type="button"
+                      disabled={editMode || isCurrent}
+                      onClick={() => onStatusChange?.(key)}
                       className={`px-3 py-1 text-[11px] font-medium ${
                         isCurrent
                           ? 'bg-accent text-white'
                           : isPast
-                            ? 'bg-emerald-500/10 text-emerald-600'
-                            : 'bg-gray-100 text-text-muted'
-                      } ${isFirst && !isCurrent ? 'rounded-l' : ''} ${isLast && !isCurrent ? 'rounded-r' : ''} ${isCurrent && isFirst ? 'rounded-l' : ''} ${isCurrent && isLast ? 'rounded-r' : ''}`}
+                            ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                            : 'bg-gray-100 text-text-muted hover:bg-gray-200'
+                      } ${isFirst && !isCurrent ? 'rounded-l' : ''} ${isLast && !isCurrent ? 'rounded-r' : ''} ${isCurrent && isFirst ? 'rounded-l' : ''} ${isCurrent && isLast ? 'rounded-r' : ''} ${!isCurrent && !editMode ? 'cursor-pointer' : 'cursor-default'}`}
                     >
                       {label}
-                    </span>
+                    </button>
                   </div>
                 )
               })}
@@ -461,14 +525,76 @@ function ActionButtons({
   )
 }
 
-function isButtonVisible(btn: ButtonElement, record?: Record<string, unknown>): boolean {
+function isButtonVisible(
+  btn: ButtonElement | StatButtonElement,
+  record?: Record<string, unknown>,
+): boolean {
   if (btn.invisible && evalModifier(btn.invisible, record)) return false
-  if (btn.states) {
+  if ('states' in btn && btn.states) {
     const allowedStates = btn.states.split(',').map((s) => s.trim())
     const currentState = record?.state as string | undefined
     if (!currentState || !allowedStates.includes(currentState)) return false
   }
   return true
+}
+
+function StatButton({
+  button,
+  record,
+  model,
+  recordId,
+}: {
+  button: StatButtonElement
+  record?: Record<string, unknown>
+  model: string
+  recordId?: number
+}) {
+  const queryClient = useQueryClient()
+  const [loading, setLoading] = useState(false)
+
+  let value: React.ReactNode = ''
+  let text = button.string ?? ''
+
+  if (button.content?.type === 'field') {
+    const raw = record?.[button.content.fieldName]
+    value = raw != null ? String(raw) : '0'
+    text = button.content.string ?? text
+  } else if (button.content?.type === 'custom') {
+    const raw = button.content.valueField ? record?.[button.content.valueField] : undefined
+    value = raw != null ? String(raw) : ''
+    text = button.content.textFallback ?? text
+  }
+
+  const handleClick = useCallback(async () => {
+    if (loading || !recordId) return
+    if (button.confirm && !window.confirm(button.confirm)) return
+    setLoading(true)
+    try {
+      if (button.buttonType === 'object') {
+        await callKw(model, button.name, [[recordId]])
+      } else if (button.buttonType === 'action') {
+        await callKw('ir.actions.server', 'run', [[Number(button.name)]])
+      }
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
+    } catch {
+      // action failed silently
+    } finally {
+      setLoading(false)
+    }
+  }, [button, loading, model, recordId, queryClient])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={loading}
+      className="flex items-center gap-2 rounded px-3 py-1.5 text-xs text-text-secondary hover:bg-hover transition-colors disabled:opacity-50"
+    >
+      {button.icon && <i className={`fa ${button.icon} text-sm text-text-muted`} />}
+      {value !== '' && <span className="font-semibold text-text-primary">{value}</span>}
+      <span>{text}</span>
+    </button>
+  )
 }
 
 function normalizeOnchangeValue(v: unknown, fieldType?: string): unknown {
@@ -481,6 +607,7 @@ interface NodeProps {
   record?: Record<string, unknown>
   fields: Record<string, OdooFieldMeta>
   model: string
+  recordId?: number
   editMode?: boolean
   onChange?: (name: string, value: unknown) => void
   level?: number
@@ -491,6 +618,7 @@ function NotebookRenderer({
   record,
   fields,
   model,
+  recordId,
   editMode,
   onChange,
   level,
@@ -499,6 +627,7 @@ function NotebookRenderer({
   record?: Record<string, unknown>
   fields: Record<string, OdooFieldMeta>
   model: string
+  recordId?: number
   editMode?: boolean
   onChange?: (n: string, v: unknown) => void
   level: number
@@ -534,6 +663,7 @@ function NotebookRenderer({
             record={record}
             fields={fields}
             model={model}
+            recordId={recordId}
             editMode={editMode}
             onChange={onChange}
             level={level + 1}
@@ -549,6 +679,7 @@ function FormLayoutNode({
   record,
   fields,
   model,
+  recordId,
   editMode,
   onChange,
   level = 0,
@@ -567,6 +698,7 @@ function FormLayoutNode({
                 record={record}
                 fields={fields}
                 model={model}
+                recordId={recordId}
                 editMode={editMode}
                 onChange={onChange}
                 level={level + 1}
@@ -574,6 +706,24 @@ function FormLayoutNode({
             )
           case 'button':
             return null
+          case 'button_box': {
+            const bbe = el as ButtonBoxElement
+            const visibleBtns = bbe.buttons.filter((b) => isButtonVisible(b, record))
+            if (visibleBtns.length === 0) return null
+            return (
+              <div key={i} className="flex flex-wrap gap-1 border-b border-border-subtle pb-3 mb-3">
+                {visibleBtns.map((btn, bi) => (
+                  <StatButton
+                    key={bi}
+                    button={btn}
+                    record={record}
+                    model={model}
+                    recordId={recordId}
+                  />
+                ))}
+              </div>
+            )
+          }
           case 'group': {
             if (evalModifier(el.invisible, record)) return null
             const cols = el.col ?? 2
@@ -591,6 +741,7 @@ function FormLayoutNode({
                     record={record}
                     fields={fields}
                     model={model}
+                    recordId={recordId}
                     editMode={editMode}
                     onChange={onChange}
                     level={level + 1}
@@ -607,6 +758,7 @@ function FormLayoutNode({
                 record={record}
                 fields={fields}
                 model={model}
+                recordId={recordId}
                 editMode={editMode}
                 onChange={onChange}
                 level={level}
@@ -630,9 +782,10 @@ function FormLayoutNode({
                 typeof el.required === 'string' ? evalModifier(el.required, record) : el.required
             }
             const deco = getDecoClass(el as unknown as Record<string, unknown>, record)
+            const colSpanStyle = el.colspan ? { gridColumn: `span ${el.colspan}` } : undefined
             if (el.nolabel) {
               return (
-                <div key={i} className={deco}>
+                <div key={i} className={deco} style={colSpanStyle}>
                   <Widget
                     field={el}
                     value={record?.[el.name]}
@@ -643,15 +796,53 @@ function FormLayoutNode({
                 </div>
               )
             }
+            // Boolean fields: checkbox first, then label
+            if (meta.type === 'boolean') {
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 ${deco ?? ''}`}
+                  style={colSpanStyle}
+                >
+                  <Widget
+                    field={el}
+                    value={record?.[el.name]}
+                    onChange={(v) => onChange?.(el.name, v)}
+                    readOnly={readOnly}
+                    meta={meta}
+                  />
+                  <label className="text-xs font-medium text-text-secondary">
+                    {el.string || meta.string || el.name}
+                    {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
+                    {meta.help && (
+                      <span
+                        className="ml-1 inline-flex items-center text-[10px] text-blue-400 cursor-help"
+                        title={meta.help}
+                      >
+                        ?
+                      </span>
+                    )}
+                  </label>
+                </div>
+              )
+            }
             return (
               <div
                 key={i}
                 className={`grid items-baseline gap-x-3 ${deco ?? ''}`}
-                style={{ gridTemplateColumns: 'auto 1fr' }}
+                style={{ gridTemplateColumns: 'auto 1fr', ...colSpanStyle }}
               >
                 <label className="truncate text-xs font-medium text-text-secondary py-1 text-right">
                   {el.string || meta.string || el.name}
                   {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
+                  {meta.help && (
+                    <span
+                      className="ml-1 inline-flex items-center text-[10px] text-blue-400 cursor-help"
+                      title={meta.help}
+                    >
+                      ?
+                    </span>
+                  )}
                 </label>
                 <Widget
                   field={el}

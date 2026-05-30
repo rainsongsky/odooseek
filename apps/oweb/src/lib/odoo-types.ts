@@ -64,6 +64,7 @@ export type FormElement =
   | NotebookElement
   | FieldElement
   | ButtonElement
+  | ButtonBoxElement
   | SeparatorElement
   | NewlineElement
   | LabelElement
@@ -84,6 +85,27 @@ export interface ButtonElement {
   states?: string
   confirm?: string
 }
+
+export interface ButtonBoxElement {
+  type: 'button_box'
+  name?: string
+  buttons: StatButtonElement[]
+}
+
+export interface StatButtonElement {
+  type: 'stat_button'
+  name: string
+  string?: string
+  buttonType?: 'object' | 'action'
+  icon?: string
+  invisible?: string
+  confirm?: string
+  content?: StatButtonContent
+}
+
+export type StatButtonContent =
+  | { type: 'field'; fieldName: string; string?: string }
+  | { type: 'custom'; valueField?: string; textFallback?: string }
 
 export interface SheetElement {
   type: 'sheet'
@@ -113,6 +135,7 @@ export interface FieldElement {
   required?: string | boolean
   readonly?: string | boolean
   nolabel?: boolean
+  colspan?: number
   placeholder?: string
   mode?: string
   subViews?: {

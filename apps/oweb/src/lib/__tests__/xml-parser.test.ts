@@ -281,6 +281,67 @@ describe('parseFormXml', () => {
     }
     expect(sheet.elements[0].mode).toBe('kanban')
   })
+
+  test('parses button_box with stat buttons', () => {
+    const xml = `<form><sheet>
+      <div class="oe_button_box" name="button_box">
+        <button name="action_open" type="object" class="oe_stat_button" icon="fa-pencil">
+          <field name="count" widget="statinfo" string="Records"/>
+        </button>
+        <button name="action_view" type="object" class="oe_stat_button" icon="fa-eye" invisible="count == 0">
+          <div class="o_field_widget o_stat_info">
+            <span class="o_stat_value"><field name="total"/></span>
+            <span class="o_stat_text">Total</span>
+          </div>
+        </button>
+      </div>
+    </sheet></form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: {
+        type: 'button_box'
+        name?: string
+        buttons: {
+          type: 'stat_button'
+          name: string
+          icon?: string
+          invisible?: string
+          content?: { type: string; fieldName?: string; string?: string; textFallback?: string }
+        }[]
+      }[]
+    }
+    const box = sheet.elements[0]
+    expect(box.type).toBe('button_box')
+    expect(box.name).toBe('button_box')
+    expect(box.buttons).toHaveLength(2)
+
+    expect(box.buttons[0].name).toBe('action_open')
+    expect(box.buttons[0].icon).toBe('fa-pencil')
+    expect(box.buttons[0].content?.type).toBe('field')
+    expect(box.buttons[0].content?.fieldName).toBe('count')
+    expect(box.buttons[0].content?.string).toBe('Records')
+
+    expect(box.buttons[1].name).toBe('action_view')
+    expect(box.buttons[1].invisible).toBe('count == 0')
+    expect(box.buttons[1].content?.type).toBe('custom')
+    expect((box.buttons[1].content as { type: 'custom'; valueField?: string }).valueField).toBe(
+      'total',
+    )
+    expect(box.buttons[1].content?.textFallback).toBe('Total')
+  })
+
+  test('parses field with colspan attribute', () => {
+    const xml = `<form><group col="4"><field name="description" colspan="4"/></group></form>`
+
+    const result = parseFormXml(xml)
+    const group = result.elements[0] as {
+      type: 'group'
+      elements: { type: 'field'; colspan?: number }[]
+    }
+    expect(group.elements[0].colspan).toBe(4)
+  })
 })
 
 describe('parseSearchXml', () => {

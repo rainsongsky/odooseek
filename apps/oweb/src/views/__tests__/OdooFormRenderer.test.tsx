@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { act } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { DialogProvider } from '../../hooks/useDialog'
 import type { OdooFieldMeta } from '../../lib/odoo-types'
@@ -474,5 +475,260 @@ describe('OdooFormRenderer', () => {
     expect(screen.getByText('Draft')).toBeInTheDocument()
     expect(screen.getByText('Confirmed')).toBeInTheDocument()
     expect(screen.getByText('Done')).toBeInTheDocument()
+  })
+
+  test('renders button_box stat buttons', async () => {
+    const buttonBoxArch = `<form string="Lead">
+      <sheet>
+        <div class="oe_button_box" name="button_box">
+          <button name="action_open" type="object" class="oe_stat_button" icon="fa-pencil">
+            <field name="count" widget="statinfo" string="Records"/>
+          </button>
+        </div>
+        <field name="name"/>
+      </sheet>
+    </form>`
+
+    const fieldsWithCount = {
+      ...fields,
+      count: {
+        name: 'count',
+        type: 'integer',
+        string: 'Count',
+        required: false,
+        readonly: false,
+        store: true,
+        searchable: true,
+        sortable: true,
+      },
+    }
+
+    mockCallKw.mockResolvedValue([
+      { id: 1, name: 'Test', email: 't@e.com', state: 'draft', count: 5 },
+    ])
+    render(
+      <OdooFormRenderer
+        model="crm.lead"
+        arch={buttonBoxArch}
+        fields={fieldsWithCount}
+        recordId={1}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('5')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Records')).toBeInTheDocument()
+  })
+
+  test('clicking stat button calls object method', async () => {
+    const user = userEvent.setup()
+    const buttonBoxArch = `<form string="Lead">
+      <sheet>
+        <div class="oe_button_box" name="button_box">
+          <button name="action_open" type="object" class="oe_stat_button" icon="fa-eye">
+            <field name="count" widget="statinfo" string="View"/>
+          </button>
+        </div>
+        <field name="name"/>
+      </sheet>
+    </form>`
+
+    const fieldsWithCount = {
+      ...fields,
+      count: {
+        name: 'count',
+        type: 'integer',
+        string: 'Count',
+        required: false,
+        readonly: false,
+        store: true,
+        searchable: true,
+        sortable: true,
+      },
+    }
+
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read')
+        return Promise.resolve([
+          { id: 1, name: 'Test', email: 't@e.com', state: 'draft', count: 3 },
+        ])
+      if (method === 'action_open') return Promise.resolve(true)
+      return Promise.resolve(undefined)
+    })
+
+    render(
+      <OdooFormRenderer
+        model="crm.lead"
+        arch={buttonBoxArch}
+        fields={fieldsWithCount}
+        recordId={1}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('View')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('View'))
+
+    await waitFor(() => {
+      const actionCall = mockCallKw.mock.calls.find((c: any[]) => c[1] === 'action_open')
+      expect(actionCall).toBeDefined()
+      expect(actionCall?.[0]).toBe('crm.lead')
+      expect(actionCall?.[2]).toEqual([[1]])
+    })
+  })
+
+  test('Ctrl+S triggers save', async () => {
+    const user = userEvent.setup()
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'write') return Promise.resolve(true)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Edit'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeInTheDocument()
+    })
+
+    act(() => {
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+    })
+
+    await waitFor(() => {
+      const writeCall = mockCallKw.mock.calls.find((c: any[]) => c[1] === 'write')
+      expect(writeCall).toBeDefined()
+    })
+  })
+
+  test('Escape cancels edit mode', async () => {
+    const user = userEvent.setup()
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Edit'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeInTheDocument()
+    })
+
+    act(() => {
+      fireEvent.keyDown(document, { key: 'Escape' })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+  })
+
+  test('clicking statusbar calls write with new state', async () => {
+    const user = userEvent.setup()
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'write') return Promise.resolve(true)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Confirmed')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Confirmed'))
+
+    await waitFor(() => {
+      const writeCall = mockCallKw.mock.calls.find((c: any[]) => c[1] === 'write')
+      expect(writeCall).toBeDefined()
+      expect(writeCall?.[2]).toEqual([[1], { state: 'confirmed' }])
+    })
+  })
+
+  test('renders help tooltip on field with help attribute', async () => {
+    const fieldsWithHelp: Record<string, OdooFieldMeta> = {
+      ...fields,
+      name: {
+        ...fields.name,
+        help: 'Enter the partner name',
+      },
+    }
+
+    mockCallKw.mockResolvedValue(readResult)
+    render(
+      <OdooFormRenderer model="res.partner" arch={formArch} fields={fieldsWithHelp} recordId={1} />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+
+    const helpIcon = screen.getByTitle('Enter the partner name')
+    expect(helpIcon).toBeInTheDocument()
+    expect(helpIcon.textContent).toBe('?')
+  })
+
+  test('renders boolean field with checkbox before label', async () => {
+    const boolArch = `<form string="Settings">
+      <sheet>
+        <group>
+          <field name="active"/>
+          <field name="name"/>
+        </group>
+      </sheet>
+    </form>`
+
+    const boolFields: Record<string, OdooFieldMeta> = {
+      active: {
+        name: 'active',
+        type: 'boolean',
+        string: 'Active',
+        required: false,
+        readonly: false,
+        store: true,
+        searchable: true,
+        sortable: true,
+      },
+      name: fields.name,
+    }
+
+    mockCallKw.mockResolvedValue([{ id: 1, active: true, name: 'Test' }])
+    render(
+      <OdooFormRenderer model="res.settings" arch={boolArch} fields={boolFields} recordId={1} />,
+      {
+        wrapper,
+      },
+    )
+
+    await waitFor(() => {
+      const checkbox = screen.getByRole('checkbox')
+      expect(checkbox).toBeChecked()
+    })
   })
 })

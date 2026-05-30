@@ -1,5 +1,6 @@
 import { parseDomainString } from './expression-evaluator'
 import type {
+  ButtonBoxElement,
   ButtonElement,
   FieldElement,
   FormElement,
@@ -17,6 +18,8 @@ import type {
   PivotMeasure,
   SearchFilter,
   SearchGroupBy,
+  StatButtonContent,
+  StatButtonElement,
   ViewField,
 } from './odoo-types'
 
@@ -35,6 +38,7 @@ function parseFieldElement(el: Element): FieldElement {
       ? parseOptions(el.getAttribute('options') ?? '')
       : undefined,
     mode: el.getAttribute('mode') ?? undefined,
+    colspan: el.hasAttribute('colspan') ? parseInt(el.getAttribute('colspan')!, 10) : undefined,
   }
 }
 
@@ -64,6 +68,52 @@ function parseButtonElement(el: Element): ButtonElement {
   }
 }
 
+function parseButtonBox(el: Element): ButtonBoxElement {
+  const buttons: StatButtonElement[] = []
+  for (const btn of Array.from(el.children)) {
+    if (btn.tagName !== 'button') continue
+    const base = parseButtonElement(btn)
+    let content: StatButtonContent | undefined
+    // Pattern 1: <field name="count" widget="statinfo" string="Label"/>
+    const statField = Array.from(btn.children).find((c) => c.tagName === 'field')
+    if (statField) {
+      content = {
+        type: 'field',
+        fieldName: statField.getAttribute('name') ?? '',
+        string: statField.getAttribute('string') ?? undefined,
+      }
+    }
+    // Pattern 2: <div class="o_stat_info"><span class="o_stat_value">...</span><span class="o_stat_text">...</span></div>
+    if (!content) {
+      const infoDiv = Array.from(btn.children).find((c) =>
+        (c.getAttribute('class') ?? '').includes('o_stat_info'),
+      )
+      if (infoDiv) {
+        const textSpan = Array.from(infoDiv.children).find((c) =>
+          (c.getAttribute('class') ?? '').includes('o_stat_text'),
+        )
+        const valueField = infoDiv.getElementsByTagName('field')[0]
+        content = {
+          type: 'custom',
+          valueField: valueField?.getAttribute('name') ?? undefined,
+          textFallback: textSpan?.textContent?.trim() ?? undefined,
+        }
+      }
+    }
+    buttons.push({
+      type: 'stat_button',
+      name: base.name,
+      string: base.string,
+      buttonType: base.buttonType === 'edit' ? undefined : base.buttonType,
+      icon: base.icon,
+      invisible: base.invisible,
+      confirm: base.confirm,
+      content,
+    })
+  }
+  return { type: 'button_box', name: el.getAttribute('name') ?? undefined, buttons }
+}
+
 function parseFormElements(container: Element): FormElement[] {
   const elements: FormElement[] = []
 
@@ -75,6 +125,8 @@ function parseFormElements(container: Element): FormElement[] {
       elements.push({ type: 'header', buttons })
     } else if (tag === 'button') {
       elements.push(parseButtonElement(child))
+    } else if (tag === 'div' && (child.getAttribute('class') ?? '').includes('oe_button_box')) {
+      elements.push(parseButtonBox(child))
     } else if (tag === 'field') {
       const fieldEl = parseFieldElement(child)
 
