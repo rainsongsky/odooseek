@@ -1,4 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { useHomeMenu } from '../hooks/useHomeMenu'
+import { useAuth } from '../lib/auth'
 
 const FEATURES = [
   {
@@ -84,6 +87,18 @@ const FEATURES = [
 
 export function HomePage() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
+  const { open } = useHomeMenu()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      open()
+    }
+  }, [isAuthenticated, open])
+
+  if (isAuthenticated) {
+    return null
+  }
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">

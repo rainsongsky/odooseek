@@ -1,7 +1,19 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
 import type { SearchFilter, SearchGroupBy } from '../../lib/odoo-types'
 import { SearchBar } from '../SearchBar'
+
+vi.mock('../../lib/api', () => ({
+  nameSearch: vi.fn(),
+}))
+
+vi.mock('../FavoriteFilters', () => ({
+  FavoriteFilters: () => null,
+}))
+
+import { nameSearch } from '../../lib/api'
+
+const mockedNameSearch = vi.mocked(nameSearch)
 
 const mockFilters: SearchFilter[] = [
   { name: 'draft', string: 'Draft', domain: [['state', '=', 'draft']] },
@@ -15,49 +27,52 @@ describe('SearchBar', () => {
     expect(screen.getByPlaceholderText('Search leads...')).toBeTruthy()
   })
 
-  test('does not show filter dropdown when no filters', () => {
+  test('does not show filter button when no filters', () => {
     render(<SearchBar onSearch={vi.fn()} />)
-    expect(screen.queryByText('Filters')).toBeNull()
+    expect(screen.queryByTitle('Filters')).toBeNull()
   })
 
-  test('shows filter dropdown when filters provided', () => {
+  test('shows filter button when filters provided', () => {
     render(<SearchBar onSearch={vi.fn()} filters={mockFilters} />)
-    expect(screen.getByText('Filters')).toBeTruthy()
+    expect(screen.getByTitle('Filters')).toBeTruthy()
   })
 
-  test('Search button triggers onSearch with keyword domain', () => {
+  test('Enter key triggers onSearch with keyword domain', () => {
     const onSearch = vi.fn()
     render(<SearchBar onSearch={onSearch} />)
-    fireEvent.change(screen.getByPlaceholderText('Search...'), {
-      target: { value: 'test' },
-    })
-    fireEvent.click(screen.getByText('Search'))
+    const input = screen.getByPlaceholderText('Search...')
+    fireEvent.change(input, { target: { value: 'test' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(onSearch).toHaveBeenCalledWith(
       expect.arrayContaining([expect.arrayContaining(['name', 'ilike', 'test'])]),
     )
   })
 
-  test('Reset button clears and calls onSearch with empty domain', () => {
+  test('Escape key clears and calls onSearch with empty domain', () => {
     const onSearch = vi.fn()
     render(<SearchBar onSearch={onSearch} />)
-    fireEvent.change(screen.getByPlaceholderText('Search...'), {
-      target: { value: 'something' },
-    })
-    fireEvent.click(screen.getByText('Reset'))
+    const input = screen.getByPlaceholderText('Search...')
+    fireEvent.change(input, { target: { value: 'x' } })
+    // First Escape closes autocomplete if open
+    fireEvent.keyDown(input, { key: 'Escape' })
+    // Second Escape clears all
+    fireEvent.keyDown(input, { key: 'Escape' })
     expect(onSearch).toHaveBeenCalledWith([])
   })
 
-  test('Advanced toggle shows advanced search form', () => {
-    render(<SearchBar onSearch={vi.fn()} />)
-    fireEvent.click(screen.getByText('Advanced'))
+  test('Add Custom Filter in filter menu shows advanced search form', () => {
+    render(<SearchBar onSearch={vi.fn()} filters={mockFilters} />)
+    fireEvent.click(screen.getByTitle('Filters'))
+    expect(screen.getByText('Add Custom Filter')).toBeTruthy()
+    fireEvent.click(screen.getByText('Add Custom Filter'))
     expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Filter')).toBeTruthy()
+    expect(screen.getByText('Apply')).toBeTruthy()
   })
 
   test('toggling a filter calls onSearch with filter domain', () => {
     const onSearch = vi.fn()
     render(<SearchBar onSearch={onSearch} filters={mockFilters} groupByFilters={mockGroupBys} />)
-    fireEvent.click(screen.getByText('Filters'))
+    fireEvent.click(screen.getByTitle('Filters'))
     fireEvent.click(screen.getByText('Draft'))
     expect(onSearch).toHaveBeenCalledWith([['state', '=', 'draft']])
   })
@@ -72,8 +87,59 @@ describe('SearchBar', () => {
         groupByFilters={mockGroupBys}
       />,
     )
-    fireEvent.click(screen.getByText('Filters'))
+    fireEvent.click(screen.getByTitle('Group By'))
     fireEvent.click(screen.getByText('Stage'))
     expect(onGroupByChange).toHaveBeenCalledWith(['stage_id'])
+  })
+
+  test('autocomplete does not fetch when no model prop', async () => {
+    render(<SearchBar onSearch={vi.fn()} />)
+    fireEvent.change(screen.getByPlaceholderText('Search...'), {
+      target: { value: 'test query' },
+    })
+    await new Promise((r) => setTimeout(r, 400))
+    expect(mockedNameSearch).not.toHaveBeenCalled()
+  })
+
+  test('autocomplete does not fetch for short keywords', async () => {
+    mockedNameSearch.mockResolvedValue([])
+    render(<SearchBar onSearch={vi.fn()} model="res.partner" />)
+    fireEvent.change(screen.getByPlaceholderText('Search...'), {
+      target: { value: 'a' },
+    })
+    await new Promise((r) => setTimeout(r, 400))
+    expect(mockedNameSearch).not.toHaveBeenCalled()
+  })
+
+  test('autocomplete calls nameSearch after debounce', async () => {
+    mockedNameSearch.mockResolvedValue([
+      [1, 'Partner A'],
+      [2, 'Partner B'],
+    ])
+    render(<SearchBar onSearch={vi.fn()} model="res.partner" />)
+    fireEvent.change(screen.getByPlaceholderText('Search...'), {
+      target: { value: 'Part' },
+    })
+    await waitFor(() => {
+      expect(mockedNameSearch).toHaveBeenCalledWith('res.partner', 'Part')
+    })
+    await waitFor(() => {
+      expect(screen.getByText('Partner A')).toBeTruthy()
+      expect(screen.getByText('Partner B')).toBeTruthy()
+    })
+  })
+
+  test('autocomplete selection triggers onSearch with id domain', async () => {
+    const onSearch = vi.fn()
+    mockedNameSearch.mockResolvedValue([[42, 'Test Record']])
+    render(<SearchBar onSearch={onSearch} model="res.partner" />)
+    fireEvent.change(screen.getByPlaceholderText('Search...'), {
+      target: { value: 'Test' },
+    })
+    await waitFor(() => {
+      expect(screen.getByText('Test Record')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('Test Record'))
+    expect(onSearch).toHaveBeenCalledWith([['id', '=', 42]])
   })
 })

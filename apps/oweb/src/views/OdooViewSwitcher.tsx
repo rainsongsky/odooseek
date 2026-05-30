@@ -1,4 +1,11 @@
-import { BarChart3, CalendarDays, Columns3, LayoutList, Table, TrendingUp } from '@/lib/lucide-icons'
+import {
+  BarChart3,
+  CalendarDays,
+  Columns3,
+  LayoutList,
+  Table,
+  TrendingUp,
+} from '@/lib/lucide-icons'
 
 type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 

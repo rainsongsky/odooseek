@@ -36,7 +36,12 @@ interface GraphRendererProps {
   domain?: unknown[]
 }
 
-export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRendererProps) {
+export function OdooGraphRenderer({
+  model,
+  arch,
+  fields: _fields,
+  domain = [],
+}: GraphRendererProps) {
   const graphView = useMemo(() => parseGraphXml(arch), [arch])
 
   const groupByFields = graphView.rowFields.map((f) =>

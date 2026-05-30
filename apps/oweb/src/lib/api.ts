@@ -14,6 +14,8 @@ interface JsonRpcResponse<T> {
   }
 }
 
+import { parseDomainString } from './expression-evaluator'
+
 let _callId = 0
 
 async function jsonRpc<T>(url: string, params: Record<string, unknown>): Promise<T> {
@@ -100,6 +102,15 @@ export function readGroup<T = unknown[]>(
   })
 }
 
+/// name_search: autocomplete search returning [[id, display_name], ...]
+export function nameSearch(
+  model: string,
+  name: string,
+  limit = 8,
+): Promise<Array<[number, string]>> {
+  return callKw(model, 'name_search', [], { name, operator: 'ilike', limit })
+}
+
 /// Get model field metadata
 export function fieldsGet<T = unknown>(
   model: string,
@@ -111,9 +122,12 @@ export function fieldsGet<T = unknown>(
 
 /// Resolve an action ID to its target model name and view settings.
 /// Handles both ir.actions.act_window and ir.actions.server types.
-export async function resolveAction(
-  actionId: number,
-): Promise<{ model: string; viewMode: string; domain: unknown[]; context: Record<string, unknown> }> {
+export async function resolveAction(actionId: number): Promise<{
+  model: string
+  viewMode: string
+  domain: unknown[]
+  context: Record<string, unknown>
+}> {
   // Step 1: determine action type via base model
   const [base] = await callKw<Array<{ type: string }>>('ir.actions.actions', 'read', [
     [actionId],
@@ -136,7 +150,9 @@ export async function resolveAction(
     return {
       model: action.res_model,
       viewMode: action.view_mode || 'list',
-      domain: Array.isArray(action.domain) ? action.domain : [],
+      domain: Array.isArray(action.domain)
+        ? action.domain
+        : (parseDomainString(action.domain as string) ?? []),
       context: typeof action.context === 'object' && action.context !== null ? action.context : {},
     }
   }
@@ -149,10 +165,7 @@ export async function resolveAction(
       domain: unknown[] | string
       context: Record<string, unknown> | string
     }>
-  >('ir.actions.act_window', 'read', [
-    [actionId],
-    ['res_model', 'view_mode', 'domain', 'context'],
-  ])
+  >('ir.actions.act_window', 'read', [[actionId], ['res_model', 'view_mode', 'domain', 'context']])
 
   if (!action?.res_model) {
     throw new Error(`Action ${actionId} has no res_model`)
@@ -161,7 +174,9 @@ export async function resolveAction(
   return {
     model: action.res_model,
     viewMode: action.view_mode || 'list',
-    domain: Array.isArray(action.domain) ? action.domain : [],
+    domain: Array.isArray(action.domain)
+      ? action.domain
+      : (parseDomainString(action.domain as string) ?? []),
     context: typeof action.context === 'object' && action.context !== null ? action.context : {},
   }
 }

@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import { describe, expect, test, vi } from 'vitest'
-import { callKw, fieldsGet, getViews, read, readGroup, searchRead } from '../api'
+import { callKw, fieldsGet, getViews, nameSearch, read, readGroup, searchRead } from '../api'
 
 describe('api', () => {
   test('searchRead generates correct args', async () => {
@@ -140,5 +140,36 @@ describe('api', () => {
 
     const groupResult = await readGroup('crm.lead', [], ['revenue'], ['stage_id'])
     expect(groupResult).toBe(mockResult)
+  })
+
+  test('nameSearch generates correct args', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ result: [[1, 'Test Partner']] }),
+    })
+    globalThis.fetch = mockFetch
+
+    const result = await nameSearch('res.partner', 'test')
+    expect(result).toEqual([[1, 'Test Partner']])
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.params.model).toBe('res.partner')
+    expect(body.params.method).toBe('name_search')
+    expect(body.params.args).toEqual([])
+    expect(body.params.kwargs.name).toBe('test')
+    expect(body.params.kwargs.operator).toBe('ilike')
+    expect(body.params.kwargs.limit).toBe(8)
+  })
+
+  test('nameSearch uses custom limit', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ result: [] }),
+    })
+    globalThis.fetch = mockFetch
+
+    await nameSearch('res.partner', 'abc', 5)
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.params.kwargs.limit).toBe(5)
   })
 })

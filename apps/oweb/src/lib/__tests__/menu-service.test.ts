@@ -1,14 +1,13 @@
 /// <reference types="vitest" />
 import { describe, expect, test, vi } from 'vitest'
 import {
-  type MenusData,
-  type OdooMenuEntry,
   fetchMenus,
   flattenMenuItems,
   getAppSections,
   getApps,
   getMenu,
   getMenuAsTree,
+  type MenusData,
   searchMenus,
 } from '../menu-service'
 

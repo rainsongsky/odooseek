@@ -20,7 +20,13 @@ interface OdooActivity {
 }
 
 const ACTIVITY_FIELDS = [
-  'id', 'activity_type_id', 'summary', 'note', 'date_deadline', 'state', 'user_id',
+  'id',
+  'activity_type_id',
+  'summary',
+  'note',
+  'date_deadline',
+  'state',
+  'user_id',
 ]
 
 function groupByState(activities: OdooActivity[]) {
@@ -52,9 +58,14 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
     queryFn: () =>
       searchRead<OdooActivity[]>(
         'mail.activity',
-        [['res_model', '=', model], ['res_id', '=', recordId!]],
+        [
+          ['res_model', '=', model],
+          ['res_id', '=', recordId!],
+        ],
         ACTIVITY_FIELDS,
-        0, 80, 'date_deadline asc',
+        0,
+        80,
+        'date_deadline asc',
       ),
     enabled,
     staleTime: 15_000,
@@ -80,8 +91,7 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
   })
 
   const createMutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      callKw('mail.activity', 'create', [values]),
+    mutationFn: (values: Record<string, unknown>) => callKw('mail.activity', 'create', [values]),
     onSuccess: () => {
       setShowForm(false)
       setNewSummary('')
@@ -116,9 +126,7 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
         </button>
       </div>
 
-      {isLoading && (
-        <div className="py-4 text-center text-xs text-text-muted">Loading...</div>
-      )}
+      {isLoading && <div className="py-4 text-center text-xs text-text-muted">Loading...</div>}
 
       {showForm && (
         <div className="mt-2 flex items-end gap-2 rounded-lg border border-border-subtle bg-surface/50 p-3">
@@ -156,7 +164,13 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
         <p className="py-3 text-center text-xs text-text-muted">No activities scheduled</p>
       )}
 
-      {([['overdue', 'Overdue', 'text-red-500', groups.overdue], ['today', 'Today', 'text-amber-500', groups.today], ['planned', 'Planned', 'text-green-500', groups.planned]] as const).map(
+      {(
+        [
+          ['overdue', 'Overdue', 'text-red-500', groups.overdue],
+          ['today', 'Today', 'text-amber-500', groups.today],
+          ['planned', 'Planned', 'text-green-500', groups.planned],
+        ] as const
+      ).map(
         ([key, label, color, items]) =>
           items.length > 0 && (
             <div key={key} className="mt-2">
@@ -170,7 +184,8 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
                 >
                   <div className="flex-1">
                     <span className="text-xs font-medium text-text-primary">
-                      {a.summary || (Array.isArray(a.activity_type_id) ? a.activity_type_id[1] : 'Activity')}
+                      {a.summary ||
+                        (Array.isArray(a.activity_type_id) ? a.activity_type_id[1] : 'Activity')}
                     </span>
                     <span className="ml-2 text-[10px] text-text-muted">{a.date_deadline}</span>
                   </div>
@@ -193,7 +208,10 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setFeedbackId(null); setFeedbackText('') }}
+                        onClick={() => {
+                          setFeedbackId(null)
+                          setFeedbackText('')
+                        }}
                         className="rounded px-1.5 py-0.5 text-[10px] text-text-muted hover:bg-hover"
                       >
                         X

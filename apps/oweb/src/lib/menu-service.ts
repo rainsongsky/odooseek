@@ -39,7 +39,9 @@ export async function fetchMenus(): Promise<MenusData> {
 export function getApps(menus: MenusData): OdooMenuEntry[] {
   const root = menus.root
   if (!root) return []
-  return root.children.map((id) => menus[String(id)]).filter((m): m is OdooMenuEntry => !!m)
+  return [...new Set(root.children)]
+    .map((id) => menus[String(id)])
+    .filter((m): m is OdooMenuEntry => !!m)
 }
 
 export function getMenu(menus: MenusData, menuId: number): OdooMenuEntry | null {
@@ -66,7 +68,7 @@ export function getMenuAsTree(menus: MenusData, menuId: number | 'root'): MenuTr
   return {
     id: entry.id as number,
     name: entry.name,
-    children: entry.children.map((cid) => getMenuAsTree(menus, cid)),
+    children: [...new Set(entry.children)].map((cid) => getMenuAsTree(menus, cid)),
     appID: entry.appID,
     xmlid: entry.xmlid,
     actionID: entry.actionID,

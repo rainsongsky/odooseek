@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import React, { useCallback, useMemo, useState } from 'react'
-import { callKw } from '../lib/api'
+import { useConfirmDialog } from '../components/ConfirmDialog'
+import { callKw, readGroup } from '../lib/api'
 import { evalCondition, getValue } from '../lib/expression-evaluator'
-import type { KanbanTemplateNode, OdooFieldMeta, ViewField } from '../lib/odoo-types'
+import type {
+  KanbanProgressbar,
+  KanbanTemplateNode,
+  OdooFieldMeta,
+  ViewField,
+} from '../lib/odoo-types'
 import { parseKanbanFields, parseKanbanXml } from '../lib/xml-parser'
 import { getFieldWidget } from './field-widgets'
 
@@ -24,6 +30,7 @@ export function OdooKanbanRenderer({
   onRecordClick,
 }: KanbanRendererProps) {
   const queryClient = useQueryClient()
+  const confirmDialog = useConfirmDialog()
   const kanbanView = useMemo(() => parseKanbanXml(arch), [arch])
   const cardFields = useMemo(
     () => (kanbanView.template ? parseKanbanFields(kanbanView.template) : []),
@@ -32,6 +39,7 @@ export function OdooKanbanRenderer({
   const templateNodes = kanbanView.templateNodes
   const groupBy = activeGroupBy?.[0] || kanbanView.defaultGroupBy || undefined
   const highlightColor = kanbanView.highlightColor
+  const progressbar = kanbanView.progressbar
 
   // Ensure groupBy + name always in search_read fields
   const searchFields = [...kanbanView.fields]
@@ -89,6 +97,46 @@ export function OdooKanbanRenderer({
     return [...groups.keys()].sort()
   }, [stages, groups, groupBy])
 
+  // 4. Fetch progressbar aggregate data (counts by progressbar field per group)
+  const { data: progressbarData } = useQuery({
+    queryKey: ['odoo', 'kanban-progressbar', model, domain, groupBy, progressbar?.field],
+    queryFn: async () => {
+      if (!progressbar || !groupBy) return {}
+      const pbField = progressbar.field
+      // read_group: group by groupBy, aggregate by progressbar field values
+      const result = await readGroup<Array<Record<string, unknown> & { [key: string]: unknown }>>(
+        model,
+        domain as unknown[],
+        [`${pbField}:count_array`],
+        [groupBy],
+        0,
+        80,
+      )
+      // Build map: columnId -> { value: count, ... }
+      const map: Record<number, Record<string, number>> = {}
+      for (const row of result) {
+        const colVal = row[groupBy]
+        const colId = Array.isArray(colVal) ? colVal[0] : typeof colVal === 'number' ? colVal : 0
+        const counts: Record<string, number> = {}
+        for (const key of Object.keys(progressbar.colors)) {
+          const countKey = `${pbField}_count_array`
+          const arr = row[countKey]
+          if (Array.isArray(arr)) {
+            // read_group with :count_array returns [[value, count], ...]
+            for (const pair of arr) {
+              if (Array.isArray(pair) && pair[0] === key) {
+                counts[key] = (pair[1] as number) || 0
+              }
+            }
+          }
+        }
+        map[colId as number] = counts
+      }
+      return map
+    },
+    enabled: !!progressbar && !!groupBy && !!records,
+  })
+
   const quickCreateMutation = useMutation({
     mutationFn: ({ name, stageId }: { name: string; stageId: number }) => {
       const vals: Record<string, unknown> = { name }
@@ -129,6 +177,40 @@ export function OdooKanbanRenderer({
     })
   }
 
+  const deleteMutation = useMutation({
+    mutationFn: (recordId: number) => callKw(model, 'unlink', [[recordId]]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'kanban', model] })
+    },
+  })
+
+  const archiveMutation = useMutation({
+    mutationFn: (recordId: number) => callKw(model, 'action_archive', [[recordId]]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'kanban', model] })
+    },
+  })
+
+  const handleCardDelete = useCallback(
+    (recordId: number) => {
+      confirmDialog({
+        title: 'Delete Record',
+        message: 'Are you sure you want to delete this record?',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+        onConfirm: () => deleteMutation.mutate(recordId),
+      })
+    },
+    [confirmDialog, deleteMutation],
+  )
+
+  const handleCardArchive = useCallback(
+    (recordId: number) => {
+      archiveMutation.mutate(recordId)
+    },
+    [archiveMutation],
+  )
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -150,6 +232,8 @@ export function OdooKanbanRenderer({
             fields={fields}
             highlightColor={highlightColor}
             onClick={onRecordClick}
+            onDelete={handleCardDelete}
+            onArchive={handleCardArchive}
           />
         ))}
       </div>
@@ -176,9 +260,13 @@ export function OdooKanbanRenderer({
             templateNodes={templateNodes}
             fields={fields}
             highlightColor={highlightColor}
+            progressbar={progressbar}
+            progressbarCounts={progressbarData?.[colId]}
             onRecordClick={onRecordClick}
             onDrop={handleDragEnd}
             onQuickCreate={handleQuickCreate}
+            onDelete={handleCardDelete}
+            onArchive={handleCardArchive}
           />
         )
       })}
@@ -195,9 +283,13 @@ function KanbanColumn({
   templateNodes,
   fields,
   highlightColor,
+  progressbar,
+  progressbarCounts,
   onRecordClick,
   onDrop,
   onQuickCreate,
+  onDelete,
+  onArchive,
 }: {
   title: string
   stageId: number
@@ -207,9 +299,13 @@ function KanbanColumn({
   templateNodes?: KanbanTemplateNode[]
   fields: Record<string, OdooFieldMeta>
   highlightColor?: string
+  progressbar?: KanbanProgressbar
+  progressbarCounts?: Record<string, number>
   onRecordClick?: (id: number) => void
   onDrop: (recordId: number, newStageId: number) => void
   onQuickCreate?: (name: string, stageId: number) => void
+  onDelete?: (id: number) => void
+  onArchive?: (id: number) => void
 }) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -230,6 +326,9 @@ function KanbanColumn({
           {count}
         </span>
       </div>
+      {progressbar && progressbarCounts && (
+        <KanbanProgressbarBar colors={progressbar.colors} counts={progressbarCounts} />
+      )}
       <div
         className="flex flex-col gap-2 overflow-y-auto p-2"
         onDragOver={(e) => e.preventDefault()}
@@ -247,6 +346,8 @@ function KanbanColumn({
             fields={fields}
             highlightColor={highlightColor}
             onClick={onRecordClick}
+            onDelete={onDelete}
+            onArchive={onArchive}
           />
         ))}
         {onQuickCreate &&
@@ -294,6 +395,47 @@ function KanbanColumn({
   )
 }
 
+const PROGRESSBAR_COLOR_MAP: Record<string, string> = {
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  danger: 'bg-red-500',
+  info: 'bg-blue-500',
+}
+
+function KanbanProgressbarBar({
+  colors,
+  counts,
+}: {
+  colors: Record<string, string>
+  counts: Record<string, number>
+}) {
+  const total = Object.values(counts).reduce((sum, c) => sum + c, 0)
+  if (total === 0) return null
+
+  const segments = Object.entries(colors)
+    .map(([value, colorName]) => ({
+      value,
+      count: counts[value] || 0,
+      className: PROGRESSBAR_COLOR_MAP[colorName] || 'bg-gray-400',
+    }))
+    .filter((s) => s.count > 0)
+
+  if (segments.length === 0) return null
+
+  return (
+    <div className="flex gap-0.5 px-3 py-1">
+      {segments.map((s) => (
+        <div
+          key={s.value}
+          className={`h-1.5 rounded-full ${s.className}`}
+          style={{ width: `${(s.count / total) * 100}%` }}
+          title={`${s.value}: ${s.count}`}
+        />
+      ))}
+    </div>
+  )
+}
+
 function KanbanCard({
   record,
   cardFields,
@@ -301,6 +443,8 @@ function KanbanCard({
   fields,
   highlightColor,
   onClick,
+  onDelete,
+  onArchive,
 }: {
   record: Record<string, unknown>
   cardFields: ViewField[]
@@ -308,25 +452,29 @@ function KanbanCard({
   fields: Record<string, OdooFieldMeta>
   highlightColor?: string
   onClick?: (id: number) => void
+  onDelete?: (id: number) => void
+  onArchive?: (id: number) => void
 }) {
   const colorIdx = highlightColor ? Number(record[highlightColor]) : 0
   const borderColor =
     colorIdx > 0 ? KANBAN_COLORS[Math.min(colorIdx, KANBAN_COLORS.length - 1)] : undefined
+  const recordId = record.id as number
 
   return (
     <div
       draggable
       onDragStart={(e) => e.dataTransfer.setData('recordId', String(record.id))}
-      onClick={() => onClick?.(record.id as number)}
-      className="cursor-pointer rounded-lg border border-border-subtle bg-surface p-3 transition-colors hover:border-border-default"
+      onClick={() => onClick?.(recordId)}
+      className="group relative cursor-pointer rounded-lg border border-border-subtle bg-surface p-3 transition-colors hover:border-border-default"
       style={borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined}
     >
+      <CardActions recordId={recordId} onEdit={onClick} onDelete={onDelete} onArchive={onArchive} />
       {templateNodes && templateNodes.length > 0 ? (
         templateNodes.map((node, i) => (
           <KanbanNode key={i} node={node} record={record} fields={fields} />
         ))
       ) : cardFields.length > 0 ? (
-        cardFields.map((f) => {
+        cardFields.map((f, fi) => {
           const meta = fields[f.name]
           if (!meta) return null
           if (f.invisible && f.invisible >= 1) return null
@@ -335,7 +483,7 @@ function KanbanCard({
             meta.type,
           )
           return (
-            <div key={f.name}>
+            <div key={`${f.name}-${fi}`}>
               <Widget
                 field={{ type: 'field', name: f.name, widget: f.widget }}
                 value={record[f.name]}
@@ -347,6 +495,88 @@ function KanbanCard({
         })
       ) : (
         <span className="text-sm font-medium text-text-primary">{record.name as string}</span>
+      )}
+    </div>
+  )
+}
+
+function CardActions({
+  recordId,
+  onEdit,
+  onDelete,
+  onArchive,
+}: {
+  recordId: number
+  onEdit?: (id: number) => void
+  onDelete?: (id: number) => void
+  onArchive?: (id: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="absolute right-1 top-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen(!open)
+        }}
+        className="rounded p-1 text-text-muted hover:bg-hover hover:text-text-primary"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="12" cy="5" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="12" cy="19" r="1" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-10 mt-1 w-28 rounded border border-border-subtle bg-surface py-1 shadow-lg">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(recordId)
+                setOpen(false)
+              }}
+              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-hover"
+            >
+              Edit
+            </button>
+          )}
+          {onArchive && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onArchive(recordId)
+                setOpen(false)
+              }}
+              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-hover"
+            >
+              Archive
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(recordId)
+                setOpen(false)
+              }}
+              className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-hover"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

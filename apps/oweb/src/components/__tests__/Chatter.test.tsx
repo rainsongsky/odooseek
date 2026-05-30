@@ -44,8 +44,24 @@ describe('Chatter', () => {
   test('renders message list', async () => {
     mockSearchRead
       .mockResolvedValueOnce([
-        { id: 1, body: '<p>Hello</p>', author_id: [1, 'Admin'], date: '2026-05-30 10:00:00', message_type: 'comment', subtype_id: [1, 'Comment'], is_note: false },
-        { id: 2, body: '<p>Note text</p>', author_id: [2, 'Bob'], date: '2026-05-29 09:00:00', message_type: 'comment', subtype_id: [2, 'Note'], is_note: true },
+        {
+          id: 1,
+          body: '<p>Hello</p>',
+          author_id: [1, 'Admin'],
+          date: '2026-05-30 10:00:00',
+          message_type: 'comment',
+          subtype_id: [1, 'Comment'],
+          is_note: false,
+        },
+        {
+          id: 2,
+          body: '<p>Note text</p>',
+          author_id: [2, 'Bob'],
+          date: '2026-05-29 09:00:00',
+          message_type: 'comment',
+          subtype_id: [2, 'Note'],
+          is_note: true,
+        },
       ])
       .mockResolvedValueOnce([])
 
@@ -59,9 +75,7 @@ describe('Chatter', () => {
   })
 
   test('shows Send Message and Log Note buttons', async () => {
-    mockSearchRead
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+    mockSearchRead.mockResolvedValueOnce([]).mockResolvedValueOnce([])
 
     render(<Chatter model="res.partner" recordId={1} />, { wrapper })
 
@@ -72,12 +86,10 @@ describe('Chatter', () => {
   })
 
   test('shows follower count', async () => {
-    mockSearchRead
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        { id: 1, partner_id: [1, 'Admin'], channel_id: false },
-        { id: 2, partner_id: [2, 'Bob'], channel_id: false },
-      ])
+    mockSearchRead.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      { id: 1, partner_id: [1, 'Admin'], channel_id: false },
+      { id: 2, partner_id: [2, 'Bob'], channel_id: false },
+    ])
 
     render(<Chatter model="res.partner" recordId={1} />, { wrapper })
 

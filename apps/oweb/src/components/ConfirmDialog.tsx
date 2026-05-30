@@ -1,0 +1,54 @@
+import { useCallback } from 'react'
+import { useDialog } from '../hooks/useDialog'
+
+interface ConfirmOptions {
+  title: string
+  message: string
+  confirmLabel?: string
+  cancelLabel?: string
+  variant?: 'danger' | 'warning' | 'default'
+  onConfirm: () => void | Promise<void>
+}
+
+export function useConfirmDialog() {
+  const { openDialog, closeDialog } = useDialog()
+
+  return useCallback(
+    (options: ConfirmOptions) => {
+      const id = openDialog({
+        size: 'sm',
+        title: options.title,
+        closeOnBackdrop: true,
+        content: <p className="text-sm text-text-secondary">{options.message}</p>,
+        footer: (
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => closeDialog(id)}
+              className="rounded-lg border border-border-default px-3 py-1.5 text-sm text-text-secondary hover:bg-hover"
+            >
+              {options.cancelLabel || 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await options.onConfirm()
+                closeDialog(id)
+              }}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white ${
+                options.variant === 'danger'
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : options.variant === 'warning'
+                    ? 'bg-amber-500 hover:bg-amber-600'
+                    : 'bg-accent hover:brightness-110'
+              }`}
+            >
+              {options.confirmLabel || 'Confirm'}
+            </button>
+          </div>
+        ),
+      })
+    },
+    [openDialog, closeDialog],
+  )
+}

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
-import { Calendar as RBC_Calendar, dateFnsLocalizer } from 'react-big-calendar'
 import { addMonths, endOfMonth, format, getDay, parse, startOfMonth, startOfWeek } from 'date-fns'
 import { enUS } from 'date-fns/locale/en-US'
+import { useCallback, useMemo, useState } from 'react'
+import { dateFnsLocalizer, Calendar as RBC_Calendar } from 'react-big-calendar'
 import { searchRead } from '../lib/api'
 import type { OdooFieldMeta } from '../lib/odoo-types'
 import { parseCalendarXml } from '../lib/xml-parser'
@@ -18,8 +18,14 @@ interface CalendarRendererProps {
 }
 
 const PALETTE = [
-  '#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626',
-  '#0891b2', '#4f46e5', '#c026d3',
+  '#7c3aed',
+  '#2563eb',
+  '#059669',
+  '#d97706',
+  '#dc2626',
+  '#0891b2',
+  '#4f46e5',
+  '#c026d3',
 ]
 
 const localizer = dateFnsLocalizer({
@@ -42,7 +48,7 @@ interface CalendarEvent {
 export function OdooCalendarRenderer({
   model,
   arch,
-  fields,
+  fields: _fields,
   domain = [],
   onRecordClick,
 }: CalendarRendererProps) {
@@ -64,7 +70,11 @@ export function OdooCalendarRenderer({
   const rangeEnd = endOfMonth(addMonths(currentDate, 1))
 
   const dateDomain = useMemo(
-    () => [...domain, [calView.dateStart, '>=', format(rangeStart, 'yyyy-MM-dd HH:mm:ss')], [calView.dateStart, '<=', format(rangeEnd, 'yyyy-MM-dd HH:mm:ss')]],
+    () => [
+      ...domain,
+      [calView.dateStart, '>=', format(rangeStart, 'yyyy-MM-dd HH:mm:ss')],
+      [calView.dateStart, '<=', format(rangeEnd, 'yyyy-MM-dd HH:mm:ss')],
+    ],
     [domain, calView.dateStart, rangeStart, rangeEnd],
   )
 
@@ -78,12 +88,17 @@ export function OdooCalendarRenderer({
     if (!records) return []
     return records.map((rec) => {
       const start = rec[calView.dateStart] ? new Date(rec[calView.dateStart] as string) : new Date()
-      const end = calView.dateStop && rec[calView.dateStop]
-        ? new Date(rec[calView.dateStop] as string)
-        : new Date(start.getTime() + 3600_000)
+      const end =
+        calView.dateStop && rec[calView.dateStop]
+          ? new Date(rec[calView.dateStop] as string)
+          : new Date(start.getTime() + 3600_000)
       const title = (rec.display_name as string) || (rec.name as string) || `#${rec.id}`
       const colorKey = calView.colorField
-        ? String(Array.isArray(rec[calView.colorField]) ? (rec[calView.colorField] as unknown[])[0] : rec[calView.colorField])
+        ? String(
+            Array.isArray(rec[calView.colorField])
+              ? (rec[calView.colorField] as unknown[])[0]
+              : rec[calView.colorField],
+          )
         : undefined
       return { id: rec.id as number, title, start, end, record: rec, colorKey }
     })

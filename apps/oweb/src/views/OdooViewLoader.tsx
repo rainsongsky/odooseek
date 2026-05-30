@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import { Breadcrumbs } from '../components/Breadcrumbs'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
-import { SearchBar } from '../components/SearchBar'
+import { useRecordActions } from '../hooks/useRecordActions'
+import { useToast } from '../hooks/useToast'
 import { callKw } from '../lib/api'
 import type { OdooFieldMeta, ViewToolbar } from '../lib/odoo-types'
+import { generateReport } from '../lib/report'
+import { cacheKey, getCachedViews, setCachedViews } from '../lib/view-cache'
 import { parseSearchXml } from '../lib/xml-parser'
 import { OdooCalendarRenderer } from './OdooCalendarRenderer'
-import { OdooFormRenderer } from './OdooFormRenderer'
+import { OdooFormRenderer, type OdooFormRendererRef } from './OdooFormRenderer'
 import { OdooGraphRenderer } from './OdooGraphRenderer'
 import { OdooKanbanRenderer } from './OdooKanbanRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
 import { OdooPivotRenderer } from './OdooPivotRenderer'
-import { OdooViewSwitcher } from './OdooViewSwitcher'
 
 type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
@@ -28,6 +29,8 @@ interface ViewLoaderProps {
   onSwitchView?: (v: ViewType) => void
   onCreateClick?: () => void
   onRecordCreated?: (newId: number) => void
+  onDirtyChange?: (dirty: boolean) => void
+  formRef?: React.Ref<OdooFormRendererRef>
 }
 
 export function OdooViewLoader({
@@ -42,13 +45,26 @@ export function OdooViewLoader({
   onSwitchView,
   onCreateClick,
   onRecordCreated,
+  onDirtyChange,
+  formRef,
 }: ViewLoaderProps) {
-  const viewsToLoad: [number | false, string][] = [
-    [viewId ?? false, viewType],
-    [false, 'search'], // always load search view
-  ]
+  const viewsToLoad = useMemo<[number | false, string][]>(
+    () => [
+      [viewId ?? false, viewType],
+      [false, 'search'],
+    ],
+    [viewId, viewType],
+  )
+  const ck = useMemo(() => cacheKey(model, viewsToLoad), [model, viewsToLoad])
   const [domain, setDomain] = useState<unknown[]>(initialDomain)
   const [groupBy, setGroupBy] = useState<string[]>([])
+  const toast = useToast()
+  const { duplicate, archive, unarchive } = useRecordActions(model)
+
+  type ViewData = {
+    views: Record<string, { arch: string; id: number; toolbar?: ViewToolbar }>
+    models: Record<string, { fields: Record<string, OdooFieldMeta> }>
+  }
 
   const {
     data: viewData,
@@ -57,12 +73,14 @@ export function OdooViewLoader({
   } = useQuery({
     queryKey: ['odoo', 'get_views', model, viewsToLoad],
     queryFn: () =>
-      callKw<{
-        views: Record<string, { arch: string; id: number; toolbar?: ViewToolbar }>
-        models: Record<string, { fields: Record<string, OdooFieldMeta> }>
-      }>(model, 'get_views', [viewsToLoad], { options: { toolbar: true } }),
+      callKw<ViewData>(model, 'get_views', [viewsToLoad], { options: { toolbar: true } }),
     staleTime: 15 * 60_000,
+    initialData: (): ViewData | undefined => (getCachedViews(ck) as ViewData | null) ?? undefined,
   })
+
+  useEffect(() => {
+    if (viewData) setCachedViews(ck, viewData)
+  }, [viewData, ck])
 
   const { data: recordNameData } = useQuery({
     queryKey: ['odoo', 'read', model, _recordId, 'display_name'],
@@ -71,6 +89,56 @@ export function OdooViewLoader({
     enabled: viewType === 'form' && !!_recordId,
     staleTime: 30_000,
   })
+
+  const handlePrintAction = useCallback(
+    async (actionId: number) => {
+      try {
+        const ids = _recordId ? [_recordId] : []
+        await generateReport(actionId, ids.length > 0 ? ids : [0])
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to generate report')
+      }
+    },
+    [_recordId, toast],
+  )
+
+  const handleDuplicate = useCallback(() => {
+    if (!_recordId) return
+    duplicate.mutate(_recordId, {
+      onSuccess: (newId) => {
+        toast.success('Record duplicated')
+        onRecordCreated?.(newId)
+      },
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to duplicate record')
+      },
+    })
+  }, [_recordId, duplicate, toast, onRecordCreated])
+
+  const handleArchive = useCallback(() => {
+    if (!_recordId) return
+    archive.mutate([_recordId], {
+      onSuccess: () => {
+        toast.success('Record archived')
+        onBackToList?.()
+      },
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to archive record')
+      },
+    })
+  }, [_recordId, archive, toast, onBackToList])
+
+  const handleUnarchive = useCallback(() => {
+    if (!_recordId) return
+    unarchive.mutate([_recordId], {
+      onSuccess: () => {
+        toast.success('Record unarchived')
+      },
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to unarchive record')
+      },
+    })
+  }, [_recordId, unarchive, toast])
 
   if (isLoading) {
     return (
@@ -114,47 +182,47 @@ export function OdooViewLoader({
   const viewTitle = arch.match(/<[^ ]+\s+[^>]*string\s*=\s*"([^"]+)"/i)?.[1] || undefined
   const recordName = (recordNameData?.[0]?.display_name as string) || undefined
   const toolbar = activeView?.toolbar
+  const hasActiveField = 'active' in fields
+
+  const showSearch =
+    viewType === 'list' ||
+    viewType === 'kanban' ||
+    viewType === 'pivot' ||
+    viewType === 'graph' ||
+    viewType === 'calendar'
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
-      <div className="flex items-center justify-between border-b border-border-subtle bg-surface/30 px-4 py-0">
-        <Breadcrumbs
-          model={model}
-          viewType={viewType}
-          viewTitle={viewTitle}
-          recordName={recordName}
-          onBackToList={onBackToList}
-        />
-        <div className="flex items-center gap-2">
-          <ControlPanel toolbar={toolbar} />
-          {viewType !== 'form' && onCreateClick && (
-            <button
-              type="button"
-              onClick={onCreateClick}
-              className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90"
-            >
-              Create
-            </button>
-          )}
-          {onSwitchView && <OdooViewSwitcher currentView={viewType} onSwitch={onSwitchView} availableViews={availableViews} />}
-        </div>
-      </div>
-      {(viewType === 'list' ||
-        viewType === 'kanban' ||
-        viewType === 'pivot' ||
-        viewType === 'graph' ||
-        viewType === 'calendar') && (
-        <div className="border-b border-border-subtle p-4">
-          <SearchBar
-            onSearch={handleSearch}
-            onGroupByChange={handleGroupByChange}
-            placeholder={`Search ${model}...`}
-            searchFields={searchData?.fields}
-            filters={searchData?.filters}
-            groupByFilters={searchData?.groupByFilters}
-          />
-        </div>
-      )}
+      <ControlPanel
+        breadcrumbs={{ model, viewType, viewTitle, recordName, onBackToList }}
+        searchProps={
+          showSearch
+            ? {
+                visible: true,
+                model,
+                onSearch: handleSearch,
+                onGroupByChange: handleGroupByChange,
+                placeholder: `Search ${model}...`,
+                searchFields: searchData?.fields,
+                filters: searchData?.filters,
+                groupByFilters: searchData?.groupByFilters,
+              }
+            : { visible: false, onSearch: () => {} }
+        }
+        toolbar={toolbar}
+        currentView={viewType}
+        availableViews={availableViews}
+        onSwitchView={onSwitchView}
+        onCreateClick={onCreateClick}
+        showCreate={!!onCreateClick}
+        onPrintAction={handlePrintAction}
+        model={model}
+        selectedIds={_recordId ? [_recordId] : []}
+        onDuplicate={viewType === 'form' && _recordId ? handleDuplicate : undefined}
+        onArchive={viewType === 'form' && _recordId ? handleArchive : undefined}
+        onUnarchive={viewType === 'form' && _recordId ? handleUnarchive : undefined}
+        hasActiveField={hasActiveField}
+      />
       {viewType === 'list' && (
         <OdooListRenderer
           model={model}
@@ -167,11 +235,13 @@ export function OdooViewLoader({
       )}
       {viewType === 'form' && (
         <OdooFormRenderer
+          ref={formRef}
           model={model}
           arch={activeView.arch}
           fields={fields}
           recordId={_recordId}
           onRecordCreated={onRecordCreated}
+          onDirtyChange={onDirtyChange}
         />
       )}
       {viewType === 'kanban' && (

@@ -64,7 +64,7 @@ describe('parseFormXml', () => {
 
     const fields = (group as { elements: { type: string; name?: string }[] }).elements
     expect(fields[0]).toMatchObject({ type: 'field', name: 'name' })
-    expect(fields[1]).toMatchObject({ name: 'email', required: true })
+    expect(fields[1]).toMatchObject({ name: 'email', required: 'true' })
     expect(fields[2]).toMatchObject({ name: 'company_id', nolabel: true })
   })
 

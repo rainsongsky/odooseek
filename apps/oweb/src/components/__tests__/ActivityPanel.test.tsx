@@ -42,9 +42,39 @@ describe('ActivityPanel', () => {
   test('renders activities grouped by state', async () => {
     const today = new Date().toISOString().slice(0, 10)
     mockSearchRead.mockResolvedValueOnce([
-      { id: 1, activity_type_id: [1, 'Email'], summary: 'Follow up', note: '', date_deadline: '2020-01-01', state: 'overdue', user_id: [1, 'Admin'], res_model: 'res.partner', res_id: 1 },
-      { id: 2, activity_type_id: [2, 'Call'], summary: 'Call back', note: '', date_deadline: today, state: 'today', user_id: [1, 'Admin'], res_model: 'res.partner', res_id: 1 },
-      { id: 3, activity_type_id: [3, 'Meeting'], summary: 'Meet', note: '', date_deadline: '2030-01-01', state: 'planned', user_id: [1, 'Admin'], res_model: 'res.partner', res_id: 1 },
+      {
+        id: 1,
+        activity_type_id: [1, 'Email'],
+        summary: 'Follow up',
+        note: '',
+        date_deadline: '2020-01-01',
+        state: 'overdue',
+        user_id: [1, 'Admin'],
+        res_model: 'res.partner',
+        res_id: 1,
+      },
+      {
+        id: 2,
+        activity_type_id: [2, 'Call'],
+        summary: 'Call back',
+        note: '',
+        date_deadline: today,
+        state: 'today',
+        user_id: [1, 'Admin'],
+        res_model: 'res.partner',
+        res_id: 1,
+      },
+      {
+        id: 3,
+        activity_type_id: [3, 'Meeting'],
+        summary: 'Meet',
+        note: '',
+        date_deadline: '2030-01-01',
+        state: 'planned',
+        user_id: [1, 'Admin'],
+        res_model: 'res.partner',
+        res_id: 1,
+      },
     ])
 
     render(<ActivityPanel model="res.partner" recordId={1} />, { wrapper })
@@ -79,7 +109,9 @@ describe('ActivityPanel', () => {
   })
 
   test('does not render when recordId is undefined', () => {
-    const { container } = render(<ActivityPanel model="res.partner" recordId={undefined} />, { wrapper })
+    const { container } = render(<ActivityPanel model="res.partner" recordId={undefined} />, {
+      wrapper,
+    })
     expect(container.innerHTML).toBe('')
   })
 })

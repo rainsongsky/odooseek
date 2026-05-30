@@ -1,4 +1,11 @@
 {
+  "common": {
+    "cancel": "取消",
+    "discard": "丢弃",
+    "unsavedChanges": "未保存的更改",
+    "unsavedChangesDesc": "您有未保存的更改。是否要在离开前保存？",
+    "saveLeave": "保存并离开"
+  },
   "nav": {
     "home": "首页",
     "apps": "应用",

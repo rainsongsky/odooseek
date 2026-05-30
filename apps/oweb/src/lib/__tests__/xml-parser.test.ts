@@ -106,13 +106,13 @@ describe('parseFormXml', () => {
     const result = parseFormXml(xml)
     const sheet = result.elements[0] as {
       type: 'sheet'
-      elements: { type: 'field'; name: string; readonly: boolean; invisible: number }[]
+      elements: { type: 'field'; name: string; readonly: string | boolean; invisible: string }[]
     }
     const field = sheet.elements[0]
     expect(field.type).toBe('field')
     expect(field.name).toBe('state')
-    expect(field.readonly).toBe(true)
-    expect(field.invisible).toBe(0)
+    expect(field.readonly).toBe('1')
+    expect(field.invisible).toBe('0')
   })
 
   test('parses group with col attribute', () => {
@@ -221,7 +221,11 @@ describe('parseFormXml', () => {
     const result = parseFormXml(xml)
     const sheet = result.elements[0] as {
       type: 'sheet'
-      elements: { type: 'field'; name: string; subViews?: { list?: { columns: { name: string }[]; editable?: string } } }[]
+      elements: {
+        type: 'field'
+        name: string
+        subViews?: { list?: { columns: { name: string }[]; editable?: string } }
+      }[]
     }
     const field = sheet.elements[0]
     expect(field.type).toBe('field')
@@ -386,6 +390,32 @@ describe('parseKanbanXml', () => {
 
     const result = parseKanbanXml(xml)
     expect(result.defaultGroupBy).toBeUndefined()
+  })
+
+  test('parses progressbar field and colors', () => {
+    const xml = `<kanban default_group_by="stage_id">
+      <field name="name"/>
+      <progressbar field="activity_state" colors='{"planned": "success", "today": "warning", "overdue": "danger"}'/>
+      <templates><t t-name="card"><field name="name"/></t></templates>
+    </kanban>`
+
+    const result = parseKanbanXml(xml)
+    expect(result.progressbar).toBeDefined()
+    expect(result.progressbar?.field).toBe('activity_state')
+    expect(result.progressbar?.colors).toEqual({
+      planned: 'success',
+      today: 'warning',
+      overdue: 'danger',
+    })
+  })
+
+  test('returns undefined progressbar when not present', () => {
+    const xml = `<kanban default_group_by="stage_id">
+      <field name="name"/>
+    </kanban>`
+
+    const result = parseKanbanXml(xml)
+    expect(result.progressbar).toBeUndefined()
   })
 })
 

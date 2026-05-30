@@ -20,6 +20,7 @@ use tracing::info;
 mod error;
 mod menu;
 mod proxy;
+mod report;
 mod session;
 mod ws;
 
@@ -113,6 +114,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/session/login", post(session_login))
         .route("/api/session/logout", post(session_logout))
         .route("/api/odoo/{*path}", post(proxy_odoo))
+        .route("/api/report/download", get(download_report))
         .route("/ws/events", get(ws_events_handler))
         .fallback_service(ServeDir::new(&frontend_dir).append_index_html_on_directories(true))
         .layer(CorsLayer::permissive())
@@ -168,6 +170,16 @@ async fn proxy_odoo(
     body: axum::body::Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     proxy::proxy_odoo(state, &path, headers, body).await
+}
+
+// ── Report download proxy ──────────────────────────────────────────
+
+async fn download_report(
+    state: State<AppState>,
+    headers: HeaderMap,
+    query: axum::extract::Query<report::ReportParams>,
+) -> Result<impl IntoResponse, AppError> {
+    report::download_report(state, headers, query).await
 }
 
 // ── WebSocket events ───────────────────────────────────────────────

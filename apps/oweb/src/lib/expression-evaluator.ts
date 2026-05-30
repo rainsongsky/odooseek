@@ -94,6 +94,8 @@ function evaluateModifierExpr(expr: string, record: Record<string, unknown>): bo
   }
   const eqMatch = expr.match(/^(\w+)\s*==\s*'(.+)'$/)
   if (eqMatch) return String(record[eqMatch[1]]) === eqMatch[2]
+  const neqMatch = expr.match(/^(\w+)\s*!=\s*'(.+)'$/)
+  if (neqMatch) return String(record[neqMatch[1]]) !== neqMatch[2]
   return !!record[expr]
 }
 
@@ -109,4 +111,32 @@ export function getDecorationClass(
     if (expr && evalModifier(String(expr), record)) classes.push(cls)
   }
   return classes.length ? classes.join(' ') : undefined
+}
+
+// ── Domain string parser ────────────────────────────────────
+
+export function parseDomainString(raw: string | null): unknown[] | null {
+  if (!raw) return []
+  const s = raw.trim()
+  if (!s) return []
+
+  const decoded = s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+
+  const normalized = decoded
+    .replace(/'/g, '"')
+    .replace(/\bFalse\b/g, 'false')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\(/g, '[')
+    .replace(/\)/g, ']')
+
+  try {
+    return JSON.parse(normalized)
+  } catch {
+    return null
+  }
 }

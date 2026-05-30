@@ -6,6 +6,7 @@ export {
   ChevronDown,
   ChevronRight,
   Columns3,
+  GripVertical,
   Home,
   LayoutList,
   LogIn,
@@ -19,4 +20,5 @@ export {
   Table,
   Terminal,
   TrendingUp,
+  X,
 } from 'lucide-react'

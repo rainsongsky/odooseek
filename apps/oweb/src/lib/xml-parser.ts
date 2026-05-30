@@ -1,3 +1,4 @@
+import { parseDomainString } from './expression-evaluator'
 import type {
   ButtonElement,
   FieldElement,
@@ -25,9 +26,9 @@ function parseFieldElement(el: Element): FieldElement {
     name: el.getAttribute('name') ?? '',
     widget: el.getAttribute('widget') ?? undefined,
     string: el.getAttribute('string') ?? undefined,
-    invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
-    required: el.hasAttribute('required'),
-    readonly: el.hasAttribute('readonly'),
+    invisible: el.getAttribute('invisible') ?? undefined,
+    required: el.hasAttribute('required') ? el.getAttribute('required') || true : undefined,
+    readonly: el.hasAttribute('readonly') ? el.getAttribute('readonly') || true : undefined,
     nolabel: el.hasAttribute('nolabel'),
     placeholder: el.getAttribute('placeholder') ?? undefined,
     options: el.getAttribute('options')
@@ -111,12 +112,14 @@ function parseFormElements(container: Element): FormElement[] {
       elements.push({
         type: 'group',
         string: child.getAttribute('string') ?? undefined,
+        invisible: child.getAttribute('invisible') ?? undefined,
         col,
         elements: parseFormElements(child),
       })
     } else if (tag === 'notebook') {
       const pages = parseChildren(child, 'page').map((page) => ({
         string: page.getAttribute('string') ?? '',
+        invisible: page.getAttribute('invisible') ?? undefined,
         elements: parseFormElements(page),
       }))
       elements.push({ type: 'notebook', pages })
@@ -150,11 +153,14 @@ function parseDecorations(el: Element): Record<string, string> {
 }
 
 function parseFieldAttrs(el: Element): ViewField {
+  const optVal = el.getAttribute('optional')
+  const invAttr = el.getAttribute('invisible')
   return {
     name: el.getAttribute('name') ?? '',
     string: el.getAttribute('string') ?? undefined,
     widget: el.getAttribute('widget') ?? undefined,
-    invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
+    invisible: invAttr ? Number(invAttr) : undefined,
+    optional: optVal === 'show' || optVal === 'hide' ? optVal : undefined,
     sum: el.getAttribute('sum') ?? undefined,
     readonly: el.hasAttribute('readonly'),
     required: el.hasAttribute('required'),
@@ -217,6 +223,22 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
 
   const templateNodes = rawTemplate ? parseKanbanTemplate(rawTemplate) : undefined
 
+  // Parse <progressbar> element
+  const progressbarEl = root.querySelector('progressbar')
+  let progressbar: { field: string; colors: Record<string, string> } | undefined
+  if (progressbarEl) {
+    const field = progressbarEl.getAttribute('field') || ''
+    const colorsRaw = progressbarEl.getAttribute('colors') || '{}'
+    let colors: Record<string, string> = {}
+    try {
+      const normalized = colorsRaw.replace(/'/g, '"')
+      colors = JSON.parse(normalized)
+    } catch {
+      /* skip */
+    }
+    if (field) progressbar = { field, colors }
+  }
+
   return {
     type: 'kanban',
     string: root.getAttribute('string') ?? '',
@@ -225,19 +247,23 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
     templateNodes,
     defaultGroupBy,
     highlightColor,
+    progressbar,
   }
 }
 
 /** Extract <field> elements from a kanban card template */
 export function parseKanbanFields(templateXml: string): ViewField[] {
   const doc = new DOMParser().parseFromString(templateXml, 'text/xml')
-  return Array.from(doc.querySelectorAll('field')).map((el) => ({
-    name: el.getAttribute('name') ?? '',
-    string: el.getAttribute('string') ?? undefined,
-    widget: el.getAttribute('widget') ?? undefined,
-    invisible: el.getAttribute('invisible') ? Number(el.getAttribute('invisible')) : undefined,
-    readonly: el.hasAttribute('readonly'),
-  }))
+  return Array.from(doc.querySelectorAll('field')).map((el) => {
+    const invAttr = el.getAttribute('invisible')
+    return {
+      name: el.getAttribute('name') ?? '',
+      string: el.getAttribute('string') ?? undefined,
+      widget: el.getAttribute('widget') ?? undefined,
+      invisible: invAttr ? Number(invAttr) : undefined,
+      readonly: el.hasAttribute('readonly'),
+    }
+  })
 }
 
 // ── Phase 4: QWeb template AST parser ─────────────────────────
@@ -426,41 +452,6 @@ function mergeConditionChains(nodes: KanbanTemplateNode[]): KanbanTemplateNode[]
   return result
 }
 
-// ── Domain string parser ────────────────────────────────────
-
-function parseDomainString(raw: string | null): unknown[] | null {
-  if (!raw) return []
-  const s = raw.trim()
-  if (!s) return []
-
-  // Decode XML entities (&lt; → <, &gt; → >, etc.)
-  const decoded = s
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-
-  // Normalize Python syntax to JSON:
-  // 1. Replace single quotes with double quotes
-  // 2. Replace Python booleans/None with JSON literals
-  // 3. Replace parentheses with brackets (tuple → array)
-  const normalized = decoded
-    .replace(/'/g, '"')
-    .replace(/\bFalse\b/g, 'false')
-    .replace(/\bTrue\b/g, 'true')
-    .replace(/\bNone\b/g, 'null')
-    .replace(/\(/g, '[')
-    .replace(/\)/g, ']')
-
-  try {
-    return JSON.parse(normalized)
-  } catch {
-    // Domain contains Python expressions (uid, self, context_today(), etc.)
-    // that cannot be JSON-parsed client-side. Skip this filter.
-    return null
-  }
-}
-
 // ── GroupBy context parser ────────────────────────────────────
 
 function parseGroupByContext(context: string): { fieldName: string; interval?: string } | null {
@@ -624,9 +615,15 @@ export function parseCalendarXml(xml: string): ParsedCalendarView {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
   const root = doc.documentElement
 
-  const fields = [...new Set(Array.from(root.querySelectorAll('field')).map((el) => el.getAttribute('name') ?? ''))]
+  const fields = [
+    ...new Set(
+      Array.from(root.querySelectorAll('field')).map((el) => el.getAttribute('name') ?? ''),
+    ),
+  ]
 
-  const avatarEl = Array.from(root.querySelectorAll('field')).find((el) => el.hasAttribute('avatar_field'))
+  const avatarEl = Array.from(root.querySelectorAll('field')).find((el) =>
+    el.hasAttribute('avatar_field'),
+  )
 
   const rawMode = root.getAttribute('mode') ?? 'month'
   const mode: 'day' | 'week' | 'month' = rawMode === 'day' || rawMode === 'week' ? rawMode : 'month'
@@ -640,7 +637,9 @@ export function parseCalendarXml(xml: string): ParsedCalendarView {
     mode,
     fields,
     avatarField: avatarEl?.getAttribute('avatar_field') ?? undefined,
-    eventLimit: root.getAttribute('event_limit') ? Number(root.getAttribute('event_limit')) : undefined,
+    eventLimit: root.getAttribute('event_limit')
+      ? Number(root.getAttribute('event_limit'))
+      : undefined,
     quickCreate: root.getAttribute('quick_create') !== '0',
     hideTime: root.getAttribute('hide_time') === '1',
   }

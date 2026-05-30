@@ -40,9 +40,14 @@ export function Chatter({ model, recordId }: ChatterProps) {
     queryFn: () =>
       searchRead<OdooMessage[]>(
         'mail.message',
-        [['model', '=', model], ['res_id', '=', recordId!]],
+        [
+          ['model', '=', model],
+          ['res_id', '=', recordId!],
+        ],
         MSG_FIELDS,
-        0, 30, 'date desc',
+        0,
+        30,
+        'date desc',
       ),
     enabled,
     staleTime: 10_000,
@@ -53,7 +58,10 @@ export function Chatter({ model, recordId }: ChatterProps) {
     queryFn: () =>
       searchRead<OdooFollower[]>(
         'mail.followers',
-        [['res_model', '=', model], ['res_id', '=', recordId!]],
+        [
+          ['res_model', '=', model],
+          ['res_id', '=', recordId!],
+        ],
         FOLLOWER_FIELDS,
       ),
     enabled,
@@ -143,7 +151,10 @@ export function Chatter({ model, recordId }: ChatterProps) {
             </button>
             <button
               type="button"
-              onClick={() => { setComposeMode('idle'); setComposeBody('') }}
+              onClick={() => {
+                setComposeMode('idle')
+                setComposeBody('')
+              }}
               className="rounded border border-border-default px-3 py-1 text-[11px] text-text-secondary hover:bg-hover"
             >
               Cancel
@@ -171,7 +182,9 @@ export function Chatter({ model, recordId }: ChatterProps) {
                 {Array.isArray(msg.author_id) ? msg.author_id[1] : 'Unknown'}
               </span>
               {msg.is_note && (
-                <span className="rounded bg-hover px-1 py-0.5 text-[9px] text-text-muted">Note</span>
+                <span className="rounded bg-hover px-1 py-0.5 text-[9px] text-text-muted">
+                  Note
+                </span>
               )}
             </div>
             <span className="text-[10px] text-text-muted">
@@ -181,6 +194,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
           {msg.body && (
             <div
               className="prose prose-xs mt-1 max-w-none text-xs text-text-primary"
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: Odoo chatter body is HTML
               dangerouslySetInnerHTML={{ __html: msg.body }}
             />
           )}

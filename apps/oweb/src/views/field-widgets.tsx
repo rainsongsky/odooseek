@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { callKw, fieldsGet } from '../lib/api'
 import type { FieldElement, O2mCommand, OdooFieldMeta, ViewField } from '../lib/odoo-types'
 
@@ -71,6 +71,40 @@ function BooleanWidget({ value, onChange, readOnly }: FieldWidgetProps) {
       disabled={readOnly}
       className="h-4 w-4 cursor-pointer rounded accent-accent"
     />
+  )
+}
+
+function BooleanToggleWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  const checked = Boolean(value)
+
+  if (readOnly) {
+    return (
+      <span
+        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+          checked ? 'bg-emerald-500/10 text-emerald-500' : 'bg-border-default/30 text-text-muted'
+        }`}
+      >
+        {checked ? 'Yes' : 'No'}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+        checked ? 'bg-accent' : 'bg-border-default'
+      }`}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+          checked ? 'translate-x-4' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
   )
 }
 
@@ -499,7 +533,12 @@ function One2ManyWidget({ field, value, onChange, readOnly, meta }: FieldWidgetP
   // Auto-discover fields when no sub-view is defined
   const { data: autoFields } = useQuery({
     queryKey: ['odoo', 'fields_get', relation],
-    queryFn: () => fieldsGet<Record<string, OdooFieldMeta>>(relation!, [], ['string', 'type', 'relation', 'selection']),
+    queryFn: () =>
+      fieldsGet<Record<string, OdooFieldMeta>>(
+        relation!,
+        [],
+        ['string', 'type', 'relation', 'selection'],
+      ),
     enabled: !!relation && !columnDefs,
   })
 
@@ -518,8 +557,7 @@ function One2ManyWidget({ field, value, onChange, readOnly, meta }: FieldWidgetP
   const ids = normalizeO2mValue(value)
   const { data: records, isLoading } = useQuery({
     queryKey: ['odoo', 'read', relation, ids, fieldNames],
-    queryFn: () =>
-      callKw<Array<Record<string, unknown>>>(relation!, 'read', [ids, fieldNames]),
+    queryFn: () => callKw<Array<Record<string, unknown>>>(relation!, 'read', [ids, fieldNames]),
     enabled: !!relation && ids.length > 0 && fieldNames.length > 0,
   })
 
@@ -558,7 +596,10 @@ function One2ManyWidget({ field, value, onChange, readOnly, meta }: FieldWidgetP
     const base = (records ?? []).map((r) => ({ ...r }))
     for (const cmd of pendingCommands) {
       if (cmd[0] === 0 && cmd[2]) {
-        base.push({ id: `new_${Date.now()}_${Math.random()}`, ...cmd[2] } as Record<string, unknown>)
+        base.push({ id: `new_${Date.now()}_${Math.random()}`, ...cmd[2] } as Record<
+          string,
+          unknown
+        >)
       } else if (cmd[0] === 2) {
         const delIdx = base.findIndex((r) => r.id === cmd[1])
         if (delIdx >= 0) base.splice(delIdx, 1)
@@ -599,17 +640,12 @@ function One2ManyWidget({ field, value, onChange, readOnly, meta }: FieldWidgetP
                   </th>
                 )
               })}
-              {!readOnly && subViewList?.delete !== false && (
-                <th className="w-8 px-1 py-1.5" />
-              )}
+              {!readOnly && subViewList?.delete !== false && <th className="w-8 px-1 py-1.5" />}
             </tr>
           </thead>
           <tbody>
             {displayRecords.map((record) => (
-              <tr
-                key={String(record.id)}
-                className="border-b border-border-subtle last:border-b-0"
-              >
+              <tr key={String(record.id)} className="border-b border-border-subtle last:border-b-0">
                 {columns.map((col, i) => (
                   <td
                     key={`o2m-d-${col.name}-${i}`}
@@ -676,6 +712,262 @@ function renderO2mCell(value: unknown, meta?: OdooFieldMeta): string {
   return JSON.stringify(value)
 }
 
+// ── Many2OneAvatarWidget ─────────────────────────────────────────────
+
+function Many2OneAvatarWidget({
+  value,
+  readOnly,
+  onChange,
+  meta,
+  field,
+  ...props
+}: FieldWidgetProps) {
+  const arrValue = Array.isArray(value) ? value : value ? [value, String(value)] : [null, '']
+  const [id, name] = arrValue as [number | null, string]
+  const relation = meta?.relation
+
+  const { data: avatarData } = useQuery({
+    queryKey: ['odoo', 'avatar', relation, id],
+    queryFn: () => callKw<Array<{ avatar_128: string }>>(relation!, 'read', [[id], ['avatar_128']]),
+    enabled: readOnly && !!relation && !!id,
+    staleTime: 60_000,
+  })
+
+  if (readOnly) {
+    const avatar = avatarData?.[0]?.avatar_128
+    return (
+      <div className="flex items-center gap-2">
+        {avatar ? (
+          <img
+            src={`data:image/png;base64,${avatar}`}
+            alt=""
+            className="h-6 w-6 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">
+            {(name || '?').charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span className="text-sm text-text-primary">{name || (id ? `#${id}` : '')}</span>
+      </div>
+    )
+  }
+
+  return (
+    <Many2OneWidget
+      value={value}
+      onChange={onChange}
+      readOnly={readOnly}
+      meta={meta}
+      field={field}
+      {...props}
+    />
+  )
+}
+
+function EmailWidget({ value, readOnly, onChange, field }: FieldWidgetProps) {
+  const v = (value as string) ?? ''
+  if (readOnly && v) {
+    return (
+      <a href={`mailto:${v}`} className="text-sm text-accent hover:underline">
+        {v}
+      </a>
+    )
+  }
+  return <CharWidget value={value} onChange={onChange} readOnly={readOnly} field={field} />
+}
+
+function PhoneWidget({ value, readOnly, onChange, field }: FieldWidgetProps) {
+  const v = (value as string) ?? ''
+  if (readOnly && v) {
+    return (
+      <a href={`tel:${v}`} className="text-sm text-accent hover:underline">
+        {v}
+      </a>
+    )
+  }
+  return <CharWidget value={value} onChange={onChange} readOnly={readOnly} field={field} />
+}
+
+function UrlWidget({ value, readOnly, onChange, field }: FieldWidgetProps) {
+  const v = (value as string) ?? ''
+  if (readOnly && v) {
+    return (
+      <a
+        href={v}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-accent hover:underline"
+      >
+        {v}
+      </a>
+    )
+  }
+  return <CharWidget value={value} onChange={onChange} readOnly={readOnly} field={field} />
+}
+
+// ── Many2Many Tags Widget ────────────────────────────────────────────
+
+function Many2ManyTagsWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const tags: Array<[number, string]> = Array.isArray(value)
+    ? value.map((v: unknown) => (Array.isArray(v) ? v : [v, String(v)]) as [number, string])
+    : []
+  const [search, setSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<[number, string]>>([])
+
+  const doSearch = useCallback(
+    async (q: string) => {
+      if (!meta?.relation || !q.trim()) {
+        setSearchResults([])
+        return
+      }
+      const results = await callKw<Array<{ id: number; display_name: string }>>(
+        meta.relation,
+        'search_read',
+        [[['display_name', 'ilike', q]], ['id', 'display_name']],
+        { limit: 10 },
+      )
+      setSearchResults(results.map((r) => [r.id, r.display_name]))
+    },
+    [meta?.relation],
+  )
+
+  if (readOnly) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {tags.map(([id, name]) => (
+          <span key={id} className="rounded-full bg-accent/10 px-2 py-0.5 text-xs text-accent">
+            {name}
+          </span>
+        ))}
+      </div>
+    )
+  }
+
+  const handleSelect = (item: [number, string]) => {
+    const currentIds = tags.map(([id]) => id)
+    if (!currentIds.includes(item[0])) {
+      onChange([[6, 0, [...currentIds, item[0]]]])
+    }
+    setSearch('')
+    setSearchResults([])
+  }
+
+  const handleRemove = (id: number) => {
+    const remaining = tags.map(([tid]) => tid).filter((tid) => tid !== id)
+    onChange([[6, 0, remaining]])
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap gap-1">
+        {tags.map(([id, name]) => (
+          <span
+            key={id}
+            className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs text-accent"
+          >
+            {name}
+            <button
+              type="button"
+              onClick={() => handleRemove(id)}
+              className="ml-0.5 text-accent/60 hover:text-accent"
+            >
+              x
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            doSearch(e.target.value)
+          }}
+          placeholder="Search..."
+          className="w-full rounded border border-border-default bg-root px-2 py-1 text-xs text-text-primary focus:border-accent focus:outline-none"
+        />
+        {searchResults.length > 0 && (
+          <div className="absolute left-0 top-full z-10 mt-1 w-full rounded border border-border-subtle bg-surface shadow-lg">
+            {searchResults.map(([id, name]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => handleSelect([id, name])}
+                className="block w-full px-2 py-1 text-left text-xs text-text-primary hover:bg-hover"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Handle Widget (drag reorder) ────────────────────────────────────
+
+function HandleWidget({ readOnly }: FieldWidgetProps) {
+  if (!readOnly) return null
+  return (
+    <span className="cursor-grab select-none text-text-muted" title="Drag to reorder">
+      ⋮⋮
+    </span>
+  )
+}
+
+// ── Color Picker Widget ─────────────────────────────────────────────
+
+function ColorPickerWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  const color = (value as string) ?? ''
+  if (readOnly) {
+    return (
+      <div className="flex items-center gap-2">
+        <span
+          className="h-4 w-4 rounded border border-border-default"
+          style={{ backgroundColor: color || '#000' }}
+        />
+        <span className="text-xs text-text-secondary">{color || 'No color'}</span>
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={color || '#000000'}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8 w-12 cursor-pointer rounded border border-border-default"
+      />
+      {color && (
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className="text-xs text-text-muted hover:text-text-primary"
+        >
+          Clear
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Progressbar Widget (form) ───────────────────────────────────────
+
+function ProgressbarWidget({ value }: FieldWidgetProps) {
+  const pct = Math.min(100, Math.max(0, Number(value) ?? 0))
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 flex-1 rounded-full bg-border-default/30">
+        <div className="h-2 rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-text-muted">{pct}%</span>
+    </div>
+  )
+}
+
 // ── Widget Registry ─────────────────────────────────────────────────
 
 export const TYPE_WIDGETS: Record<string, React.ComponentType<FieldWidgetProps>> = {
@@ -717,4 +1009,14 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   priority: PriorityWidget,
   state: StateBadgeWidget,
   statusbar: StateBadgeWidget,
+  boolean_toggle: BooleanToggleWidget,
+  many2one_avatar: Many2OneAvatarWidget,
+  email: EmailWidget,
+  phone: PhoneWidget,
+  url: UrlWidget,
+  many2many_tags: Many2ManyTagsWidget,
+  many2many: Many2ManyTagsWidget,
+  handle: HandleWidget,
+  color_picker: ColorPickerWidget,
+  progressbar: ProgressbarWidget,
 }

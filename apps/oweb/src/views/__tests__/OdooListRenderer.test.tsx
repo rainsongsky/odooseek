@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { DialogProvider } from '../../hooks/useDialog'
 import type { OdooFieldMeta } from '../../lib/odoo-types'
 import { OdooListRenderer } from '../OdooListRenderer'
 
@@ -37,7 +38,9 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false } },
   })
   wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <DialogProvider>{children}</DialogProvider>
+    </QueryClientProvider>
   )
 }
 
@@ -216,9 +219,7 @@ describe('OdooListRenderer — inline editing', () => {
   })
 
   test('clicking row in editable list enters edit mode', async () => {
-    mockCallKw
-      .mockResolvedValueOnce([{ id: 1, name: 'Widget', qty: 5 }])
-      .mockResolvedValueOnce(1)
+    mockCallKw.mockResolvedValueOnce([{ id: 1, name: 'Widget', qty: 5 }]).mockResolvedValueOnce(1)
 
     render(<OdooListRenderer model="test.model" arch={editableArch} fields={editableFields} />, {
       wrapper,
@@ -265,8 +266,8 @@ describe('OdooListRenderer — inline editing', () => {
       const calls = mockCallKw.mock.calls
       const writeCall = calls.find((c: any[]) => c[1] === 'write')
       expect(writeCall).toBeTruthy()
-      expect(writeCall![0]).toBe('test.model')
-      expect(writeCall![2][0]).toEqual([1])
+      expect(writeCall?.[0]).toBe('test.model')
+      expect(writeCall?.[2][0]).toEqual([1])
     })
   })
 
@@ -298,7 +299,7 @@ describe('OdooListRenderer — inline editing', () => {
       const calls = mockCallKw.mock.calls
       const createCall = calls.find((c: any[]) => c[1] === 'create')
       expect(createCall).toBeTruthy()
-      expect(createCall![0]).toBe('test.model')
+      expect(createCall?.[0]).toBe('test.model')
     })
   })
 

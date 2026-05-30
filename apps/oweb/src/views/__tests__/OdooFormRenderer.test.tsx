@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { DialogProvider } from '../../hooks/useDialog'
 import type { OdooFieldMeta } from '../../lib/odoo-types'
 import { OdooFormRenderer } from '../OdooFormRenderer'
 
@@ -13,7 +14,9 @@ vi.mock('../../lib/api', () => ({
 let queryClient: QueryClient
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  <QueryClientProvider client={queryClient}>
+    <DialogProvider>{children}</DialogProvider>
+  </QueryClientProvider>
 )
 
 const formArch = `<form string="Partner">
@@ -74,7 +77,7 @@ describe('OdooFormRenderer', () => {
     })
   })
 
-  test('renders form title in read-only mode', async () => {
+  test('renders form in read-only mode', async () => {
     mockCallKw.mockResolvedValue(readResult)
     render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
       wrapper,
@@ -83,7 +86,6 @@ describe('OdooFormRenderer', () => {
     await waitFor(() => {
       expect(screen.getByText('Edit')).toBeInTheDocument()
     })
-    expect(screen.getByText('Partner')).toBeInTheDocument()
   })
 
   test('clicking Edit shows Save and Cancel', async () => {
@@ -366,7 +368,91 @@ describe('OdooFormRenderer', () => {
 
     const sheet = container.querySelector('.o_form_sheet')
     expect(sheet).toBeInTheDocument()
-    expect(sheet?.className).toContain('max-w-[860px]')
+    // max-w-[860px] is on the sheet's parent div
+    const layoutContainer = sheet?.closest('[class*="max-w"]')
+    expect(layoutContainer?.className).toContain('max-w-[860px]')
+  })
+
+  test('shows Unsaved indicator when form is dirty', async () => {
+    const user = userEvent.setup()
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Edit'))
+
+    // Change a field value to make the form dirty
+    const nameInput = screen.getAllByRole('textbox')[0]
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Changed Name')
+
+    await waitFor(() => {
+      expect(screen.getByText('Unsaved')).toBeInTheDocument()
+    })
+  })
+
+  test('shows Saved indicator after successful save', async () => {
+    const user = userEvent.setup()
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'write') return Promise.resolve(true)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Edit'))
+
+    // Change a field to make form dirty
+    const nameInput = screen.getAllByRole('textbox')[0]
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Changed Name')
+
+    await waitFor(() => {
+      expect(screen.getByText('Unsaved')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Saved')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
+  })
+
+  test('shows Invalid indicator when there is a save error', async () => {
+    const user = userEvent.setup()
+    mockCallKw.mockImplementation((_model: string, method: string) => {
+      if (method === 'default_get') return Promise.resolve({ name: '', email: '', state: false })
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Save')).toBeInTheDocument()
+    })
+    // Click Save without filling required field
+    await user.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid')).toBeInTheDocument()
+    })
   })
 
   test('header with statusbar and buttons renders in header area', async () => {

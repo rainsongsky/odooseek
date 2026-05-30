@@ -13,10 +13,21 @@ vi.mock('../../lib/api', () => ({
 // Mock react-big-calendar to avoid CSS loading issues in tests
 vi.mock('react-big-calendar', () => {
   return {
-    Calendar: ({ events, onSelectEvent }: { events: Array<{ id: number; title: string }>; onSelectEvent?: (e: { id: number }) => void }) => (
+    Calendar: ({
+      events,
+      onSelectEvent,
+    }: {
+      events: Array<{ id: number; title: string }>
+      onSelectEvent?: (e: { id: number }) => void
+    }) => (
       <div data-testid="calendar">
         {events.map((e) => (
-          <button key={e.id} type="button" data-testid={`event-${e.id}`} onClick={() => onSelectEvent?.(e as any)}>
+          <button
+            key={e.id}
+            type="button"
+            data-testid={`event-${e.id}`}
+            onClick={() => onSelectEvent?.(e as any)}
+          >
             {e.title}
           </button>
         ))}
@@ -44,10 +55,47 @@ const calendarArch = `<calendar string="Meetings" date_start="start" date_stop="
 </calendar>`
 
 const fields: Record<string, OdooFieldMeta> = {
-  name: { name: 'name', type: 'char', string: 'Name', required: false, readonly: false, store: true, searchable: true, sortable: true },
-  start: { name: 'start', type: 'datetime', string: 'Start', required: false, readonly: false, store: true, searchable: true, sortable: true },
-  stop: { name: 'stop', type: 'datetime', string: 'Stop', required: false, readonly: false, store: true, searchable: true, sortable: true },
-  partner_id: { name: 'partner_id', type: 'many2one', string: 'Partner', required: false, readonly: false, store: true, searchable: true, sortable: true, relation: 'res.partner' },
+  name: {
+    name: 'name',
+    type: 'char',
+    string: 'Name',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  start: {
+    name: 'start',
+    type: 'datetime',
+    string: 'Start',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  stop: {
+    name: 'stop',
+    type: 'datetime',
+    string: 'Stop',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  partner_id: {
+    name: 'partner_id',
+    type: 'many2one',
+    string: 'Partner',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+    relation: 'res.partner',
+  },
 }
 
 describe('OdooCalendarRenderer', () => {
@@ -58,10 +106,18 @@ describe('OdooCalendarRenderer', () => {
 
   test('renders calendar container with events', async () => {
     mockSearchRead.mockResolvedValueOnce([
-      { id: 1, display_name: 'Team Meeting', start: '2026-05-30 10:00:00', stop: '2026-05-30 11:00:00', partner_id: [1, 'Alice'] },
+      {
+        id: 1,
+        display_name: 'Team Meeting',
+        start: '2026-05-30 10:00:00',
+        stop: '2026-05-30 11:00:00',
+        partner_id: [1, 'Alice'],
+      },
     ])
 
-    render(<OdooCalendarRenderer model="calendar.event" arch={calendarArch} fields={fields} />, { wrapper })
+    render(<OdooCalendarRenderer model="calendar.event" arch={calendarArch} fields={fields} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar')).toBeInTheDocument()
@@ -72,11 +128,22 @@ describe('OdooCalendarRenderer', () => {
   test('clicking event triggers onRecordClick', async () => {
     const onRecordClick = vi.fn()
     mockSearchRead.mockResolvedValueOnce([
-      { id: 42, display_name: 'Sync', start: '2026-05-30 09:00:00', stop: '2026-05-30 09:30:00', partner_id: false },
+      {
+        id: 42,
+        display_name: 'Sync',
+        start: '2026-05-30 09:00:00',
+        stop: '2026-05-30 09:30:00',
+        partner_id: false,
+      },
     ])
 
     render(
-      <OdooCalendarRenderer model="calendar.event" arch={calendarArch} fields={fields} onRecordClick={onRecordClick} />,
+      <OdooCalendarRenderer
+        model="calendar.event"
+        arch={calendarArch}
+        fields={fields}
+        onRecordClick={onRecordClick}
+      />,
       { wrapper },
     )
 
@@ -91,7 +158,9 @@ describe('OdooCalendarRenderer', () => {
   test('shows loading spinner', () => {
     mockSearchRead.mockReturnValue(new Promise(() => {}))
 
-    render(<OdooCalendarRenderer model="calendar.event" arch={calendarArch} fields={fields} />, { wrapper })
+    render(<OdooCalendarRenderer model="calendar.event" arch={calendarArch} fields={fields} />, {
+      wrapper,
+    })
 
     expect(document.querySelector('.animate-spin')).toBeTruthy()
   })

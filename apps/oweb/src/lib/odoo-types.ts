@@ -14,6 +14,7 @@ export interface OdooFieldMeta {
   searchable: boolean
   sortable: boolean
   widget?: string
+  onChange?: boolean
 }
 
 export interface ViewField {
@@ -23,6 +24,7 @@ export interface ViewField {
   widget?: string
   options?: Record<string, unknown>
   invisible?: number
+  optional?: 'show' | 'hide'
   required?: boolean
   readonly?: boolean
   nolabel?: boolean
@@ -91,13 +93,14 @@ export interface SheetElement {
 export interface GroupElement {
   type: 'group'
   string?: string
+  invisible?: string
   col?: number
   elements: FormElement[]
 }
 
 export interface NotebookElement {
   type: 'notebook'
-  pages: { string: string; elements: FormElement[] }[]
+  pages: { string: string; invisible?: string; elements: FormElement[] }[]
 }
 
 export interface FieldElement {
@@ -106,9 +109,9 @@ export interface FieldElement {
   widget?: string
   string?: string
   options?: Record<string, unknown>
-  invisible?: number
-  required?: boolean
-  readonly?: boolean
+  invisible?: string
+  required?: string | boolean
+  readonly?: string | boolean
   nolabel?: boolean
   placeholder?: string
   mode?: string
@@ -152,6 +155,11 @@ export interface LabelElement {
   string: string
 }
 
+export interface KanbanProgressbar {
+  field: string
+  colors: Record<string, string> // e.g. {"planned": "success", "today": "warning", "overdue": "danger"}
+}
+
 export interface ParsedKanbanView {
   type: 'kanban'
   string: string
@@ -160,6 +168,7 @@ export interface ParsedKanbanView {
   templateNodes?: KanbanTemplateNode[] // AST (Phase 4)
   defaultGroupBy?: string
   highlightColor?: string // e.g. "color"
+  progressbar?: KanbanProgressbar
 }
 
 // ── Phase 4: QWeb template AST ───────────────────────────────
@@ -272,4 +281,14 @@ export interface ToolbarAction {
 export interface ViewToolbar {
   print: ToolbarAction[]
   action: ToolbarAction[]
+}
+
+export interface IrFilterRecord {
+  id: number
+  name: string
+  user_id: [number, string] | false
+  domain: string
+  context: Record<string, unknown>
+  sort: string
+  is_default: boolean
 }
