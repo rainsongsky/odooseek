@@ -8,6 +8,11 @@ import { OdooCalendarRenderer } from '../OdooCalendarRenderer'
 const mockSearchRead = vi.fn()
 vi.mock('../../lib/api', () => ({
   searchRead: (...args: unknown[]) => mockSearchRead(...args),
+  callKw: vi.fn(),
+}))
+
+vi.mock('../../hooks/useToast', () => ({
+  useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }),
 }))
 
 // Mock react-big-calendar to avoid CSS loading issues in tests

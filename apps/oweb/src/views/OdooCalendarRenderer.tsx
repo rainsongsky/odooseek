@@ -1,9 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { addMonths, endOfMonth, format, getDay, parse, startOfMonth, startOfWeek } from 'date-fns'
 import { enUS } from 'date-fns/locale/en-US'
 import { useCallback, useMemo, useState } from 'react'
 import { dateFnsLocalizer, Calendar as RBC_Calendar } from 'react-big-calendar'
-import { searchRead } from '../lib/api'
+import { callKw, searchRead } from '../lib/api'
+import { useToast } from '../hooks/useToast'
 import type { OdooFieldMeta } from '../lib/odoo-types'
 import { parseCalendarXml } from '../lib/xml-parser'
 
@@ -48,13 +49,15 @@ interface CalendarEvent {
 export function OdooCalendarRenderer({
   model,
   arch,
-  fields: _fields,
+  fields,
   domain = [],
   onRecordClick,
 }: CalendarRendererProps) {
   const calView = useMemo(() => parseCalendarXml(arch), [arch])
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>(calView.mode)
+  const toast = useToast()
+  const queryClient = useQueryClient()
 
   const fieldList = useMemo(() => {
     const required = [calView.dateStart, 'display_name', 'id']
@@ -78,8 +81,10 @@ export function OdooCalendarRenderer({
     [domain, calView.dateStart, rangeStart, rangeEnd],
   )
 
+  const queryKey = ['odoo', 'calendar', model, dateDomain, fieldList]
+
   const { data: records, isLoading } = useQuery({
-    queryKey: ['odoo', 'calendar', model, dateDomain, fieldList],
+    queryKey,
     queryFn: () => searchRead<Record<string, unknown>[]>(model, dateDomain, fieldList),
     staleTime: 30_000,
   })
@@ -124,9 +129,70 @@ export function OdooCalendarRenderer({
         color: '#fff',
         fontSize: '12px',
         padding: '2px 4px',
+        cursor: 'pointer',
       },
     }),
     [colorMap],
+  )
+
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey })
+  }, [queryClient, queryKey])
+
+  // Create event on slot select (click empty area or drag range)
+  const handleSelectSlot = useCallback(
+    async ({ start, end }: { start: Date; end: Date }) => {
+      if (!calView.quickCreate) return
+      const values: Record<string, unknown> = {
+        [calView.dateStart]: format(start, "yyyy-MM-dd HH:mm:ss"),
+      }
+      if (calView.dateStop) {
+        values[calView.dateStop] = format(end, "yyyy-MM-dd HH:mm:ss")
+      }
+      try {
+        await callKw(model, 'create', [values])
+        invalidate()
+        toast.success('Event created')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to create event')
+      }
+    },
+    [calView, model, invalidate, toast],
+  )
+
+  // Move event via drag
+  const handleEventDrop = useCallback(
+    async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
+      const values: Record<string, unknown> = {
+        [calView.dateStart]: format(start, "yyyy-MM-dd HH:mm:ss"),
+      }
+      if (calView.dateStop) {
+        values[calView.dateStop] = format(end, "yyyy-MM-dd HH:mm:ss")
+      }
+      try {
+        await callKw(model, 'write', [[event.id], values])
+        invalidate()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to move event')
+      }
+    },
+    [calView, model, invalidate, toast],
+  )
+
+  // Resize event
+  const handleEventResize = useCallback(
+    async ({ event, end }: { event: CalendarEvent; end: Date }) => {
+      if (!calView.dateStop) return
+      try {
+        await callKw(model, 'write', [[event.id], {
+          [calView.dateStop]: format(end, "yyyy-MM-dd HH:mm:ss"),
+        }])
+        invalidate()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to resize event')
+      }
+    },
+    [calView, model, invalidate, toast],
   )
 
   const handleSelectEvent = useCallback(
@@ -161,7 +227,11 @@ export function OdooCalendarRenderer({
         date={currentDate}
         onNavigate={handleNavigate}
         onView={setView as (view: string) => void}
+        selectable
+        onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
+        onEventDrop={handleEventDrop}
+        onEventResize={handleEventResize}
         eventPropGetter={eventPropGetter}
         popup
         style={{ height: '100%' }}
