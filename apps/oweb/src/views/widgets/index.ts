@@ -1,4 +1,7 @@
 import type { FieldElement } from '../../lib/odoo-types'
+
+/** Stable no-op callback — avoids creating new function references on every render. */
+export const NOOP = () => {}
 import {
   BooleanToggleWidget,
   BooleanWidget,

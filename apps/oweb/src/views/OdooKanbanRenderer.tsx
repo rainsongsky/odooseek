@@ -10,7 +10,7 @@ import type {
   ViewField,
 } from '../lib/odoo-types'
 import { parseKanbanFields, parseKanbanXml } from '../lib/xml-parser'
-import { getFieldWidget } from './widgets'
+import { getFieldWidget, NOOP } from './widgets'
 
 interface KanbanRendererProps {
   model: string
@@ -487,7 +487,7 @@ function KanbanCard({
               <Widget
                 field={{ type: 'field', name: f.name, widget: f.widget }}
                 value={record[f.name]}
-                onChange={() => {}}
+                onChange={NOOP}
                 readOnly
               />
             </div>
@@ -619,7 +619,7 @@ function KanbanNode({
           <Widget
             field={{ type: 'field', name: node.name, widget: node.widget }}
             value={record[node.name]}
-            onChange={() => {}}
+            onChange={NOOP}
             readOnly
           />
         </div>

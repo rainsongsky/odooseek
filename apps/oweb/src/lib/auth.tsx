@@ -14,6 +14,7 @@ interface AuthState {
   partner_display_name: string | null
   server_version: string | null
   home_action_id: number | null
+  user_context?: { lang?: string; tz?: string; uid?: number }
 }
 
 const ANONYMOUS: AuthState = {

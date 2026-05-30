@@ -4,7 +4,7 @@ import { callKw, fieldsGet } from '../../lib/api'
 import { evalCondition, parseDomainString } from '../../lib/expression-evaluator'
 import type { FieldElement, O2mCommand, OdooFieldMeta, ViewField } from '../../lib/odoo-types'
 import type { FieldWidgetProps } from './index'
-import { getFieldWidget } from './index'
+import { getFieldWidget, NOOP } from './index'
 
 function normalizeM2mValue(value: unknown): [number, string][] {
   if (!value) return []
@@ -78,7 +78,7 @@ function O2mCellDisplay({
     <Widget
       field={col as FieldElement}
       value={value}
-      onChange={() => {}}
+      onChange={NOOP}
       readOnly
       meta={{
         selection: meta?.selection as [string, string][] | undefined,
@@ -764,7 +764,7 @@ export function AttachmentImageWidget({ value, readOnly, meta }: FieldWidgetProp
   return (
     <Many2OneWidget
       value={value}
-      onChange={() => {}}
+      onChange={NOOP}
       readOnly={false}
       field={{ type: 'field', name: 'attachment_id' }}
       meta={meta}

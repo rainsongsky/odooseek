@@ -152,13 +152,13 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     },
   })
 
-  const handleChange = (name: string, value: unknown) => {
+  const handleChange = useCallback((name: string, value: unknown) => {
     setFormValues((prev) => {
       const next = { ...prev, [name]: value }
       triggerOnchange([name], next)
       return next
     })
-  }
+  }, [triggerOnchange])
 
   const handleSave = useCallback(async (): Promise<void> => {
     const missing: string[] = []

@@ -24,7 +24,7 @@ pub async fn proxy_odoo(
             data: None,
         }));
     }
-    let odoo_url = format!("{}/{}", state.odoo_url.trim_end_matches('/'), path);
+    let odoo_url = format!("{}/{}", state.odoo_url, path);
     tracing::debug!("Proxying JSON-RPC to: {odoo_url}");
 
     let mut request = state
@@ -94,7 +94,7 @@ pub async fn proxy_image(
     }
     let odoo_url = format!(
         "{}/web/image/{}",
-        state.odoo_url.trim_end_matches('/'),
+        state.odoo_url,
         image_path
     );
     tracing::debug!("Proxying image request to: {odoo_url}");

@@ -67,7 +67,7 @@ pub async fn download_report(
 
     let odoo_rpc_url = format!(
         "{}/web/dataset/call_kw",
-        state.odoo_url.trim_end_matches('/')
+        state.odoo_url
     );
 
     let mut rpc_req = state.http_client.post(&odoo_rpc_url).json(&rpc_body);
@@ -104,7 +104,7 @@ pub async fn download_report(
     // Step 2: build the Odoo report URL and proxy the request
     let report_url = format!(
         "{}/report/{}/{}",
-        state.odoo_url.trim_end_matches('/'),
+        state.odoo_url,
         report_type,
         report_name,
     );

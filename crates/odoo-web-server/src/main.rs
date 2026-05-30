@@ -19,6 +19,7 @@ use tower_http::services::ServeDir;
 use tracing::info;
 
 mod error;
+mod helpers;
 mod menu;
 mod proxy;
 mod report;
@@ -30,9 +31,9 @@ use error::AppError;
 /// Application shared state
 #[derive(Clone)]
 struct AppState {
-    /// reqwest HTTP client with cookie_store enabled
+    /// reqwest HTTP client — cookies are forwarded manually per-request
     http_client: reqwest::Client,
-    /// Odoo base URL
+    /// Odoo base URL (guaranteed no trailing slash)
     odoo_url: String,
     /// WebSocket event broadcast sender
     event_tx: broadcast::Sender<serde_json::Value>,
@@ -92,16 +93,17 @@ async fn main() -> anyhow::Result<()> {
     // WebSocket event broadcast channel
     let (event_tx, _) = broadcast::channel::<serde_json::Value>(256);
 
+    let odoo_url_clean = config.odoo_url.trim_end_matches('/').to_string();
     let state = AppState {
         http_client: http_client.clone(),
-        odoo_url: config.odoo_url.clone(),
+        odoo_url: odoo_url_clean.clone(),
         event_tx: event_tx.clone(),
     };
 
     // Spawn Odoo Bus polling task
     tokio::spawn(ws::poll_odoo_bus(
         http_client,
-        config.odoo_url.clone(),
+        odoo_url_clean,
         event_tx,
     ));
 

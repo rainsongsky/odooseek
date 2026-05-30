@@ -20,7 +20,7 @@ pub async fn get_menus(
 ) -> Result<Response, AppError> {
     let url = format!(
         "{}/web/webclient/load_menus?unique=1",
-        state.odoo_url.trim_end_matches('/')
+        state.odoo_url
     );
 
     let client = reqwest::Client::builder()
@@ -63,7 +63,7 @@ pub async fn get_menus(
 pub async fn get_menu(State(state): State<AppState>) -> Result<Response, AppError> {
     let odoo_url = format!(
         "{}/web/dataset/call_kw",
-        state.odoo_url.trim_end_matches('/')
+        state.odoo_url
     );
 
     let request = serde_json::json!({

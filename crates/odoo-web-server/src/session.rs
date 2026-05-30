@@ -5,15 +5,13 @@ use axum::response::Response;
 
 use crate::AppState;
 use crate::error::AppError;
+use crate::helpers::{json_response_with_cookies, session_info_from_json};
 use odoo_core::error::OdooError;
 use odoo_core::types::{LoginRequest, SessionInfo};
 
 /// GET /api/session — calls Odoo /web/session/get_session_info
 pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Response, AppError> {
-    let odoo_url = format!(
-        "{}/web/session/get_session_info",
-        state.odoo_url.trim_end_matches('/')
-    );
+    let odoo_url = format!("{}/web/session/get_session_info", state.odoo_url);
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",
@@ -24,7 +22,6 @@ pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Res
 
     let mut req = state.http_client.post(&odoo_url).json(&request);
 
-    // Forward browser Cookie to Odoo for session recognition
     if let Some(cookie) = headers.get("cookie")
         && let Ok(cookie_str) = cookie.to_str()
     {
@@ -39,75 +36,18 @@ pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Res
     let resp_headers = response.headers().clone();
     let json_body: serde_json::Value = response.json().await?;
 
-    // Build SessionInfo from Odoo's session_info() response (snake_case keys)
     let info = match json_body.get("result") {
-        Some(result) => SessionInfo {
-            authenticated: true,
-            uid: result.get("uid").and_then(|v| v.as_i64()),
-            name: result
-                .get("name")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            username: result
-                .get("username")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            db: result.get("db").and_then(|v| v.as_str()).map(String::from),
-            is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
-            is_system: result.get("is_system").and_then(|v| v.as_bool()),
-            partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
-            partner_display_name: result
-                .get("partner_display_name")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            server_version: result
-                .get("server_version")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            server_version_info: result
-                .get("server_version_info")
-                .cloned()
-                .and_then(|v| v.as_array().cloned()),
-            user_context: result.get("user_context").cloned(),
-            user_companies: result.get("user_companies").cloned(),
-            web_base_url: result
-                .get("web.base.url")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            home_action_id: result.get("home_action_id").cloned(),
-            active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
-            max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
-            groups: result.get("groups").cloned(),
-            extra: serde_json::Value::default(),
-        },
+        Some(result) => session_info_from_json(result),
         None => SessionInfo::anonymous(),
     };
 
-    let mut builder = Response::builder().status(200);
-    for (key, value) in resp_headers.iter() {
-        if key.as_str().eq_ignore_ascii_case("set-cookie")
-            && let Ok(v) = value.to_str()
-        {
-            builder = builder.header("Set-Cookie", v);
-        }
-    }
-
-    builder
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(
-            serde_json::to_vec(&info).unwrap_or_default(),
-        ))
-        .map_err(|e| AppError(OdooError::InvalidResponse(e.to_string())))
+    Ok(json_response_with_cookies(&info, &resp_headers))
 }
 
 /// POST /api/session/login — calls Odoo /web/session/authenticate
 pub async fn login(state: AppState, body: LoginRequest) -> Result<Response, AppError> {
-    let odoo_url = format!(
-        "{}/web/session/authenticate",
-        state.odoo_url.trim_end_matches('/')
-    );
+    let odoo_url = format!("{}/web/session/authenticate", state.odoo_url);
 
-    // Odoo 19 CE: flat params (db, login, password), NOT nested args array
     let request = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "call",
@@ -143,70 +83,19 @@ pub async fn login(state: AppState, body: LoginRequest) -> Result<Response, AppE
         }));
     }
 
-    // Parse session_info from Odoo's authenticate response (snake_case keys)
-    let info = match json_body.get("result") {
-        Some(result) => SessionInfo {
-            authenticated: result.get("uid").and_then(|v| v.as_i64()).is_some(),
-            uid: result.get("uid").and_then(|v| v.as_i64()),
-            name: result
-                .get("name")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            username: Some(body.login),
-            db: Some(body.db),
-            is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
-            is_system: result.get("is_system").and_then(|v| v.as_bool()),
-            partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
-            partner_display_name: result
-                .get("partner_display_name")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            server_version: result
-                .get("server_version")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            server_version_info: result
-                .get("server_version_info")
-                .cloned()
-                .and_then(|v| v.as_array().cloned()),
-            user_context: result.get("user_context").cloned(),
-            user_companies: result.get("user_companies").cloned(),
-            web_base_url: result
-                .get("web.base.url")
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            home_action_id: result.get("home_action_id").cloned(),
-            active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
-            max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
-            groups: result.get("groups").cloned(),
-            extra: serde_json::Value::default(),
-        },
+    let mut info = match json_body.get("result") {
+        Some(result) => session_info_from_json(result),
         None => SessionInfo::anonymous(),
     };
+    info.username = Some(body.login);
+    info.db = Some(body.db);
 
-    let mut builder = Response::builder().status(200);
-    for (key, value) in resp_headers.iter() {
-        if key.as_str().eq_ignore_ascii_case("set-cookie")
-            && let Ok(v) = value.to_str()
-        {
-            builder = builder.header("Set-Cookie", v);
-        }
-    }
-
-    builder
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(
-            serde_json::to_vec(&info).unwrap_or_default(),
-        ))
-        .map_err(|e| AppError(OdooError::InvalidResponse(e.to_string())))
+    Ok(json_response_with_cookies(&info, &resp_headers))
 }
 
 /// POST /api/session/logout — calls Odoo /web/session/destroy
 pub async fn logout(state: AppState, headers: HeaderMap) -> Result<Response, AppError> {
-    let odoo_url = format!(
-        "{}/web/session/destroy",
-        state.odoo_url.trim_end_matches('/')
-    );
+    let odoo_url = format!("{}/web/session/destroy", state.odoo_url);
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",
@@ -229,19 +118,5 @@ pub async fn logout(state: AppState, headers: HeaderMap) -> Result<Response, App
 
     let resp_headers = response.headers().clone();
 
-    let mut builder = Response::builder().status(200);
-    for (key, value) in resp_headers.iter() {
-        if key.as_str().eq_ignore_ascii_case("set-cookie")
-            && let Ok(v) = value.to_str()
-        {
-            builder = builder.header("Set-Cookie", v);
-        }
-    }
-
-    builder
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(
-            serde_json::to_vec(&SessionInfo::anonymous()).unwrap_or_default(),
-        ))
-        .map_err(|e| AppError(OdooError::InvalidResponse(e.to_string())))
+    Ok(json_response_with_cookies(&SessionInfo::anonymous(), &resp_headers))
 }

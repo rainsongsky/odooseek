@@ -27,7 +27,7 @@ function odooLangToLocale(lang: string | null | undefined): string {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
-  const locale = session.db ? odooLangToLocale('zh_CN') : 'en'
+  const locale = session.db ? odooLangToLocale(session.user_context?.lang) : 'en'
 
   return (
     <IntlProvider key={locale} locale={locale} messages={MESSAGES[locale] ?? {}}>
