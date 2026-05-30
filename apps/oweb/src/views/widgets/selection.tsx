@@ -91,3 +91,154 @@ export function StateBadgeWidget({ value, meta }: FieldWidgetProps) {
     </span>
   )
 }
+
+// ── Statusbar Widget (Phase 24) ────────────────────────────────────
+
+export function StatusbarWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const selection = meta?.selection ?? []
+  const currentVal = String(value ?? '')
+  const currentIdx = selection.findIndex(([k]) => k === currentVal)
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {selection.map(([key, label], i) => {
+        const isCurrent = key === currentVal
+        const isPast = currentIdx >= 0 && i < currentIdx
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={readOnly || isCurrent}
+            onClick={() => onChange(key)}
+            className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${
+              isCurrent
+                ? 'bg-accent text-white'
+                : isPast
+                  ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                  : 'bg-gray-100 text-text-muted hover:bg-gray-200'
+            }`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Radio Widget (Phase 24) ────────────────────────────────────────
+
+export function RadioWidget({ field, value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const selection = meta?.selection ?? []
+  const orientation =
+    ((field.options as Record<string, unknown>)?.orientation as string) ?? 'vertical'
+  const currentVal = String(value ?? '')
+
+  if (readOnly) {
+    const pair = selection.find(([k]) => k === currentVal)
+    return <span className="text-sm text-text-primary">{pair?.[1] ?? currentVal}</span>
+  }
+
+  return (
+    <div className={`flex ${orientation === 'horizontal' ? 'flex-row gap-4' : 'flex-col gap-1'}`}>
+      {selection.map(([key, label]) => (
+        <label
+          key={key}
+          className="flex items-center gap-2 text-sm text-text-primary cursor-pointer"
+        >
+          <input
+            type="radio"
+            name={field.name}
+            value={key}
+            checked={currentVal === key}
+            onChange={() => onChange(key)}
+            className="accent-accent"
+          />
+          {label}
+        </label>
+      ))}
+    </div>
+  )
+}
+
+// ── Badge Selection Widget (Phase 25) ──────────────────────────────
+
+export function BadgeSelectionWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const selection = meta?.selection ?? []
+  const currentVal = String(value ?? '')
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {selection.map(([key, label]) => {
+        const isSelected = key === currentVal
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={readOnly}
+            onClick={() => onChange(key)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              isSelected
+                ? 'bg-accent text-white'
+                : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+            } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Label Selection Widget (Phase 25) ──────────────────────────────
+
+export function LabelSelectionWidget({ value, meta }: FieldWidgetProps) {
+  const val = String(value ?? '')
+  const selection = meta?.selection ?? []
+  const pair = selection.find(([k]) => k === val)
+  const label = pair?.[1] ?? val
+
+  const classes: Record<string, string> = {
+    draft: 'bg-gray-200 text-gray-700',
+    confirmed: 'bg-blue-100 text-blue-700',
+    done: 'bg-green-100 text-green-700',
+    cancel: 'bg-red-100 text-red-700',
+  }
+  const cls = classes[val] ?? 'bg-gray-100 text-text-secondary'
+
+  return (
+    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>
+  )
+}
+
+// ── State Selection Widget (Phase 25) ──────────────────────────────
+
+export function StateSelectionWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const selection = meta?.selection ?? []
+  const currentVal = String(value ?? '')
+  const colors: Record<string, string> = {
+    normal: 'text-text-secondary',
+    done: 'text-green-500',
+    blocked: 'text-red-500',
+  }
+
+  if (readOnly) {
+    const color = colors[currentVal] ?? 'text-amber-500'
+    return <span className={`text-lg ${color}`}>★</span>
+  }
+
+  return (
+    <select
+      value={currentVal}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded border border-border-default px-2 py-1 text-sm"
+    >
+      {selection.map(([key, label]) => (
+        <option key={key} value={key}>
+          {label}
+        </option>
+      ))}
+    </select>
+  )
+}

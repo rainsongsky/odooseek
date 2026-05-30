@@ -554,3 +554,153 @@ export function AttachmentImageWidget({ value, readOnly, meta }: FieldWidgetProp
     />
   )
 }
+
+// ── Many2Many Checkboxes Widget (Phase 24) ──────────────────────────
+
+export function Many2ManyCheckboxesWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const relation = meta?.relation
+  const tags = normalizeM2mValue(value)
+  const selectedIds = useMemo(() => new Set(tags.map(([id]) => id)), [tags])
+
+  const { data: options } = useQuery({
+    queryKey: ['odoo', 'name_search', relation],
+    queryFn: async () => {
+      const res = await callKw<Array<{ id: number; display_name: string }>>(
+        relation as string,
+        'web_name_search',
+        [],
+        { name: '', limit: 100, specification: { display_name: {} } },
+      )
+      return Array.isArray(res) ? res : []
+    },
+    enabled: !!relation,
+  })
+
+  const toggle = (id: number, name: string) => {
+    const newTags = selectedIds.has(id)
+      ? tags.filter(([tid]) => tid !== id)
+      : [...tags, [id, name] as [number, string]]
+    onChange(encodeM2mValue(newTags))
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {options?.map?.((opt: { id: number; display_name: string }) => (
+        <label key={opt.id} className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={selectedIds.has(opt.id)}
+            onChange={() => toggle(opt.id, opt.display_name)}
+            disabled={readOnly}
+            className="accent-accent"
+          />
+          {opt.display_name}
+        </label>
+      ))}
+    </div>
+  )
+}
+
+// ── Many2Many Tags Avatar Widget (Phase 24) ────────────────────────
+
+export function Many2ManyTagsAvatarWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+  const relation = meta?.relation
+  const [search, setSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<[number, string]>>([])
+  const tags = normalizeM2mValue(value)
+
+  const doSearch = useCallback(
+    async (q: string) => {
+      if (!relation || !q.trim()) {
+        setSearchResults([])
+        return
+      }
+      const res = await callKw<Array<{ id: number; display_name: string }>>(
+        relation,
+        'web_name_search',
+        [],
+        { name: q, operator: 'ilike', limit: 10, specification: { display_name: {} } },
+      )
+      const records = Array.isArray(res) ? res : []
+      setSearchResults(
+        records.map(
+          (r: { id: number; display_name: string }) => [r.id, r.display_name] as [number, string],
+        ),
+      )
+    },
+    [relation],
+  )
+
+  const removeTag = (id: number) => {
+    const newTags = tags.filter(([tid]) => tid !== id)
+    onChange(encodeM2mValue(newTags))
+  }
+
+  const addTag = (id: number, name: string) => {
+    if (tags.some(([tid]) => tid === id)) return
+    const newTags = [...tags, [id, name] as [number, string]]
+    onChange(encodeM2mValue(newTags))
+    setSearch('')
+    setSearchResults([])
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap gap-1">
+        {tags.map(([id, name]) => (
+          <span
+            key={id}
+            className="inline-flex items-center gap-1 rounded-full bg-accent/10 pl-0.5 pr-2 py-0.5 text-xs"
+          >
+            <img
+              src={`/api/web/image/${relation}/${id}/avatar_128`}
+              alt=""
+              className="h-4 w-4 rounded-full object-cover"
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+            <span className="text-accent">{name || `#${id}`}</span>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => removeTag(id)}
+                className="ml-0.5 text-accent/60 hover:text-accent"
+              >
+                x
+              </button>
+            )}
+          </span>
+        ))}
+      </div>
+      {!readOnly && (
+        <div className="relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              doSearch(e.target.value)
+            }}
+            placeholder="Search..."
+            className="w-full rounded border border-border-default bg-root px-2 py-1 text-xs text-text-primary focus:border-accent focus:outline-none"
+          />
+          {searchResults.length > 0 && (
+            <div className="absolute left-0 top-full z-10 mt-1 w-full rounded border border-border-subtle bg-surface shadow-lg">
+              {searchResults.map(([id, name]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => addTag(id, name)}
+                  className="block w-full px-2 py-1 text-left text-xs text-text-primary hover:bg-hover"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

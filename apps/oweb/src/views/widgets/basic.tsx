@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { formatFloatTime, formatPercentage, parseFloatTime } from '../../lib/field-formatters'
 import type { FieldWidgetProps } from './index'
 import { FIELD_INPUT_CLASS } from './index'
 
@@ -219,5 +220,35 @@ export function DatetimeWidget({ value, onChange, readOnly }: FieldWidgetProps) 
       onChange={(e) => onChange(`${e.target.value.replace('T', ' ')}:00`)}
       className="w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
     />
+  )
+}
+
+export function FloatTimeWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly)
+    return <span className="text-sm text-text-primary">{formatFloatTime(Number(value) || 0)}</span>
+  return (
+    <input
+      type="text"
+      value={value != null ? formatFloatTime(Number(value)) : ''}
+      onChange={(e) => onChange(parseFloatTime(e.target.value))}
+      placeholder="HH:MM"
+      className={FIELD_INPUT_CLASS}
+    />
+  )
+}
+
+export function PercentageWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly)
+    return <span className="text-sm text-text-primary">{formatPercentage(Number(value) || 0)}</span>
+  return (
+    <div className="flex items-center">
+      <input
+        type="number"
+        value={value != null ? (Number(value) * 100).toFixed(2) : ''}
+        onChange={(e) => onChange(e.target.value ? Number(e.target.value) / 100 : null)}
+        className={FIELD_INPUT_CLASS}
+      />
+      <span className="ml-1 text-sm text-text-muted">%</span>
+    </div>
   )
 }

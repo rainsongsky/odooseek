@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { callKw } from '../../lib/api'
+import { formatRemainingDays } from '../../lib/field-formatters'
 import { CharWidget } from './basic'
 import type { FieldWidgetProps } from './index'
 
@@ -219,6 +220,125 @@ export function ProgressbarWidget({ value, onChange, readOnly }: FieldWidgetProp
         />
       </div>
       <span className="text-xs text-text-muted w-8 text-right">{pct}%</span>
+    </div>
+  )
+}
+
+// ── Boolean Favorite Widget (Phase 26) ─────────────────────────────
+
+export function BooleanFavoriteWidget({ value, onChange, readOnly }: FieldWidgetProps) {
+  const active = Boolean(value)
+  return (
+    <button
+      type="button"
+      onClick={() => !readOnly && onChange(!active)}
+      className={`text-lg ${active ? 'text-amber-500' : 'text-border-default hover:text-amber-400'}`}
+      disabled={readOnly}
+    >
+      {active ? '★' : '☆'}
+    </button>
+  )
+}
+
+// ── Boolean Icon Widget (Phase 26) ─────────────────────────────────
+
+export function BooleanIconWidget({ value, onChange, field }: FieldWidgetProps) {
+  const active = Boolean(value)
+  const icon = ((field.options as Record<string, unknown>)?.icon as string) ?? 'fa-check-square-o'
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!active)}
+      className={`text-lg ${active ? 'text-accent' : 'text-border-default hover:text-accent/60'}`}
+    >
+      <i className={`fa ${icon}`} />
+    </button>
+  )
+}
+
+// ── Copy Clipboard Widget (Phase 26) ──────────────────────────────
+
+export function CopyClipboardWidget({ value }: FieldWidgetProps) {
+  const [copied, setCopied] = useState(false)
+  const text = String(value ?? '')
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-text-primary">{text}</span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="text-xs text-text-muted hover:text-accent"
+        title="Copy"
+      >
+        {copied ? '✓' : '📋'}
+      </button>
+    </div>
+  )
+}
+
+// ── Remaining Days Widget (Phase 26) ───────────────────────────────
+
+export function RemainingDaysWidget({ value }: FieldWidgetProps) {
+  const { text, color } = formatRemainingDays(value)
+  if (!text) return <span className="text-sm text-text-muted">—</span>
+  return <span className={`text-sm font-medium ${color}`}>{text}</span>
+}
+
+// ── Image URL Widget (Phase 26) ────────────────────────────────────
+
+export function ImageUrlWidget({ field, value }: FieldWidgetProps) {
+  const url = String(value ?? '')
+  const opts = (field.options as Record<string, unknown>) ?? {}
+  const w = opts.width ? Number(opts.width) : undefined
+  const h = opts.height ? Number(opts.height) : undefined
+
+  if (!url) return <span className="text-sm text-text-muted">—</span>
+  return (
+    <img
+      src={url}
+      alt={field.string || ''}
+      className="max-h-32 rounded border border-border-subtle object-contain"
+      style={w || h ? { maxWidth: w, maxHeight: h } : undefined}
+      onError={(e) => {
+        ;(e.target as HTMLImageElement).src = ''
+      }}
+    />
+  )
+}
+
+// ── Percent Pie Widget (Phase 26) ──────────────────────────────────
+
+export function PercentPieWidget({ value }: FieldWidgetProps) {
+  const pct = Math.min(100, Math.max(0, Number(value) * 100))
+  const r = 16
+  const c = 2 * Math.PI * r
+  const offset = c - (pct / 100) * c
+
+  return (
+    <div className="flex items-center gap-2">
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r={r} fill="none" stroke="#e5e7eb" strokeWidth="3" />
+        <circle
+          cx="18"
+          cy="18"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          className="text-accent"
+          transform="rotate(-90 18 18)"
+        />
+      </svg>
+      <span className="text-xs text-text-muted">{pct.toFixed(1)}%</span>
     </div>
   )
 }

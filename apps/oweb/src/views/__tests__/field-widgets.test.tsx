@@ -106,7 +106,8 @@ describe('field-widgets', () => {
 
   test('resolves widget=statusbar via WIDGET_OVERRIDES', () => {
     const Widget = getFieldWidget({ ...baseField, widget: 'statusbar' }, 'char')
-    expect(Widget).toBe(TYPE_WIDGETS.state)
+    expect(Widget).not.toBe(TYPE_WIDGETS.char)
+    expect(Widget.name).toBe('StatusbarWidget')
   })
 
   test('resolves widget=state via WIDGET_OVERRIDES', () => {
@@ -578,5 +579,327 @@ describe('field-widgets', () => {
     )
     expect(screen.getByDisplayValue('Bob')).toBeTruthy()
     expect(screen.getByDisplayValue('Bob').tagName).toBe('INPUT')
+  })
+
+  // ── FloatTimeWidget ─────────────────────────────────────────────────
+
+  test('FloatTimeWidget renders formatted time in readOnly', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'float_time' }, 'float')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 1.5,
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('01:30')).toBeInTheDocument()
+  })
+
+  test('FloatTimeWidget renders input in edit mode', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'float_time' }, 'float')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 2.25,
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.getByDisplayValue('02:15')).toBeInTheDocument()
+  })
+
+  // ── PercentageWidget ────────────────────────────────────────────────
+
+  test('PercentageWidget renders percentage in readOnly', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'percentage' }, 'float')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 0.5,
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('50.00%')).toBeInTheDocument()
+  })
+
+  // ── StatusbarWidget ─────────────────────────────────────────────────
+
+  test('StatusbarWidget renders clickable status buttons', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'statusbar' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'confirmed',
+        onChange: () => {},
+        readOnly: false,
+        meta: {
+          selection: [
+            ['draft', 'Draft'],
+            ['confirmed', 'Confirmed'],
+            ['done', 'Done'],
+          ],
+        },
+      }),
+    )
+    expect(screen.getByText('Draft')).toBeInTheDocument()
+    expect(screen.getByText('Confirmed')).toBeInTheDocument()
+    expect(screen.getByText('Done')).toBeInTheDocument()
+  })
+
+  test('StatusbarWidget highlights current value', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'statusbar' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'confirmed',
+        onChange: () => {},
+        readOnly: false,
+        meta: {
+          selection: [
+            ['draft', 'Draft'],
+            ['confirmed', 'Confirmed'],
+            ['done', 'Done'],
+          ],
+        },
+      }),
+    )
+    const currentBtn = screen.getByText('Confirmed')
+    expect(currentBtn.className).toContain('bg-accent')
+  })
+
+  // ── RadioWidget ─────────────────────────────────────────────────────
+
+  test('RadioWidget renders radio buttons', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'radio' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'a',
+        onChange: () => {},
+        readOnly: false,
+        meta: {
+          selection: [
+            ['a', 'Option A'],
+            ['b', 'Option B'],
+          ],
+        },
+      }),
+    )
+    expect(screen.getByText('Option A')).toBeInTheDocument()
+    expect(screen.getByText('Option B')).toBeInTheDocument()
+    const radioA = screen.getByDisplayValue('a') as HTMLInputElement
+    expect(radioA.checked).toBe(true)
+  })
+
+  test('RadioWidget readOnly shows label text', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'radio' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'b',
+        onChange: () => {},
+        readOnly: true,
+        meta: {
+          selection: [
+            ['a', 'Option A'],
+            ['b', 'Option B'],
+          ],
+        },
+      }),
+    )
+    expect(screen.getByText('Option B')).toBeInTheDocument()
+  })
+
+  // ── BooleanFavoriteWidget ───────────────────────────────────────────
+
+  test('BooleanFavoriteWidget renders filled star when true', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'boolean_favorite' }, 'boolean')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: true,
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.getByText('★')).toBeInTheDocument()
+  })
+
+  test('BooleanFavoriteWidget renders empty star when false', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'boolean_favorite' }, 'boolean')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: false,
+        onChange: () => {},
+        readOnly: false,
+      }),
+    )
+    expect(screen.getByText('☆')).toBeInTheDocument()
+  })
+
+  test('BooleanFavoriteWidget toggles on click', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'boolean_favorite' }, 'boolean')
+    const onChange = vi.fn()
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: false,
+        onChange,
+        readOnly: false,
+      }),
+    )
+    fireEvent.click(screen.getByText('☆'))
+    expect(onChange).toHaveBeenCalledWith(true)
+  })
+
+  // ── CopyClipboardWidget ─────────────────────────────────────────────
+
+  test('CopyClipboardWidget renders value with copy button', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'copy_clipboard' }, 'char')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'hello world',
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('hello world')).toBeInTheDocument()
+  })
+
+  // ── RemainingDaysWidget ─────────────────────────────────────────────
+
+  test('RemainingDaysWidget renders dash for empty value', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'remaining_days' }, 'date')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: null,
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  test('RemainingDaysWidget renders Today for current date', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'remaining_days' }, 'date')
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: today,
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('Today')).toBeInTheDocument()
+  })
+
+  // ── PercentPieWidget ────────────────────────────────────────────────
+
+  test('PercentPieWidget renders SVG with percentage', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'percentpie' }, 'float')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 0.75,
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('75.0%')).toBeInTheDocument()
+    expect(document.querySelector('svg')).toBeInTheDocument()
+  })
+
+  // ── BadgeSelectionWidget ────────────────────────────────────────────
+
+  test('BadgeSelectionWidget renders badge buttons', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'selection_badge' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'a',
+        onChange: () => {},
+        readOnly: false,
+        meta: {
+          selection: [
+            ['a', 'Alpha'],
+            ['b', 'Beta'],
+          ],
+        },
+      }),
+    )
+    expect(screen.getByText('Alpha').className).toContain('bg-accent')
+    expect(screen.getByText('Beta').className).toContain('bg-gray-100')
+  })
+
+  // ── LabelSelectionWidget ────────────────────────────────────────────
+
+  test('LabelSelectionWidget renders colored label', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'label_selection' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'done',
+        onChange: () => {},
+        readOnly: true,
+        meta: {
+          selection: [
+            ['draft', 'Draft'],
+            ['done', 'Done'],
+          ],
+        },
+      }),
+    )
+    const label = screen.getByText('Done')
+    expect(label).toBeInTheDocument()
+    expect(label.className).toContain('bg-green-100')
+  })
+
+  // ── StateSelectionWidget ────────────────────────────────────────────
+
+  test('StateSelectionWidget renders star in readOnly', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'state_selection' }, 'selection')
+    render(
+      createElement(Widget, {
+        field: baseField,
+        value: 'done',
+        onChange: () => {},
+        readOnly: true,
+      }),
+    )
+    expect(screen.getByText('★')).toBeInTheDocument()
+  })
+
+  // ── Widget Override Completeness ────────────────────────────────────
+
+  test('all new WIDGET_OVERRIDES resolve correctly', () => {
+    const overrides = [
+      'float_time',
+      'percentage',
+      'statusbar',
+      'radio',
+      'many2many_checkboxes',
+      'many2many_tags_avatar',
+      'selection_badge',
+      'label_selection',
+      'state_selection',
+      'boolean_favorite',
+      'boolean_icon',
+      'copy_clipboard',
+      'remaining_days',
+      'image_url',
+      'percentpie',
+    ]
+    for (const w of overrides) {
+      const Widget = getFieldWidget({ ...baseField, widget: w }, 'char')
+      expect(Widget).toBeDefined()
+      expect(Widget).not.toBe(TYPE_WIDGETS.char)
+    }
   })
 })
