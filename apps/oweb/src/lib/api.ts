@@ -28,6 +28,10 @@ async function jsonRpc<T>(url: string, params: Record<string, unknown>): Promise
   })
 
   if (!res.ok) {
+    if (res.status === 401) {
+      window.location.href = '/login'
+      throw new Error('Session expired')
+    }
     throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   }
 

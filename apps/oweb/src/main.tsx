@@ -19,7 +19,16 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 2,
+      retry: (failureCount, error) => {
+        if (error.message === 'Session expired') return false
+        return failureCount < 2
+      },
+    },
+    mutations: {
+      onError: (error) => {
+        if (error.message === 'Session expired') return
+        console.error('Mutation error:', error.message)
+      },
     },
   },
 })
