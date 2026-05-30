@@ -287,10 +287,8 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         justSaved={justSaved}
         saveError={saveError}
         onEdit={() => {
-          if (record?.[0]) {
-            setFormValues({ ...record[0] })
-            setEditMode(true)
-          }
+          setFormValues(record?.[0] ? { ...record[0] } : { ...formValues })
+          setEditMode(true)
         }}
         onSave={handleSave}
         onCancel={handleCancel}
