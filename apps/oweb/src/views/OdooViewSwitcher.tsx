@@ -6,6 +6,7 @@ import {
   Table,
   TrendingUp,
 } from '@/lib/lucide-icons'
+import { prefetchView } from './OdooViewLoader'
 
 type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
@@ -42,6 +43,7 @@ export function OdooViewSwitcher({ currentView, onSwitch, availableViews }: View
             key={v.type}
             type="button"
             onClick={() => onSwitch(v.type)}
+            onMouseEnter={() => prefetchView(v.type)}
             className={`flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${
               active
                 ? 'bg-accent/15 text-accent'

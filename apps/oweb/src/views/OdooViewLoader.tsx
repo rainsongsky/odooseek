@@ -29,6 +29,19 @@ const OdooCalendarRenderer = lazy(() =>
 
 type OdooFormRendererRef = React.ComponentRef<typeof OdooFormRenderer>
 
+// Prefetch map: preload view chunks on hover so switching is instant
+const viewPrefetchers: Record<string, () => Promise<unknown>> = {
+  form: () => import('./OdooFormRenderer'),
+  kanban: () => import('./OdooKanbanRenderer'),
+  pivot: () => import('./OdooPivotRenderer'),
+  graph: () => import('./OdooGraphRenderer'),
+  calendar: () => import('./OdooCalendarRenderer'),
+}
+
+export function prefetchView(type: string) {
+  viewPrefetchers[type]?.()
+}
+
 type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
 interface ViewLoaderProps {
