@@ -1,8 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import React, { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
-import { ChevronRight, Settings } from '@/lib/lucide-icons'
-import { ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, Settings } from '@/lib/lucide-icons'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { ExportDialog } from '../components/ExportDialog'
 import { Pagination } from '../components/Pagination'
@@ -192,7 +191,7 @@ export function OdooListRenderer({
           }),
   })
 
-  const handleSort = (fieldName: string) => {
+  const handleSort = useCallback((fieldName: string) => {
     if (tableContainerRef.current) savedScrollTop.current = tableContainerRef.current.scrollTop
     setOrder((prev) => {
       if (prev === fieldName) return `${fieldName} desc`
@@ -201,13 +200,13 @@ export function OdooListRenderer({
     })
     setOffset(0)
     setSelectedIds(new Set())
-  }
+  }, [])
 
-  const sortIcon = (fieldName: string) => {
+  const sortIcon = useCallback((fieldName: string) => {
     if (order === fieldName) return <ChevronUp className="inline h-3 w-3 text-accent" />
     if (order === `${fieldName} desc`) return <ChevronDown className="inline h-3 w-3 text-accent" />
     return <ArrowUpDown className="inline h-3 w-3 opacity-30" />
-  }
+  }, [order])
 
   const data = (groupedData ?? []) as unknown[]
   const groupData = groupByActive ? (groupedData as ReadGroupResult[] | undefined) : null

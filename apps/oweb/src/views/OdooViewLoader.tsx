@@ -4,7 +4,7 @@ import { ControlPanel } from '../components/ControlPanel'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
 import { callKw } from '../lib/api'
-import type { OdooFieldMeta, ViewToolbar } from '../lib/odoo-types'
+import type { OdooFieldMeta, ViewToolbar, ViewType } from '../lib/odoo-types'
 import { generateReport } from '../lib/report'
 import { cacheKey, getCachedViews, setCachedViews } from '../lib/view-cache'
 import { parseSearchXml } from '../lib/xml-parser'
@@ -41,8 +41,6 @@ const viewPrefetchers: Record<string, () => Promise<unknown>> = {
 export function prefetchView(type: string) {
   viewPrefetchers[type]?.()
 }
-
-type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
 interface ViewLoaderProps {
   model: string
@@ -197,13 +195,13 @@ export function OdooViewLoader({
     )
   }
 
-  const handleSearch = (newDomain: unknown[]) => {
+  const handleSearch = useCallback((newDomain: unknown[]) => {
     setDomain(newDomain)
-  }
+  }, [])
 
-  const handleGroupByChange = (groupBys: string[]) => {
+  const handleGroupByChange = useCallback((groupBys: string[]) => {
     setGroupBy(groupBys)
-  }
+  }, [])
 
   const arch = activeView?.arch ?? ''
   const viewTitle = arch.match(/<[^ ]+\s+[^>]*string\s*=\s*"([^"]+)"/i)?.[1] || undefined

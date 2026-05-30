@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { ChevronDown } from '@/lib/lucide-icons'
-import type { ViewToolbar } from '../lib/odoo-types'
+import type { ViewToolbar, ViewType } from '../lib/odoo-types'
 import { OdooViewSwitcher } from '../views/OdooViewSwitcher'
 import { Breadcrumbs } from './Breadcrumbs'
 import { Pagination } from './Pagination'
 import { SearchBar, type SearchBarProps } from './SearchBar'
-
-type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
 interface BreadcrumbProps {
   model: string

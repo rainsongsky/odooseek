@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
 import { resolveAction } from '../lib/api'
+import type { ViewType } from '../lib/odoo-types'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 
@@ -12,8 +13,6 @@ interface WebSearch {
   action?: number
   viewType?: string
 }
-
-type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
 function WebPage() {
   const t = useTranslations()

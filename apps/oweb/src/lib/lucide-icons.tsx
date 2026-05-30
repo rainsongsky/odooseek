@@ -5,6 +5,7 @@ export {
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Columns3,
   GripVertical,
   Home,

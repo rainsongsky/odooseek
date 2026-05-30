@@ -1,5 +1,7 @@
 // Odoo 19 CE view type definitions
 
+export type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
+
 export interface OdooFieldMeta {
   name: string
   type: string // char, text, integer, float, boolean, date, datetime, selection, many2one, many2many, one2many, binary, html, reference, monetary

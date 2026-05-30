@@ -6,9 +6,8 @@ import {
   Table,
   TrendingUp,
 } from '@/lib/lucide-icons'
+import type { ViewType } from '../lib/odoo-types'
 import { prefetchView } from './OdooViewLoader'
-
-type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
 interface ViewSwitcherProps {
   currentView: ViewType
