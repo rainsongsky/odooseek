@@ -1,3 +1,4 @@
+import { fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
@@ -21,6 +22,21 @@ const barArch = `<graph string="Sales">
   <field name="amount" type="measure" operator="sum"/>
 </graph>`
 
+const multiMeasureArch = `<graph string="Revenue" type="bar">
+  <field name="stage_id" type="row"/>
+  <field name="amount" type="measure" operator="sum"/>
+  <field name="quantity" type="measure" operator="sum"/>
+</graph>`
+
+const pieArch = `<graph string="By Stage" type="pie">
+  <field name="stage_id" type="row"/>
+</graph>`
+
+const areaArch = `<graph string="Trend" type="area">
+  <field name="date" type="row" interval="month"/>
+  <field name="amount" type="measure"/>
+</graph>`
+
 const fields: Record<string, OdooFieldMeta> = {
   stage_id: {
     name: 'stage_id',
@@ -36,6 +52,26 @@ const fields: Record<string, OdooFieldMeta> = {
     name: 'amount',
     type: 'float',
     string: 'Amount',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  quantity: {
+    name: 'quantity',
+    type: 'float',
+    string: 'Quantity',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  date: {
+    name: 'date',
+    type: 'date',
+    string: 'Date',
     required: false,
     readonly: false,
     store: true,
@@ -80,5 +116,105 @@ describe('OdooGraphRenderer', () => {
     await waitFor(() => {
       expect(screen.getByText(/Network error/)).toBeInTheDocument()
     })
+  })
+
+  test('shows chart type selector with Bar default', async () => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockResolvedValue([
+      { stage_id: 'New', amount: 100 },
+    ])
+
+    render(<OdooGraphRenderer model="crm.lead" arch={barArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Bar')).toBeInTheDocument()
+    })
+  })
+
+  test('shows Pie chart type for pie arch', async () => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockResolvedValue([
+      { stage_id: 'New', __count: 5 },
+    ])
+
+    render(<OdooGraphRenderer model="crm.lead" arch={pieArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Pie')).toBeInTheDocument()
+    })
+  })
+
+  test('shows Area chart type for area arch', async () => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockResolvedValue([
+      { 'date:month': '2026-05', amount: 500 },
+    ])
+
+    render(<OdooGraphRenderer model="crm.lead" arch={areaArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Area')).toBeInTheDocument()
+    })
+  })
+
+  test('shows measure selector when multiple measures exist', async () => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockResolvedValue([
+      { stage_id: 'New', amount: 100, quantity: 5 },
+    ])
+
+    render(
+      <OdooGraphRenderer model="sale.order" arch={multiMeasureArch} fields={fields} />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      // Title renders
+      expect(screen.getByText('Revenue')).toBeInTheDocument()
+    })
+
+    // Measure dropdown button should show the first measure name
+    const buttons = screen.getAllByRole('button')
+    const measureBtn = buttons.find((b) => b.textContent?.includes('amount'))
+    expect(measureBtn).toBeTruthy()
+  })
+
+  test('sort button toggles sort order', async () => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockResolvedValue([
+      { stage_id: 'New', amount: 100 },
+      { stage_id: 'Won', amount: 500 },
+    ])
+
+    render(<OdooGraphRenderer model="crm.lead" arch={barArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Sort')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Sort'))
+    expect(screen.getByText('Sort ↓')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Sort ↓'))
+    expect(screen.getByText('Sort ↑')).toBeInTheDocument()
+  })
+
+  test('chart type dropdown opens and shows options', async () => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockResolvedValue([
+      { stage_id: 'New', amount: 100 },
+    ])
+
+    render(<OdooGraphRenderer model="crm.lead" arch={barArch} fields={fields} />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Bar')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Bar'))
+    expect(screen.getByText('Bar Chart')).toBeInTheDocument()
+    expect(screen.getByText('Line Chart')).toBeInTheDocument()
+    expect(screen.getByText('Pie Chart')).toBeInTheDocument()
+    expect(screen.getByText('Area Chart')).toBeInTheDocument()
   })
 })

@@ -724,7 +724,7 @@ export function parseGraphXml(xml: string): ParsedGraphView {
   }
 
   const rawType = root.getAttribute('type') ?? 'bar'
-  const graphType = rawType === 'line' || rawType === 'pie' ? rawType : 'bar'
+  const graphType = rawType === 'line' || rawType === 'pie' || rawType === 'area' ? rawType : 'bar'
 
   return {
     type: 'graph',

@@ -315,7 +315,7 @@ export interface GraphMeasure {
 export interface ParsedGraphView {
   type: 'graph'
   string: string
-  graphType: 'bar' | 'line' | 'pie'
+  graphType: 'bar' | 'line' | 'pie' | 'area'
   rowFields: GraphField[]
   colFields: GraphField[]
   measures: GraphMeasure[]
