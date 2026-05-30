@@ -54,6 +54,7 @@ pub async fn download_report(
     let mut rpc_req = state.http_client.post(&odoo_rpc_url).json(&rpc_body);
 
     // Forward browser Cookie to Odoo
+    #[allow(clippy::collapsible_if)]
     if let Some(cookie) = headers.get("cookie") {
         if let Ok(cookie_str) = cookie.to_str() {
             rpc_req = rpc_req.header("cookie", cookie_str);
@@ -97,6 +98,7 @@ pub async fn download_report(
     let mut dl_req = state.http_client.get(&report_url);
 
     // Forward browser Cookie to Odoo for session
+    #[allow(clippy::collapsible_if)]
     if let Some(cookie) = headers.get("cookie") {
         if let Ok(cookie_str) = cookie.to_str() {
             dl_req = dl_req.header("cookie", cookie_str);
@@ -120,6 +122,7 @@ pub async fn download_report(
 
     for (key, value) in odoo_headers.iter() {
         let name = key.as_str();
+        #[allow(clippy::collapsible_if)]
         if matches!(
             name,
             "content-type" | "content-disposition" | "content-length"
@@ -132,5 +135,9 @@ pub async fn download_report(
 
     builder
         .body(axum::body::Body::from(body_bytes))
-        .map_err(|e| AppError(OdooError::InvalidResponse(format!("Failed to build response: {e}"))))
+        .map_err(|e| {
+            AppError(OdooError::InvalidResponse(format!(
+                "Failed to build response: {e}"
+            )))
+        })
 }
