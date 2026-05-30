@@ -13,6 +13,7 @@ use clap::Parser;
 use odoo_core::config::ServerConfig;
 use odoo_core::types::LoginRequest;
 use tokio::sync::broadcast;
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tracing::info;
@@ -118,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/report/download", get(download_report))
         .route("/ws/events", get(ws_events_handler))
         .fallback_service(ServeDir::new(&frontend_dir).append_index_html_on_directories(true))
+        .layer(CompressionLayer::new())
         .layer(CorsLayer::permissive())
         .with_state(state);
 
