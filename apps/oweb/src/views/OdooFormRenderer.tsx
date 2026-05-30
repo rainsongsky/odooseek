@@ -349,7 +349,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         </div>
       )}
 
-      <div ref={formRef} className="flex-1 overflow-auto px-6 py-0">
+      <div ref={formRef} className="flex-1 overflow-auto px-6 py-4">
         <div className="o_form_sheet mx-auto max-w-[860px] border-y border-border-subtle bg-surface px-6 py-5">
           <FormLayoutNode
             elements={nonHeaderElements}
