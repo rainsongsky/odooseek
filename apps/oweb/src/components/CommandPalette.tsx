@@ -7,6 +7,7 @@ import { fetchMenus, flattenMenuItems, type MenusData } from '../lib/menu-servic
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [highlightIndex, setHighlightIndex] = useState(0)
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
 
@@ -17,6 +18,7 @@ export function CommandPalette() {
         e.preventDefault()
         setOpen((v) => !v)
         setQuery('')
+        setHighlightIndex(0)
       }
     }
     window.addEventListener('keydown', handler)
@@ -55,18 +57,33 @@ export function CommandPalette() {
       }))
   }, [menus, query, navigate])
 
-  // Close on Escape
+  // Reset highlight when commands change
+  useEffect(() => {
+    setHighlightIndex(0)
+  }, [commands])
+
+  // Keyboard navigation: Escape, Enter, ArrowUp, ArrowDown
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault()
         setOpen(false)
         setQuery('')
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setHighlightIndex((i) => Math.min(i + 1, commands.length - 1))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setHighlightIndex((i) => Math.max(i - 1, 0))
+      } else if (e.key === 'Enter' && commands[highlightIndex]) {
+        e.preventDefault()
+        commands[highlightIndex].execute()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open])
+  }, [open, commands, highlightIndex])
 
   if (!open) return null
 
@@ -93,15 +110,18 @@ export function CommandPalette() {
         </div>
         {commands.length > 0 ? (
           <ul className="max-h-80 overflow-y-auto py-1">
-            {commands.map((cmd) => (
+            {commands.map((cmd, idx) => (
               <li key={cmd.id}>
                 <button
                   type="button"
                   onClick={cmd.execute}
-                  className="flex w-full flex-col px-4 py-2 text-left transition-colors hover:bg-hover"
+                  onMouseEnter={() => setHighlightIndex(idx)}
+                  className={`flex w-full flex-col px-4 py-2 text-left transition-colors ${
+                    idx === highlightIndex ? 'bg-accent/10 text-accent' : 'hover:bg-hover'
+                  }`}
                 >
-                  <span className="text-sm font-medium text-text-primary">{cmd.label}</span>
-                  <span className="text-xs text-text-muted">{cmd.path}</span>
+                  <span className={`text-sm font-medium ${idx === highlightIndex ? 'text-accent' : 'text-text-primary'}`}>{cmd.label}</span>
+                  <span className={`text-xs ${idx === highlightIndex ? 'text-accent/70' : 'text-text-muted'}`}>{cmd.path}</span>
                 </button>
               </li>
             ))}
