@@ -1,8 +1,28 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { fetchMenus, flattenMenuItems, type MenusData } from '../lib/menu-service'
+
+/** Fuzzy match: returns a score (higher = better) or -1 if no match. */
+export function fuzzyMatch(text: string, query: string): number {
+  const t = text.toLowerCase()
+  const q = query.toLowerCase()
+  // Exact substring gets highest score
+  const idx = t.indexOf(q)
+  if (idx !== -1) return 1000 - idx
+  // Fuzzy: each char must appear in order
+  let ti = 0
+  let score = 0
+  for (let qi = 0; qi < q.length; qi++) {
+    const pos = t.indexOf(q[qi], ti)
+    if (pos === -1) return -1
+    // Consecutive chars bonus
+    score += pos === ti ? 10 : 1
+    ti = pos + 1
+  }
+  return score
+}
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
@@ -36,12 +56,17 @@ export function CommandPalette() {
   const commands = useMemo(() => {
     if (!menus || !query.trim()) return []
     const all = flattenMenuItems(menus, 'root')
-    const q = query.toLowerCase()
+    const q = query.trim()
     return all
-      .filter(({ menu, path }) => {
-        const fullPath = path.join(' / ').toLowerCase()
-        return fullPath.includes(q) || menu.name.toLowerCase().includes(q)
+      .map(({ menu, path }) => {
+        const fullPath = path.join(' / ')
+        const nameScore = fuzzyMatch(menu.name, q)
+        const pathScore = fuzzyMatch(fullPath, q)
+        const best = Math.max(nameScore, pathScore)
+        return { menu, path, score: best }
       })
+      .filter((r) => r.score > 0)
+      .sort((a, b) => b.score - a.score)
       .slice(0, 10)
       .map(({ menu, path }) => ({
         id: `menu-${menu.id}`,

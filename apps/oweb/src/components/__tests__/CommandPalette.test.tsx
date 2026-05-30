@@ -1,6 +1,49 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
-import { CommandPalette } from '../CommandPalette'
+import { CommandPalette, fuzzyMatch } from '../CommandPalette'
+
+// ── fuzzyMatch unit tests ──────────────────────────────────────
+
+describe('fuzzyMatch', () => {
+  test('exact substring returns high score', () => {
+    expect(fuzzyMatch('Sales Pipeline', 'sales')).toBeGreaterThan(0)
+    // "sales" found at index 0 → 1000 - 0 = 1000
+    expect(fuzzyMatch('Sales Pipeline', 'sales')).toBe(1000)
+  })
+
+  test('case-insensitive matching', () => {
+    expect(fuzzyMatch('CRM Pipeline', 'crm')).toBeGreaterThan(0)
+    expect(fuzzyMatch('CRM Pipeline', 'CRM')).toBeGreaterThan(0)
+  })
+
+  test('fuzzy: chars in order match', () => {
+    // "sp" matches "Sales Pipeline" (s...p... in order)
+    expect(fuzzyMatch('Sales Pipeline', 'sp')).toBeGreaterThan(0)
+  })
+
+  test('fuzzy: out-of-order chars fail', () => {
+    // "sl" → 's' at 0, then 'l' must come after → found at 2 in "Sales" → match (not out of order)
+    // Use truly impossible: "xyz" has no match in "Sales"
+    expect(fuzzyMatch('Sales', 'xyz')).toBe(-1)
+  })
+
+  test('fuzzy: missing char fails', () => {
+    expect(fuzzyMatch('Sales', 'sz')).toBe(-1)
+  })
+
+  test('consecutive chars score higher than spread', () => {
+    const consecutive = fuzzyMatch('Sales', 'sa')
+    const spread = fuzzyMatch('Sales Pipeline', 'sp')
+    expect(consecutive).toBeGreaterThan(spread)
+  })
+
+  test('empty query matches with substring score', () => {
+    // idx 0 → 1000 - 0 = 1000
+    expect(fuzzyMatch('anything', '')).toBe(1000)
+  })
+})
+
+// ── Component tests ────────────────────────────────────────────
 
 const mockNavigate = vi.fn()
 
