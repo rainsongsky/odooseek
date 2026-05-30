@@ -1,3 +1,5 @@
+import { ThemeToggle } from '../components/ThemeToggle'
+
 function SettingsPage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8">
@@ -5,6 +7,11 @@ function SettingsPage() {
         <h2 className="mb-8 text-center text-2xl font-semibold text-text-primary">Settings</h2>
 
         <div className="space-y-4">
+          <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
+            <h3 className="mb-3 text-sm font-semibold text-text-primary">Appearance</h3>
+            <ThemeToggle />
+          </div>
+
           <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
             <h3 className="mb-3 text-sm font-semibold text-text-primary">Odoo Connection</h3>
             <dl className="space-y-2 text-xs">

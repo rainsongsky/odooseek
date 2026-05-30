@@ -1,17 +1,82 @@
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
-import { useHomeMenu } from '../hooks/useHomeMenu'
+import { useMemo, useState } from 'react'
+import { Search } from '@/lib/lucide-icons'
+import { fetchMenus, getApps, type MenusData, type OdooMenuEntry } from '../lib/menu-service'
 
 function MenuPage() {
   const navigate = useNavigate()
-  const { open } = useHomeMenu()
+  const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    open()
-    navigate({ to: '/' })
-  }, [open, navigate])
+  const { data: menus } = useQuery<MenusData>({
+    queryKey: ['odoo', 'menus'],
+    queryFn: fetchMenus,
+    staleTime: 5 * 60_000,
+  })
 
-  return null
+  const apps = useMemo(() => {
+    if (!menus) return []
+    const allApps = getApps(menus)
+    if (!searchQuery.trim()) return allApps
+    const q = searchQuery.toLowerCase()
+    return allApps.filter((app) => app.name.toLowerCase().includes(q))
+  }, [menus, searchQuery])
+
+  const handleAppClick = (app: OdooMenuEntry) => {
+    if (app.actionID) {
+      navigate({ to: '/web', search: { action: app.actionID } })
+    }
+  }
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="px-8 py-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search apps..."
+            className="w-full rounded-lg border border-border-default bg-surface pl-9 pr-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-8 pt-0">
+        {apps.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-text-muted">
+            {searchQuery ? 'No matching apps' : 'No applications available'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+            {apps.map((app) => (
+              <div
+                key={String(app.id)}
+                onClick={() => handleAppClick(app)}
+                className="group flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 transition-all hover:border-border-default hover:bg-surface"
+              >
+                {app.webIconData ? (
+                  <img
+                    src={app.webIconData}
+                    alt={app.name}
+                    className="h-12 w-12 rounded-lg object-contain"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                    <span className="text-xl font-semibold">{app.name[0]}</span>
+                  </div>
+                )}
+                <span className="text-center text-sm font-medium leading-tight text-text-primary">
+                  {app.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export const Route = createFileRoute('/menu')({

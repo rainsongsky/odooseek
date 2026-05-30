@@ -45,6 +45,10 @@ docker_*
 
 # OS
 .DS_Store
+
+# Local docs
+docs/
+
 # Test artifacts
 docker/headers.txt
 docker/response.json

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
-import { Home, LogIn, LogOut, Settings } from '@/lib/lucide-icons'
+import { Home, LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
 import { useHomeMenu } from '../hooks/useHomeMenu'
 import { useAuth } from '../lib/auth'
 import {
@@ -12,7 +12,6 @@ import {
   type MenusData,
   type MenuTreeNode,
 } from '../lib/menu-service'
-import { ThemeToggle } from './ThemeToggle'
 
 export function Navbar() {
   const t = useTranslations()
@@ -37,7 +36,7 @@ export function Navbar() {
   const currentApp = currentAppId ? menus?.[String(currentAppId)] : null
   const sections = currentApp && menus && currentAppId ? getAppSections(menus, currentAppId) : []
 
-  // Detect current app from URL
+  // Detect current app from URL, reset on non-/web pages
   useEffect(() => {
     if (!menus) return
     if (currentPath === '/web') {
@@ -55,6 +54,8 @@ export function Navbar() {
           }
         }
       }
+    } else {
+      setCurrentAppId(null)
     }
   }, [currentPath, currentSearch, menus, apps])
 
@@ -125,14 +126,14 @@ export function Navbar() {
           <nav className="flex items-center gap-1">
             <button
               type="button"
-              onClick={toggleHomeMenu}
+              onClick={() => navigate({ to: '/menu' })}
               className={`flex items-center rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
                 currentPath === '/' || currentPath === '/menu'
                   ? 'bg-accent/15 text-accent'
                   : 'text-text-secondary hover:bg-hover hover:text-text-primary'
               }`}
             >
-              <Home className="h-4 w-4" />
+              <Menu className="h-4 w-4" />
             </button>
 
             {sections.length > 0 && (
@@ -179,6 +180,16 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-1">
+        <Link
+          to="/settings"
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            settingsActive
+              ? 'bg-accent/15 text-accent'
+              : 'text-text-secondary hover:bg-hover hover:text-text-primary'
+          }`}
+        >
+          <Settings className="h-4 w-4" />
+        </Link>
         {isAuthenticated ? (
           <>
             <span className="px-2.5 py-1.5 text-xs text-text-secondary">
@@ -194,7 +205,6 @@ export function Navbar() {
               }}
             >
               <LogOut className="h-4 w-4" />
-              <span>{t('nav.logout')}</span>
             </Link>
           </>
         ) : (
@@ -206,18 +216,6 @@ export function Navbar() {
             <span>{t('nav.connect')}</span>
           </Link>
         )}
-        <Link
-          to="/settings"
-          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            settingsActive
-              ? 'bg-accent/15 text-accent'
-              : 'text-text-secondary hover:bg-hover hover:text-text-primary'
-          }`}
-        >
-          <Settings className="h-4 w-4" />
-          <span>{t('nav.settings')}</span>
-        </Link>
-        <ThemeToggle />
       </div>
     </header>
   )
