@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { callKw, fieldsGet } from '../../lib/api'
-import { parseDomainString } from '../../lib/expression-evaluator'
-import type { O2mCommand, OdooFieldMeta, ViewField } from '../../lib/odoo-types'
+import { evalCondition, parseDomainString } from '../../lib/expression-evaluator'
+import type { FieldElement, O2mCommand, OdooFieldMeta, ViewField } from '../../lib/odoo-types'
 import type { FieldWidgetProps } from './index'
+import { getFieldWidget } from './index'
 
 function normalizeM2mValue(value: unknown): [number, string][] {
   if (!value) return []
@@ -34,7 +35,7 @@ function normalizeO2mValue(value: unknown): number[] {
   return []
 }
 
-function renderO2mCell(value: unknown, meta?: OdooFieldMeta): string {
+function renderO2mCellText(value: unknown, meta?: OdooFieldMeta): string {
   if (value === null || value === undefined || value === false) return ''
   if (typeof value === 'boolean') return value ? '✓' : ''
   if (typeof value === 'string') return value
@@ -46,6 +47,85 @@ function renderO2mCell(value: unknown, meta?: OdooFieldMeta): string {
     return value[1] ? String(value[1]) : `#${value[0]}`
   }
   return JSON.stringify(value)
+}
+
+/** Render a cell using the appropriate widget for rich display. */
+function O2mCellDisplay({
+  col,
+  value,
+  meta,
+  record,
+  relation,
+}: {
+  col: ViewField
+  value: unknown
+  meta?: OdooFieldMeta
+  record: Record<string, unknown>
+  relation: string
+}) {
+  const fieldType = meta?.type ?? 'char'
+  const Widget = getFieldWidget(col as FieldElement, fieldType)
+
+  // Simple text fallback for basic types that don't need interactive widgets
+  if (
+    !col.widget &&
+    ['char', 'text', 'integer', 'float', 'monetary', 'date', 'datetime', 'html'].includes(fieldType)
+  ) {
+    return <span className="text-sm text-text-primary">{renderO2mCellText(value, meta)}</span>
+  }
+
+  return (
+    <Widget
+      field={col as FieldElement}
+      value={value}
+      onChange={() => {}}
+      readOnly
+      meta={{
+        selection: meta?.selection as [string, string][] | undefined,
+        type: meta?.type,
+        relation: meta?.relation,
+      }}
+      record={record}
+      model={relation}
+      recordId={record.id as number}
+    />
+  )
+}
+
+/** Editable inline cell for o2m rows. */
+function O2mCellEdit({
+  col,
+  value,
+  onChange,
+  meta,
+  record,
+  relation,
+}: {
+  col: ViewField
+  value: unknown
+  onChange: (val: unknown) => void
+  meta?: OdooFieldMeta
+  record: Record<string, unknown>
+  relation: string
+}) {
+  const fieldType = meta?.type ?? 'char'
+  const Widget = getFieldWidget(col as FieldElement, fieldType)
+
+  return (
+    <Widget
+      field={col as FieldElement}
+      value={value}
+      onChange={onChange}
+      readOnly={false}
+      meta={{
+        selection: meta?.selection as [string, string][] | undefined,
+        type: meta?.type,
+        relation: meta?.relation,
+      }}
+      record={record}
+      model={relation}
+    />
+  )
 }
 
 export function Many2OneWidget({
@@ -312,6 +392,8 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
   const relation = meta?.relation
   const subViewList = field.subViews?.list
   const columnDefs = subViewList?.columns
+  const editable = !readOnly && subViewList?.editable
+  const decorations = subViewList?.decorations ?? {}
 
   // Auto-discover fields when no sub-view is defined
   const { data: autoFields } = useQuery({
@@ -348,6 +430,10 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
   // Local ORM commands for pending changes
   const [pendingCommands, setPendingCommands] = useState<O2mCommand[]>([])
 
+  // Inline editing state: which record row is being edited
+  const [editingId, setEditingId] = useState<unknown>(null)
+  const [editValues, setEditValues] = useState<Record<string, unknown>>({})
+
   const emitChange = useCallback(
     (commands: O2mCommand[]) => {
       setPendingCommands(commands)
@@ -371,9 +457,72 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
   const handleAddRow = useCallback(async () => {
     if (!relation) return
     const defaults = await callKw<Record<string, unknown>>(relation, 'default_get', [fieldNames])
-    const cmds = [...pendingCommands, [0, 0, defaults] as O2mCommand]
-    emitChange(cmds)
-  }, [relation, fieldNames, pendingCommands, emitChange])
+    if (editable) {
+      // Start inline editing the new row immediately
+      const tempId = `new_${Date.now()}`
+      setEditValues(defaults)
+      setEditingId(tempId)
+      const cmds = [...pendingCommands, [0, 0, defaults] as O2mCommand]
+      emitChange(cmds)
+    } else {
+      const cmds = [...pendingCommands, [0, 0, defaults] as O2mCommand]
+      emitChange(cmds)
+    }
+  }, [relation, fieldNames, pendingCommands, emitChange, editable])
+
+  const handleCellChange = useCallback((_recordId: unknown, colName: string, val: unknown) => {
+    setEditValues((prev) => ({ ...prev, [colName]: val }))
+  }, [])
+
+  const handleSaveEdit = useCallback(
+    (recordId: unknown) => {
+      // Find or create the right ORM command
+      const isNew = typeof recordId === 'string'
+      if (isNew) {
+        // Update the last [0, 0, {...}] command with current editValues
+        const cmds = pendingCommands.map((cmd) => {
+          if (cmd[0] === 0 && cmd[2]) return [0, 0, { ...cmd[2], ...editValues }] as O2mCommand
+          return cmd
+        })
+        emitChange(cmds)
+      } else {
+        // Add an update command for existing record
+        const hasUpdate = pendingCommands.some((c) => c[0] === 1 && c[1] === recordId)
+        let cmds: O2mCommand[]
+        if (hasUpdate) {
+          cmds = pendingCommands.map((cmd) => {
+            if (cmd[0] === 1 && cmd[1] === recordId)
+              return [1, recordId, { ...(cmd[2] ?? {}), ...editValues }] as O2mCommand
+            return cmd
+          })
+        } else {
+          cmds = [...pendingCommands, [1, recordId, editValues] as O2mCommand]
+        }
+        emitChange(cmds)
+      }
+      setEditingId(null)
+      setEditValues({})
+    },
+    [pendingCommands, editValues, emitChange],
+  )
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingId(null)
+    setEditValues({})
+  }, [])
+
+  const handleStartEdit = useCallback(
+    (record: Record<string, unknown>) => {
+      const rid = record.id
+      setEditingId(rid)
+      const initialValues: Record<string, unknown> = {}
+      for (const col of columns) {
+        initialValues[col.name] = record[col.name]
+      }
+      setEditValues(initialValues)
+    },
+    [columns],
+  )
 
   // Merge server records with pending commands
   const displayRecords = useMemo(() => {
@@ -395,6 +544,19 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
     return base
   }, [records, pendingCommands])
 
+  // Compute decoration class for a row
+  const getRowClass = useCallback(
+    (record: Record<string, unknown>) => {
+      if (!decorations || Object.keys(decorations).length === 0) return ''
+      let cls = ''
+      for (const [expr, className] of Object.entries(decorations)) {
+        if (evalCondition(expr, record)) cls += ` ${className}`
+      }
+      return cls.trim()
+    },
+    [decorations],
+  )
+
   if (!relation) return <span className="text-sm text-text-muted">—</span>
 
   return (
@@ -405,11 +567,11 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
         </div>
       )}
 
-      {!isLoading && displayRecords.length === 0 && (
+      {!isLoading && displayRecords.length === 0 && !editable && (
         <div className="px-4 py-6 text-center text-sm text-text-muted">No records</div>
       )}
 
-      {!isLoading && displayRecords.length > 0 && columns.length > 0 && (
+      {(!isLoading && displayRecords.length > 0 && columns.length > 0) || editable ? (
         <table className="w-full">
           <thead>
             <tr className="border-b border-border-subtle bg-surface/50">
@@ -424,39 +586,94 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
                   </th>
                 )
               })}
-              {!readOnly && subViewList?.delete !== false && <th className="w-8 px-1 py-1.5" />}
+              {(!readOnly || editable) && subViewList?.delete !== false && (
+                <th className="w-8 px-1 py-1.5" />
+              )}
             </tr>
           </thead>
           <tbody>
-            {displayRecords.map((record) => (
-              <tr key={String(record.id)} className="border-b border-border-subtle last:border-b-0">
-                {columns.map((col, i) => (
-                  <td
-                    key={`o2m-d-${col.name}-${i}`}
-                    className="whitespace-nowrap px-3 py-1.5 text-sm text-text-primary"
-                  >
-                    {renderO2mCell(record[col.name], autoFields?.[col.name])}
-                  </td>
-                ))}
-                {!readOnly && subViewList?.delete !== false && (
-                  <td className="px-1 py-1.5 text-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const rid = record.id as number
-                        if (typeof rid === 'number') handleDelete(rid)
-                      }}
-                      className="text-xs text-text-muted hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
+            {displayRecords.map((record) => {
+              const rowId = record.id
+              const isEditing = editingId === rowId
+              const decoClass = getRowClass(record)
+
+              return (
+                <tr
+                  key={String(rowId)}
+                  className={`border-b border-border-subtle last:border-b-0 ${isEditing ? 'bg-accent/5' : ''} ${decoClass}`}
+                  onDoubleClick={() => editable && !isEditing && handleStartEdit(record)}
+                >
+                  {columns.map((col, i) => {
+                    const colMeta = autoFields?.[col.name]
+                    const cellValue = isEditing ? editValues[col.name] : record[col.name]
+
+                    return (
+                      <td
+                        key={`o2m-d-${col.name}-${i}`}
+                        className="whitespace-nowrap px-1 py-1 text-sm text-text-primary"
+                      >
+                        {isEditing ? (
+                          <O2mCellEdit
+                            col={col}
+                            value={cellValue}
+                            onChange={(val) => handleCellChange(rowId, col.name, val)}
+                            meta={colMeta}
+                            record={isEditing ? editValues : record}
+                            relation={relation}
+                          />
+                        ) : (
+                          <O2mCellDisplay
+                            col={col}
+                            value={cellValue}
+                            meta={colMeta}
+                            record={record}
+                            relation={relation}
+                          />
+                        )}
+                      </td>
+                    )
+                  })}
+                  {(!readOnly || editable) && subViewList?.delete !== false && (
+                    <td className="px-1 py-1.5 text-center">
+                      {isEditing ? (
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(rowId)}
+                            className="text-xs text-accent hover:text-accent/80"
+                            title="Save"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="text-xs text-text-muted hover:text-red-500"
+                            title="Cancel"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const rid = rowId as number
+                            if (typeof rid === 'number') handleDelete(rid)
+                          }}
+                          className="text-xs text-text-muted hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
-      )}
+      ) : null}
 
       {!readOnly && subViewList?.create !== false && (
         <div className="border-t border-border-subtle px-3 py-1.5">
