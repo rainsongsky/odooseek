@@ -138,7 +138,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         onRecordCreated?.(result)
       } else {
         baselineRef.current = { ...formValues }
-        queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
+        const invalidateKey = newRecordId
+          ? ['odoo', 'read', model, newRecordId]
+          : ['odoo', 'read', model, recordId]
+        queryClient.invalidateQueries({ queryKey: invalidateKey })
         setEditMode(false)
       }
       // Clear draft on successful save
