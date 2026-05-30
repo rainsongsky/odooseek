@@ -1641,10 +1641,10 @@ export function OdooListRenderer({
                       const colAggs = Object.entries(aggregates)
                         .filter(([k]) => k.startsWith(`${col.name}_`))
                         .map(([, v]) => v)
-                      if (!colAggs.length) return <td key={`f-${col.name}`} className="px-4 py-2" />
+                      if (!colAggs.length) return <td key={`f-${ci}`} className="px-4 py-2" />
                       return (
                         <td
-                          key={`f-${col.name}`}
+                          key={`f-${ci}`}
                           className="whitespace-nowrap px-4 py-2 text-sm text-text-primary"
                         >
                           {colAggs.map((a, i) => (
