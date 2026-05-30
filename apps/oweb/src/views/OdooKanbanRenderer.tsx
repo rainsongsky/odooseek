@@ -10,7 +10,7 @@ import type {
   ViewField,
 } from '../lib/odoo-types'
 import { parseKanbanFields, parseKanbanXml } from '../lib/xml-parser'
-import { getFieldWidget } from './field-widgets'
+import { getFieldWidget } from './widgets'
 
 interface KanbanRendererProps {
   model: string

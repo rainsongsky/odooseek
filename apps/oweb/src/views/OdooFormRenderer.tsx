@@ -23,7 +23,7 @@ import type {
   StatButtonElement,
 } from '../lib/odoo-types'
 import { parseFormXml } from '../lib/xml-parser'
-import { getFieldWidget } from './field-widgets'
+import { getFieldWidget } from './widgets'
 
 export interface OdooFormRendererRef {
   save: () => Promise<void>

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { FieldElement } from '../../lib/odoo-types'
-import { getFieldWidget, PriorityWidget, TYPE_WIDGETS } from '../field-widgets'
+import { getFieldWidget, PriorityWidget, TYPE_WIDGETS } from '../widgets'
 
 const mockCallKw = vi.fn()
 vi.mock('../../lib/api', () => ({

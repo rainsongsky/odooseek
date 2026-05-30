@@ -22,7 +22,7 @@ import type {
 } from '../lib/odoo-types'
 import { getColumnPrefs, setColumnPrefs } from '../lib/view-cache'
 import { parseListXml } from '../lib/xml-parser'
-import { getFieldWidget } from './field-widgets'
+import { getFieldWidget } from './widgets'
 
 interface ListRendererProps {
   model: string
