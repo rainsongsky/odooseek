@@ -165,6 +165,14 @@ export function OdooViewLoader({
     })
   }, [_recordId, unarchive, toast])
 
+  const handleSearch = useCallback((newDomain: unknown[]) => {
+    setDomain(newDomain)
+  }, [])
+
+  const handleGroupByChange = useCallback((groupBys: string[]) => {
+    setGroupBy(groupBys)
+  }, [])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -194,14 +202,6 @@ export function OdooViewLoader({
       </div>
     )
   }
-
-  const handleSearch = useCallback((newDomain: unknown[]) => {
-    setDomain(newDomain)
-  }, [])
-
-  const handleGroupByChange = useCallback((groupBys: string[]) => {
-    setGroupBy(groupBys)
-  }, [])
 
   const arch = activeView?.arch ?? ''
   const viewTitle = arch.match(/<[^ ]+\s+[^>]*string\s*=\s*"([^"]+)"/i)?.[1] || undefined
