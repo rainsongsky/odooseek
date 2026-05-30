@@ -84,12 +84,29 @@ export function Navbar() {
   }, [])
 
   const handleSectionClick = (section: MenuTreeNode) => {
-    if (section.children.length > 0 && section.actionID === false) {
+    // If section has its own action, navigate directly
+    if (section.actionID) {
+      navigate({ to: '/web', search: { action: section.actionID } })
+      setOpenSubmenu(null)
+      return
+    }
+    // If section has children, toggle submenu
+    if (section.children.length > 0) {
       setOpenSubmenu(openSubmenu === section.id ? null : section.id)
       return
     }
-    if (section.actionID) {
-      navigate({ to: '/web', search: { action: section.actionID } })
+    // Leaf with no action — try navigating to the first child with an action
+    const findFirstAction = (node: MenuTreeNode): number | null => {
+      if (node.actionID) return node.actionID
+      for (const child of node.children) {
+        const found = findFirstAction(child)
+        if (found) return found
+      }
+      return null
+    }
+    const actionId = findFirstAction(section)
+    if (actionId) {
+      navigate({ to: '/web', search: { action: actionId } })
     }
   }
 
