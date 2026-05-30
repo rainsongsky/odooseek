@@ -11,17 +11,17 @@ export interface FieldWidgetProps {
   meta?: { selection?: [string, string][]; type?: string; relation?: string }
 }
 
-// Odoo 19 style: edit mode = bottom border only, read-only = no border
+// Odoo 19 style: edit mode = bottom border only, read-only = plain text
 const FIELD_INPUT_CLASS =
-  'w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none read-only:border-b-0'
+  'w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none'
 
 function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly) return <span className="text-sm text-text-primary">{(value as string) ?? ''}</span>
   return (
     <input
       type="text"
       value={(value as string) ?? ''}
       onChange={(e) => onChange(e.target.value)}
-      readOnly={readOnly}
       placeholder={field.placeholder}
       className={FIELD_INPUT_CLASS}
     />
@@ -29,11 +29,11 @@ function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
 }
 
 function TextWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly) return <span className="text-sm text-text-primary whitespace-pre-wrap">{(value as string) ?? ''}</span>
   return (
     <textarea
       value={(value as string) ?? ''}
       onChange={(e) => onChange(e.target.value)}
-      readOnly={readOnly}
       placeholder={field.placeholder}
       rows={3}
       className={FIELD_INPUT_CLASS}
@@ -42,25 +42,25 @@ function TextWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
 }
 
 function IntegerWidget({ field: _field, value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly) return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
   return (
     <input
       type="number"
       value={value != null ? Number(value) : ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-      readOnly={readOnly}
       className={FIELD_INPUT_CLASS}
     />
   )
 }
 
 function FloatWidget({ field: _field, value, onChange, readOnly }: FieldWidgetProps) {
+  if (readOnly) return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
   return (
     <input
       type="number"
       step="0.01"
       value={value != null ? Number(value) : ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-      readOnly={readOnly}
       className={FIELD_INPUT_CLASS}
     />
   )

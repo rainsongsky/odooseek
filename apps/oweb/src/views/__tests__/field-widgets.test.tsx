@@ -429,9 +429,9 @@ describe('field-widgets', () => {
     expect(screen.getByDisplayValue('user@example.com')).toBeTruthy()
   })
 
-  test('EmailWidget empty value in readonly renders input fallback', () => {
+  test('EmailWidget empty value in readonly renders span', () => {
     const Widget = getFieldWidget({ ...baseField, widget: 'email' }, 'char')
-    render(
+    const { container } = render(
       createElement(Widget, {
         field: baseField,
         value: '',
@@ -439,10 +439,10 @@ describe('field-widgets', () => {
         readOnly: true,
       }),
     )
-    // Empty value should fall through to CharWidget input
-    const input = screen.getByDisplayValue('')
-    expect(input).toBeTruthy()
-    expect(input.tagName).toBe('INPUT')
+    // Empty value in readonly renders a span
+    const span = container.querySelector('span')
+    expect(span).toBeTruthy()
+    expect(span?.className).toContain('text-text-primary')
   })
 
   // ── PhoneWidget ────────────────────────────────────────────────────
