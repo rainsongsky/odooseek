@@ -68,7 +68,9 @@ export function getMenuAsTree(menus: MenusData, menuId: number | 'root'): MenuTr
   return {
     id: entry.id as number,
     name: entry.name,
-    children: [...new Set(entry.children)].map((cid) => getMenuAsTree(menus, cid)),
+    children: [...new Set(entry.children)]
+      .map((cid) => getMenuAsTree(menus, cid))
+      .filter((child) => child.id !== 0),
     appID: entry.appID,
     xmlid: entry.xmlid,
     actionID: entry.actionID,
