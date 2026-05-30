@@ -29,7 +29,9 @@ const VIEWS: {
 ]
 
 export function OdooViewSwitcher({ currentView, onSwitch, availableViews }: ViewSwitcherProps) {
-  const visible = availableViews ? VIEWS.filter((v) => availableViews.includes(v.type)) : VIEWS
+  const visible = (
+    availableViews ? VIEWS.filter((v) => availableViews.includes(v.type)) : VIEWS
+  ).filter((v) => v.type !== 'form')
   return (
     <div className="flex items-center justify-end gap-1">
       {visible.map((v) => {

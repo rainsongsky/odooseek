@@ -546,7 +546,7 @@ function One2ManyWidget({ field, value, onChange, readOnly, meta }: FieldWidgetP
     queryKey: ['odoo', 'fields_get', relation],
     queryFn: () =>
       fieldsGet<Record<string, OdooFieldMeta>>(
-        relation!,
+        relation as string,
         [],
         ['string', 'type', 'relation', 'selection'],
       ),
@@ -568,7 +568,8 @@ function One2ManyWidget({ field, value, onChange, readOnly, meta }: FieldWidgetP
   const ids = normalizeO2mValue(value)
   const { data: records, isLoading } = useQuery({
     queryKey: ['odoo', 'read', relation, ids, fieldNames],
-    queryFn: () => callKw<Array<Record<string, unknown>>>(relation!, 'read', [ids, fieldNames]),
+    queryFn: () =>
+      callKw<Array<Record<string, unknown>>>(relation as string, 'read', [ids, fieldNames]),
     enabled: !!relation && ids.length > 0 && fieldNames.length > 0,
   })
 
@@ -739,7 +740,8 @@ function Many2OneAvatarWidget({
 
   const { data: avatarData } = useQuery({
     queryKey: ['odoo', 'avatar', relation, id],
-    queryFn: () => callKw<Array<{ avatar_128: string }>>(relation!, 'read', [[id], ['avatar_128']]),
+    queryFn: () =>
+      callKw<Array<{ avatar_128: string }>>(relation as string, 'read', [[id], ['avatar_128']]),
     enabled: readOnly && !!relation && !!id,
     staleTime: 60_000,
   })

@@ -20,7 +20,7 @@ describe('OdooViewSwitcher', () => {
     expect(screen.getByText('Pivot')).toBeInTheDocument()
     expect(screen.getByText('Graph')).toBeInTheDocument()
     expect(screen.getByText('Kanban')).toBeInTheDocument()
-    expect(screen.getByText('Form')).toBeInTheDocument()
+    expect(screen.queryByText('Form')).not.toBeInTheDocument()
   })
 
   test('highlights current view', () => {
