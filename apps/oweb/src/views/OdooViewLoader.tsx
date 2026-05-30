@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, useCallback, useEffect, useMemo, useState, Suspense } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
@@ -8,12 +8,26 @@ import type { OdooFieldMeta, ViewToolbar } from '../lib/odoo-types'
 import { generateReport } from '../lib/report'
 import { cacheKey, getCachedViews, setCachedViews } from '../lib/view-cache'
 import { parseSearchXml } from '../lib/xml-parser'
-import { OdooCalendarRenderer } from './OdooCalendarRenderer'
-import { OdooFormRenderer, type OdooFormRendererRef } from './OdooFormRenderer'
-import { OdooGraphRenderer } from './OdooGraphRenderer'
-import { OdooKanbanRenderer } from './OdooKanbanRenderer'
 import { OdooListRenderer } from './OdooListRenderer'
-import { OdooPivotRenderer } from './OdooPivotRenderer'
+
+// Lazy-loaded views — only fetched when the user switches to that view type
+const OdooFormRenderer = lazy(() =>
+  import('./OdooFormRenderer').then((m) => ({ default: m.OdooFormRenderer })),
+)
+const OdooKanbanRenderer = lazy(() =>
+  import('./OdooKanbanRenderer').then((m) => ({ default: m.OdooKanbanRenderer })),
+)
+const OdooPivotRenderer = lazy(() =>
+  import('./OdooPivotRenderer').then((m) => ({ default: m.OdooPivotRenderer })),
+)
+const OdooGraphRenderer = lazy(() =>
+  import('./OdooGraphRenderer').then((m) => ({ default: m.OdooGraphRenderer })),
+)
+const OdooCalendarRenderer = lazy(() =>
+  import('./OdooCalendarRenderer').then((m) => ({ default: m.OdooCalendarRenderer })),
+)
+
+type OdooFormRendererRef = React.ComponentRef<typeof OdooFormRenderer>
 
 type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
 
@@ -234,41 +248,59 @@ export function OdooViewLoader({
         />
       )}
       {viewType === 'form' && (
-        <OdooFormRenderer
-          ref={formRef}
-          model={model}
-          arch={activeView.arch}
-          fields={fields}
-          recordId={_recordId}
-          onRecordCreated={onRecordCreated}
-          onDirtyChange={onDirtyChange}
-        />
+        <Suspense fallback={<ViewSkeleton />}>
+          <OdooFormRenderer
+            ref={formRef}
+            model={model}
+            arch={activeView.arch}
+            fields={fields}
+            recordId={_recordId}
+            onRecordCreated={onRecordCreated}
+            onDirtyChange={onDirtyChange}
+          />
+        </Suspense>
       )}
       {viewType === 'kanban' && (
-        <OdooKanbanRenderer
-          model={model}
-          arch={activeView.arch}
-          fields={fields}
-          domain={domain}
-          groupBy={groupBy}
-          onRecordClick={onRowClick}
-        />
+        <Suspense fallback={<ViewSkeleton />}>
+          <OdooKanbanRenderer
+            model={model}
+            arch={activeView.arch}
+            fields={fields}
+            domain={domain}
+            groupBy={groupBy}
+            onRecordClick={onRowClick}
+          />
+        </Suspense>
       )}
       {viewType === 'pivot' && (
-        <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+        <Suspense fallback={<ViewSkeleton />}>
+          <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+        </Suspense>
       )}
       {viewType === 'graph' && (
-        <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+        <Suspense fallback={<ViewSkeleton />}>
+          <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+        </Suspense>
       )}
       {viewType === 'calendar' && (
-        <OdooCalendarRenderer
-          model={model}
-          arch={activeView.arch}
-          fields={fields}
-          domain={domain}
-          onRecordClick={onRowClick}
-        />
+        <Suspense fallback={<ViewSkeleton />}>
+          <OdooCalendarRenderer
+            model={model}
+            arch={activeView.arch}
+            fields={fields}
+            domain={domain}
+            onRecordClick={onRowClick}
+          />
+        </Suspense>
       )}
+    </div>
+  )
+}
+
+function ViewSkeleton() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
     </div>
   )
 }
