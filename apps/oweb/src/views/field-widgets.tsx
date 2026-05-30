@@ -29,7 +29,12 @@ function CharWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
 }
 
 function TextWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
-  if (readOnly) return <span className="text-sm text-text-primary whitespace-pre-wrap">{(value as string) ?? ''}</span>
+  if (readOnly)
+    return (
+      <span className="text-sm text-text-primary whitespace-pre-wrap">
+        {(value as string) ?? ''}
+      </span>
+    )
   return (
     <textarea
       value={(value as string) ?? ''}
@@ -42,7 +47,8 @@ function TextWidget({ field, value, onChange, readOnly }: FieldWidgetProps) {
 }
 
 function IntegerWidget({ field: _field, value, onChange, readOnly }: FieldWidgetProps) {
-  if (readOnly) return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+  if (readOnly)
+    return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
   return (
     <input
       type="number"
@@ -54,7 +60,8 @@ function IntegerWidget({ field: _field, value, onChange, readOnly }: FieldWidget
 }
 
 function FloatWidget({ field: _field, value, onChange, readOnly }: FieldWidgetProps) {
-  if (readOnly) return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+  if (readOnly)
+    return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
   return (
     <input
       type="number"
