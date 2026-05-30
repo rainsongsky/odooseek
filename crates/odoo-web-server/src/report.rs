@@ -31,6 +31,25 @@ pub async fn download_report(
     headers: HeaderMap,
     Query(params): Query<ReportParams>,
 ) -> Result<Response, AppError> {
+    // Validate report_id is positive
+    if params.report_id <= 0 {
+        return Err(AppError(OdooError::Api {
+            code: 400,
+            message: "Invalid report_id".into(),
+            data: None,
+        }));
+    }
+    // Validate ids is comma-separated integers only
+    for part in params.ids.split(',') {
+        if part.trim().parse::<i64>().is_err() {
+            return Err(AppError(OdooError::Api {
+                code: 400,
+                message: "Invalid ids: must be comma-separated integers".into(),
+                data: None,
+            }));
+        }
+    }
+
     let report_type = params.report_type.as_deref().unwrap_or("pdf");
 
     // Step 1: read the report action to obtain report_name

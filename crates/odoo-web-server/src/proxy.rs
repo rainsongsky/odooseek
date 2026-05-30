@@ -9,13 +9,21 @@ use odoo_core::error::OdooError;
 /// POST /api/odoo/{*path}
 ///
 /// Transparently forwards the JSON-RPC request to Odoo, passing
-/// Cookie/Set-Cookie headers through via reqwest's cookie_store.
+/// Cookie headers through manually (no shared cookie store).
 pub async fn proxy_odoo(
     state: AppState,
     path: &str,
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Result<Response, AppError> {
+    // Reject path traversal attempts
+    if path.contains("..") || path.contains('\0') {
+        return Err(AppError(OdooError::Api {
+            code: 400,
+            message: "Invalid path".into(),
+            data: None,
+        }));
+    }
     let odoo_url = format!("{}/{}", state.odoo_url.trim_end_matches('/'), path);
     tracing::debug!("Proxying JSON-RPC to: {odoo_url}");
 
@@ -76,6 +84,14 @@ pub async fn proxy_image(
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
     let image_path = path.0;
+    // Reject path traversal attempts
+    if image_path.contains("..") || image_path.contains('\0') {
+        return Err(AppError(OdooError::Api {
+            code: 400,
+            message: "Invalid image path".into(),
+            data: None,
+        }));
+    }
     let odoo_url = format!(
         "{}/web/image/{}",
         state.odoo_url.trim_end_matches('/'),

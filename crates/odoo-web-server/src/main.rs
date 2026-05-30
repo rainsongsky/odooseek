@@ -82,10 +82,10 @@ async fn main() -> anyhow::Result<()> {
     info!("Odoo URL: {}", config.odoo_url);
     info!("Frontend dir: {}", config.frontend_dir);
 
-    // reqwest client with cookie store for automatic session management
+    // reqwest client — no cookie_store: cookies are manually forwarded per-request
+    // to prevent session leakage between concurrent users.
     let http_client = reqwest::Client::builder()
         .user_agent(concat!("odoo-web-server/", env!("CARGO_PKG_VERSION")))
-        .cookie_store(true)
         .timeout(std::time::Duration::from_secs(30))
         .build()?;
 
@@ -120,7 +120,21 @@ async fn main() -> anyhow::Result<()> {
         .route("/ws/events", get(ws_events_handler))
         .fallback_service(ServeDir::new(&frontend_dir).append_index_html_on_directories(true))
         .layer(CompressionLayer::new())
-        .layer(CorsLayer::permissive())
+        .layer(
+            CorsLayer::new()
+                .allow_origin(tower_http::cors::Any)
+                .allow_methods([
+                    axum::http::Method::GET,
+                    axum::http::Method::POST,
+                    axum::http::Method::OPTIONS,
+                ])
+                .allow_headers([
+                    axum::http::header::CONTENT_TYPE,
+                    axum::http::header::COOKIE,
+                    axum::http::header::ACCEPT,
+                ])
+                .allow_credentials(true),
+        )
         .with_state(state);
 
     let addr = format!("{}:{}", config.host, config.port);
