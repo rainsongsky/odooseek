@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useAuth } from '../lib/auth'
@@ -6,10 +6,11 @@ import { useAuth } from '../lib/auth'
 function LoginPage() {
   const navigate = useNavigate()
   const t = useTranslations()
-  const { isAuthenticated, refetch } = useAuth()
-  const [db, setDb] = useState('')
+  const { isAuthenticated, refetch, session } = useAuth()
+  const [db, setDb] = useState(session.db ?? '')
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -20,33 +21,37 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (!db.trim()) { setError('Database name is required'); return }
+    if (!login.trim()) { setError('Username is required'); return }
+    if (!password) { setError('Password is required'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/session/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ db, login, password }),
+        body: JSON.stringify({ db: db.trim(), login: login.trim(), password }),
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.message || 'Authentication failed')
+        if (res.status === 401) throw new Error('Invalid credentials')
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.message || `Server error (${res.status})`)
       }
       const data = await res.json()
       if (!data.authenticated) {
-        throw new Error(t('login.invalidCredentials'))
+        throw new Error('Invalid username or password')
       }
       refetch()
       navigate({ to: '/dashboard' })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+        setError('Cannot connect to server. Is Odoo running?')
+      } else {
+        setError(err instanceof Error ? err.message : 'Authentication failed')
+      }
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleGuest = () => {
-    navigate({ to: '/dashboard' })
   }
 
   return (
@@ -80,6 +85,7 @@ function LoginPage() {
               value={login}
               onChange={(e) => setLogin(e.target.value)}
               placeholder="admin"
+              autoComplete="username"
               className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
             />
           </div>
@@ -90,14 +96,25 @@ function LoginPage() {
             >
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
-              className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••"
+                autoComplete="current-password"
+                className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-1 py-0.5 text-xs text-text-muted hover:text-text-primary"
+                tabIndex={-1}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -111,23 +128,13 @@ function LoginPage() {
             disabled={loading}
             className="w-full cursor-pointer rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? '...' : t('login.submit')}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleGuest}
-            className="w-full cursor-pointer rounded-lg border border-border-default px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover"
-          >
-            {t('login.guest')}
+            {loading ? 'Signing in...' : t('login.submit')}
           </button>
         </form>
       </div>
     </div>
   )
 }
-
-import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
