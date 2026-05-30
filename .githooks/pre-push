@@ -43,7 +43,7 @@ run_step "test"   cargo test --workspace -- --test-threads=1 || exit 1
 
 # ── TypeScript CI (only when oweb code changed) ──────────
 
-OWEB_CHANGED=$(git diff --name-only HEAD@{push}...HEAD -- 'apps/oweb/' 2>/dev/null | head -1)
+OWEB_CHANGED=$(git diff --name-only HEAD@{push}...HEAD -- 'apps/oweb/' 2>/dev/null | head -1 || true)
 
 if [ -n "$OWEB_CHANGED" ]; then
   if [ -d "apps/oweb" ]; then
