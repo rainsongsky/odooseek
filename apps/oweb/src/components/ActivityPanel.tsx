@@ -2,6 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { callKw, searchRead } from '../lib/api'
 
+interface ActivityType {
+  id: number
+  name: string
+  category: string
+  default_user_id: [number, string] | false
+}
+
 interface ActivityPanelProps {
   model: string
   recordId: number | undefined
@@ -48,6 +55,7 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
   const [showForm, setShowForm] = useState(false)
   const [newSummary, setNewSummary] = useState('')
   const [newDeadline, setNewDeadline] = useState(new Date().toISOString().slice(0, 10))
+  const [newActivityTypeId, setNewActivityTypeId] = useState<number | null>(null)
   const [feedbackId, setFeedbackId] = useState<number | null>(null)
   const [feedbackText, setFeedbackText] = useState('')
 
@@ -69,6 +77,20 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
       ),
     enabled,
     staleTime: 15_000,
+  })
+
+  const { data: activityTypes } = useQuery({
+    queryKey: ['odoo', 'activity-types'],
+    queryFn: () =>
+      searchRead<ActivityType[]>(
+        'mail.activity.type',
+        [['active', '=', true]],
+        ['id', 'name', 'category', 'default_user_id'],
+        0,
+        50,
+        'name asc',
+      ),
+    staleTime: 60_000,
   })
 
   const invalidateActivities = () => {
@@ -105,12 +127,14 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
   const groups = groupByState(activities ?? [])
 
   const handleCreate = () => {
-    createMutation.mutate({
+    const values: Record<string, unknown> = {
       res_model: model,
       res_id: recordId as number,
       summary: newSummary,
       date_deadline: newDeadline,
-    })
+    }
+    if (newActivityTypeId) values.activity_type_id = newActivityTypeId
+    createMutation.mutate(values)
   }
 
   return (
@@ -130,6 +154,25 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
 
       {showForm && (
         <div className="mt-2 flex items-end gap-2 rounded-lg border border-border-subtle bg-surface/50 p-3">
+          {activityTypes && activityTypes.length > 0 && (
+            <div>
+              <label className="mb-1 block text-[10px] text-text-secondary">Type</label>
+              <select
+                value={newActivityTypeId ?? ''}
+                onChange={(e) =>
+                  setNewActivityTypeId(e.target.value ? Number(e.target.value) : null)
+                }
+                className="rounded border border-border-default bg-root px-2 py-1 text-xs text-text-primary"
+              >
+                <option value="">-- None --</option>
+                {activityTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex-1">
             <label className="mb-1 block text-[10px] text-text-secondary">Summary</label>
             <input

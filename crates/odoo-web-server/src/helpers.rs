@@ -17,10 +17,7 @@ pub fn session_info_from_json(result: &serde_json::Value) -> SessionInfo {
             .get("username")
             .and_then(|v| v.as_str())
             .map(String::from),
-        db: result
-            .get("db")
-            .and_then(|v| v.as_str())
-            .map(String::from),
+        db: result.get("db").and_then(|v| v.as_str()).map(String::from),
         is_admin: result.get("is_admin").and_then(|v| v.as_bool()),
         is_system: result.get("is_system").and_then(|v| v.as_bool()),
         partner_id: result.get("partner_id").and_then(|v| v.as_i64()),
@@ -44,9 +41,7 @@ pub fn session_info_from_json(result: &serde_json::Value) -> SessionInfo {
             .map(String::from),
         home_action_id: result.get("home_action_id").cloned(),
         active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
-        max_file_upload_size: result
-            .get("max_file_upload_size")
-            .and_then(|v| v.as_i64()),
+        max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
         groups: result.get("groups").cloned(),
         extra: serde_json::Value::default(),
     }

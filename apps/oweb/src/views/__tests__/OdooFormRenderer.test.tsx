@@ -8,9 +8,17 @@ import type { OdooFieldMeta } from '../../lib/odoo-types'
 import { OdooFormRenderer } from '../OdooFormRenderer'
 
 const mockCallKw = vi.fn()
-vi.mock('../../lib/api', () => ({
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-}))
+const mockCallButton = vi.fn()
+const mockLoadAction = vi.fn()
+vi.mock('../../lib/api', async (original) => {
+  const actual = await original()
+  return {
+    ...(actual as Record<string, unknown>),
+    callKw: (...args: unknown[]) => mockCallKw(...args),
+    callButton: (...args: unknown[]) => mockCallButton(...args),
+    loadAction: (...args: unknown[]) => mockLoadAction(...args),
+  }
+})
 
 let queryClient: QueryClient
 
@@ -304,10 +312,10 @@ describe('OdooFormRenderer', () => {
 
     mockCallKw.mockImplementation((_model: string, method: string) => {
       if (method === 'read') return Promise.resolve(readResult)
-      if (method === 'action_won') return Promise.resolve(true)
       if (method === 'onchange') return Promise.resolve({ value: {} })
       return Promise.resolve(undefined)
     })
+    mockCallButton.mockResolvedValue(false)
 
     render(<OdooFormRenderer model="crm.lead" arch={headerArch} fields={fields} recordId={1} />, {
       wrapper,
@@ -319,7 +327,7 @@ describe('OdooFormRenderer', () => {
     await user.click(screen.getByText('Mark as Won'))
 
     await waitFor(() => {
-      const actionCall = mockCallKw.mock.calls.find(
+      const actionCall = mockCallButton.mock.calls.find(
         (c: unknown[]) => (c as unknown[])[1] === 'action_won',
       )
       expect(actionCall).toBeDefined()
@@ -328,7 +336,7 @@ describe('OdooFormRenderer', () => {
     })
   })
 
-  test('clicking action button calls ir.actions.server run', async () => {
+  test('clicking action button calls loadAction', async () => {
     const user = userEvent.setup()
     const headerArch = `<form string="Lead">
       <header>
@@ -339,10 +347,10 @@ describe('OdooFormRenderer', () => {
 
     mockCallKw.mockImplementation((_model: string, method: string) => {
       if (method === 'read') return Promise.resolve(readResult)
-      if (method === 'run') return Promise.resolve(true)
       if (method === 'onchange') return Promise.resolve({ value: {} })
       return Promise.resolve(undefined)
     })
+    mockLoadAction.mockResolvedValue({ type: 'ir.actions.act_window', res_model: 'res.partner' })
 
     render(<OdooFormRenderer model="crm.lead" arch={headerArch} fields={fields} recordId={1} />, {
       wrapper,
@@ -354,31 +362,27 @@ describe('OdooFormRenderer', () => {
     await user.click(screen.getByText('Run Report'))
 
     await waitFor(() => {
-      const actionCall = mockCallKw.mock.calls.find(
-        (c: unknown[]) =>
-          (c as unknown[])[0] === 'ir.actions.server' && (c as unknown[])[1] === 'run',
-      )
-      expect(actionCall).toBeDefined()
-      expect(actionCall?.[2]).toEqual([[42]])
+      expect(mockLoadAction).toHaveBeenCalled()
+      const calls = mockLoadAction.mock.calls[0] as unknown[]
+      expect(calls[0]).toBe('42')
+      expect(calls[1]).toHaveProperty('active_model', 'crm.lead')
+      expect(calls[1]).toHaveProperty('active_id', 1)
     })
   })
 
-  test('sheet uses max-w-[860px] for layout', async () => {
+  test('sheet uses o_form_sheet_bg for layout', async () => {
     mockCallKw.mockResolvedValue(readResult)
     const { container } = render(
       <OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />,
       { wrapper },
     )
-
     await waitFor(() => {
       expect(screen.getByText('Edit')).toBeInTheDocument()
     })
-
+    const bg = container.querySelector('.o_form_sheet_bg')
+    expect(bg).toBeInTheDocument()
     const sheet = container.querySelector('.o_form_sheet')
     expect(sheet).toBeInTheDocument()
-    // max-w-[860px] is on the sheet's parent div
-    const layoutContainer = sheet?.closest('[class*="max-w"]')
-    expect(layoutContainer?.className).toContain('max-w-[860px]')
   })
 
   test('shows Unsaved indicator when form is dirty', async () => {

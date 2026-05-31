@@ -71,7 +71,20 @@ function O2mCellDisplay({
     !col.widget &&
     ['char', 'text', 'integer', 'float', 'monetary', 'date', 'datetime', 'html'].includes(fieldType)
   ) {
-    return <span className="text-sm text-text-primary">{renderO2mCellText(value, meta)}</span>
+    const text = renderO2mCellText(value, meta)
+    // Detect color hex values (field name contains 'color' or value is #RRGGBB)
+    if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-sm text-text-primary">
+          <span
+            className="inline-block h-3 w-3 rounded-sm border border-border-default"
+            style={{ backgroundColor: value }}
+          />
+          {text}
+        </span>
+      )
+    }
+    return <span className="text-sm text-text-primary">{text}</span>
   }
 
   return (
@@ -433,6 +446,7 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
   // Inline editing state: which record row is being edited
   const [editingId, setEditingId] = useState<unknown>(null)
   const [editValues, setEditValues] = useState<Record<string, unknown>>({})
+  const tempIdCounter = useRef(0)
 
   const emitChange = useCallback(
     (commands: O2mCommand[]) => {
@@ -457,17 +471,13 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
   const handleAddRow = useCallback(async () => {
     if (!relation) return
     const defaults = await callKw<Record<string, unknown>>(relation, 'default_get', [fieldNames])
+    const tempId = -++tempIdCounter.current
     if (editable) {
-      // Start inline editing the new row immediately
-      const tempId = `new_${Date.now()}`
       setEditValues(defaults)
       setEditingId(tempId)
-      const cmds = [...pendingCommands, [0, 0, defaults] as O2mCommand]
-      emitChange(cmds)
-    } else {
-      const cmds = [...pendingCommands, [0, 0, defaults] as O2mCommand]
-      emitChange(cmds)
     }
+    const cmds = [...pendingCommands, [0, tempId, defaults] as O2mCommand]
+    emitChange(cmds)
   }, [relation, fieldNames, pendingCommands, emitChange, editable])
 
   const handleCellChange = useCallback((_recordId: unknown, colName: string, val: unknown) => {
@@ -476,17 +486,15 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
 
   const handleSaveEdit = useCallback(
     (recordId: unknown) => {
-      // Find or create the right ORM command
-      const isNew = typeof recordId === 'string'
+      const isNew = typeof recordId === 'number' && recordId < 0
       if (isNew) {
-        // Update the last [0, 0, {...}] command with current editValues
         const cmds = pendingCommands.map((cmd) => {
-          if (cmd[0] === 0 && cmd[2]) return [0, 0, { ...cmd[2], ...editValues }] as O2mCommand
+          if (cmd[0] === 0 && cmd[1] === recordId)
+            return [0, recordId, { ...cmd[2], ...editValues }] as O2mCommand
           return cmd
         })
         emitChange(cmds)
       } else {
-        // Add an update command for existing record
         const hasUpdate = pendingCommands.some((c) => c[0] === 1 && c[1] === recordId)
         let cmds: O2mCommand[]
         if (hasUpdate) {
@@ -529,10 +537,7 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
     const base = (records ?? []).map((r) => ({ ...r }))
     for (const cmd of pendingCommands) {
       if (cmd[0] === 0 && cmd[2]) {
-        base.push({ id: `new_${Date.now()}_${Math.random()}`, ...cmd[2] } as Record<
-          string,
-          unknown
-        >)
+        base.push({ id: cmd[1], ...cmd[2] } as Record<string, unknown>)
       } else if (cmd[0] === 2) {
         const delIdx = base.findIndex((r) => r.id === cmd[1])
         if (delIdx >= 0) base.splice(delIdx, 1)
@@ -659,7 +664,14 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
                           type="button"
                           onClick={() => {
                             const rid = rowId as number
-                            if (typeof rid === 'number') handleDelete(rid)
+                            if (typeof rid === 'number' && rid < 0) {
+                              const cmds = pendingCommands.filter(
+                                (cmd) => !(cmd[0] === 0 && cmd[1] === rid),
+                              )
+                              emitChange(cmds)
+                            } else if (typeof rid === 'number') {
+                              handleDelete(rid)
+                            }
                           }}
                           className="text-xs text-text-muted hover:text-red-500"
                         >

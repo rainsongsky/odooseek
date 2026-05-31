@@ -4,7 +4,7 @@
 
 OdooSeek 是一个基于 React + TypeScript + Rust 的 Odoo 19 CE 现代前端替代方案。它保留了 Odoo 的元数据驱动架构和业务逻辑，仅替换前端渲染层和通信中间件。
 
-[OdooSeek 愿景](/)
+[OdooSeek 愿景](/VISION.pdf)
 
 ## 架构
 

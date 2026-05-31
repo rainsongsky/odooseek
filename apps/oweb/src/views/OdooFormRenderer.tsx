@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom'
 import { ActivityPanel } from '../components/ActivityPanel'
 import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
-import { callKw } from '../lib/api'
+import { callButton, callKw, type OdooAction } from '../lib/api'
 import { evalModifier, getDecorationClass as getDecoClass } from '../lib/expression-evaluator'
 import type {
   ButtonBoxElement,
@@ -36,10 +36,11 @@ interface FormRendererProps {
   recordId?: number
   onRecordCreated?: (newId: number) => void
   onDirtyChange?: (dirty: boolean) => void
+  onAction?: (action: OdooAction) => void
 }
 
 export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
-  { model, arch, fields, recordId, onRecordCreated, onDirtyChange }: FormRendererProps,
+  { model, arch, fields, recordId, onRecordCreated, onDirtyChange, onAction }: FormRendererProps,
   ref: React.Ref<OdooFormRendererRef>,
 ) {
   const queryClient = useQueryClient()
@@ -258,7 +259,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     (btn: ButtonElement) => {
       if (!newRecordId) return
 
-      const executeAction = () => {
+      const executeAction = async () => {
         if (btn.buttonType === 'edit') {
           if (record?.[0]) {
             setFormValues({ ...record[0] })
@@ -267,23 +268,31 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           return
         }
 
-        if (btn.buttonType === 'object') {
-          callKw(model, btn.name, [[newRecordId]])
-            .then(() => {
-              queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
-            })
-            .catch((err: unknown) => {
-              setSaveError(err instanceof Error ? err.message : 'Action failed')
-            })
-        } else if (btn.buttonType === 'action') {
-          const actionId = Number(btn.name)
-          callKw('ir.actions.server', 'run', [[actionId]])
-            .then(() => {
-              queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
-            })
-            .catch((err: unknown) => {
-              setSaveError(err instanceof Error ? err.message : 'Action failed')
-            })
+        const context: Record<string, unknown> = {
+          active_model: model,
+          active_id: newRecordId,
+          active_ids: [newRecordId],
+        }
+
+        try {
+          if (btn.buttonType === 'object' || !btn.buttonType) {
+            const result = await callButton<OdooAction | false>(
+              model,
+              btn.name,
+              [[newRecordId]],
+              { context },
+            )
+            queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, newRecordId] })
+            if (result && typeof result === 'object' && result.type) {
+              onAction?.(result)
+            }
+          } else if (btn.buttonType === 'action') {
+            const { loadAction } = await import('../lib/api')
+            const action = await loadAction(btn.name, context)
+            if (action) onAction?.(action)
+          }
+        } catch (err: unknown) {
+          setSaveError(err instanceof Error ? err.message : 'Action failed')
         }
       }
 
@@ -300,7 +309,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
 
       executeAction()
     },
-    [model, newRecordId, record, recordId, queryClient, confirmDialog],
+    [model, newRecordId, record, queryClient, confirmDialog, onAction],
   )
 
   const handleStatusChange = useCallback(
@@ -321,7 +330,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   const currentRecord = editMode ? formValues : record?.[0]
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
+    <div className="flex flex-1 flex-col overflow-hidden">
       <HeaderBar
         headerElement={headerElement}
         stateField={fields.state}
@@ -342,18 +351,19 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       />
 
       {saveError && (
-        <div className="mx-auto max-w-[860px] mt-2 rounded border border-red-400/30 bg-red-400/10 px-4 py-2 text-xs text-red-400">
+        <div className="mx-auto mt-1 max-w-[860px] w-full rounded border border-red-400/30 bg-red-400/10 px-4 py-2 text-xs text-red-400">
           {saveError}
         </div>
       )}
       {warning && (
-        <div className="mx-auto max-w-[860px] mt-2 rounded border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs text-yellow-400">
+        <div className="mx-auto mt-1 max-w-[860px] w-full rounded border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs text-yellow-400">
           <span className="font-medium">{warning.title}</span>: {warning.message}
         </div>
       )}
 
-      <div ref={formRef} className="flex-1 overflow-auto px-6 py-4">
-        <div className="o_form_sheet mx-auto max-w-[860px] border-y border-border-subtle bg-surface px-6 py-5">
+      <div ref={formRef} className="o_form_body flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+        <div className="o_form_sheet_bg mx-auto">
+        <div className="o_form_sheet">
           <FormLayoutNode
             elements={nonHeaderElements}
             record={currentRecord}
@@ -362,8 +372,11 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
             recordId={recordId}
             editMode={editMode}
             onChange={handleChange}
+            onAction={onAction}
+            onButtonAction={handleActionButton}
           />
           {recordId && <FormTimestamps record={record?.[0]} />}
+        </div>
         </div>
         <div className="mx-auto max-w-[860px]">
           <ActivityPanel model={model} recordId={recordId} />
@@ -469,6 +482,21 @@ function HeaderBar({
   onCancel: () => void
   isSaving: boolean
 }) {
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handler = () => {
+      const container = document.querySelector('.o_form_body')
+      setScrolled(container ? container.scrollTop > 4 : false)
+    }
+    // Listen on the scrollable container
+    const container = document.querySelector('.o_form_body')
+    if (container) {
+      container.addEventListener('scroll', handler, { passive: true })
+      return () => container.removeEventListener('scroll', handler)
+    }
+  }, [])
+
   const stateSelection = stateField?.selection ?? []
   const stateValue = currentRecord?.state as string | undefined
   const stateIdx = stateSelection.findIndex(([k]) => k === stateValue)
@@ -481,7 +509,7 @@ function HeaderBar({
 
   if (!hasContent) {
     return (
-      <div className="flex items-center justify-between border-b border-border-subtle px-6 py-2">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border-subtle bg-surface px-4 py-1.5 transition-shadow">
         <div className="flex items-center gap-2">
           <span />
         </div>
@@ -500,33 +528,34 @@ function HeaderBar({
   }
 
   return (
-    <div className="border-b border-border-subtle bg-surface px-6 py-2">
+    <div className={`sticky top-0 z-20 border-b border-border-subtle bg-surface px-4 py-1.5 transition-shadow ${scrolled ? 'shadow-md' : ''}`}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           {stateSelection.length > 1 && (
-            <div className="flex items-center">
+            <div className="flex items-center gap-0.5">
               {stateSelection.map(([key, label], i) => {
                 const isCurrent = key === stateValue
                 const isPast = stateIdx >= 0 && i < stateIdx
                 const isFirst = i === 0
                 const isLast = i === stateSelection.length - 1
+                const baseClass = 'px-3 py-1 text-[11px] font-medium transition-colors'
+                const roundedClass = isFirst ? 'rounded-l' : isLast ? 'rounded-r' : ''
+                const colorClass = isCurrent
+                  ? 'bg-accent text-white'
+                  : isPast
+                    ? 'bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50'
+                    : 'bg-gray-700/50 text-text-muted hover:bg-gray-600/50'
+                const cursorClass = isCurrent || editMode ? 'cursor-default' : 'cursor-pointer'
                 return (
-                  <div key={key} className="flex items-center">
-                    <button
-                      type="button"
-                      disabled={editMode || isCurrent}
-                      onClick={() => onStatusChange?.(key)}
-                      className={`px-3 py-1 text-[11px] font-medium ${
-                        isCurrent
-                          ? 'bg-accent text-white'
-                          : isPast
-                            ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
-                            : 'bg-gray-100 text-text-muted hover:bg-gray-200'
-                      } ${isFirst && !isCurrent ? 'rounded-l' : ''} ${isLast && !isCurrent ? 'rounded-r' : ''} ${isCurrent && isFirst ? 'rounded-l' : ''} ${isCurrent && isLast ? 'rounded-r' : ''} ${!isCurrent && !editMode ? 'cursor-pointer' : 'cursor-default'}`}
-                    >
-                      {label}
-                    </button>
-                  </div>
+                  <button
+                    key={key}
+                    type="button"
+                    disabled={editMode || isCurrent}
+                    onClick={() => onStatusChange?.(key)}
+                    className={`${baseClass} ${colorClass} ${roundedClass} ${cursorClass}`}
+                  >
+                    {label}
+                  </button>
                 )
               })}
             </div>
@@ -705,6 +734,8 @@ interface NodeProps {
   recordId?: number
   editMode?: boolean
   onChange?: (name: string, value: unknown) => void
+  onAction?: (action: OdooAction) => void
+  onButtonAction?: (btn: ButtonElement) => void
   level?: number
 }
 
@@ -716,6 +747,8 @@ function NotebookRenderer({
   recordId,
   editMode,
   onChange,
+  onAction,
+  onButtonAction,
   level,
 }: {
   pages: { string: string; invisible?: string; elements: FormElement[] }[]
@@ -725,6 +758,8 @@ function NotebookRenderer({
   recordId?: number
   editMode?: boolean
   onChange?: (n: string, v: unknown) => void
+  onAction?: (action: OdooAction) => void
+  onButtonAction?: (btn: ButtonElement) => void
   level: number
 }) {
   const [activePage, setActivePage] = useState(0)
@@ -779,6 +814,8 @@ function NotebookRenderer({
             recordId={recordId}
             editMode={editMode}
             onChange={onChange}
+            onAction={onAction}
+            onButtonAction={onButtonAction}
             level={level + 1}
           />
         )}
@@ -872,6 +909,57 @@ function ButtonBoxRenderer({
   )
 }
 
+function renderGroupItems(
+  elements: FormElement[],
+  ctx: Omit<NodeProps, 'elements'>,
+): React.ReactNode[] {
+  const result: React.ReactNode[] = []
+  let colIndex = 0
+  const maxCols = 2
+
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i]
+
+    // newline: force column break (move to next row)
+    if (el.type === 'newline') {
+      colIndex = 0
+      result.push(<div key={`nl-${i}`} className="col-span-full" />)
+      continue
+    }
+
+    const colspan = el.type === 'field' ? (el.colspan ?? 1) : 1
+    if (colIndex + colspan > maxCols) {
+      colIndex = 0
+      result.push(<div key={`wrap-${i}`} className="col-span-full" />)
+    }
+
+    const itemKey = `${el.type === 'field' ? 'fld' : 'other'}-${i}`
+    result.push(
+      <div
+        key={itemKey}
+        className={el.type === 'field' ? 'o_inner_group' : ''}
+        style={el.type === 'field' && colspan > 1 ? { gridColumn: `span ${colspan}` } : undefined}
+      >
+        <FormLayoutNode
+          elements={[el]}
+          record={ctx.record}
+          fields={ctx.fields}
+          model={ctx.model}
+          recordId={ctx.recordId}
+          editMode={ctx.editMode}
+          onChange={ctx.onChange}
+          onAction={ctx.onAction}
+          onButtonAction={ctx.onButtonAction}
+          level={ctx.level}
+        />
+      </div>,
+    )
+    colIndex += colspan
+    if (colIndex >= maxCols) colIndex = 0
+  }
+  return result
+}
+
 function FormLayoutNode({
   elements,
   record,
@@ -880,6 +968,8 @@ function FormLayoutNode({
   recordId,
   editMode,
   onChange,
+  onAction,
+  onButtonAction,
   level = 0,
 }: NodeProps) {
   return (
@@ -891,7 +981,7 @@ function FormLayoutNode({
           case 'sheet':
             return (
               <FormLayoutNode
-                key={i}
+                key={`sheet-${i}`}
                 elements={el.elements}
                 record={record}
                 fields={fields}
@@ -899,18 +989,39 @@ function FormLayoutNode({
                 recordId={recordId}
                 editMode={editMode}
                 onChange={onChange}
+                onAction={onAction}
+                onButtonAction={onButtonAction}
                 level={level + 1}
               />
             )
-          case 'button':
-            return null
+          case 'button': {
+            const btn = el as ButtonElement
+            if (!isButtonVisible(btn, record)) return null
+            if (editMode) return null
+            return (
+              <div key={`btn-${i}`} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => onButtonAction?.(btn)}
+                  className={`px-3 py-1 text-xs font-medium transition-colors ${
+                    btn.class?.includes('btn-primary')
+                      ? 'bg-accent text-white hover:bg-accent/90 rounded'
+                      : 'text-text-secondary hover:bg-hover rounded border border-border-default'
+                  }`}
+                >
+                  {btn.icon && <span className="mr-1">{btn.icon}</span>}
+                  {btn.string || btn.name}
+                </button>
+              </div>
+            )
+          }
           case 'button_box': {
             const bbe = el as ButtonBoxElement
             const visibleBtns = bbe.buttons.filter((b) => isButtonVisible(b, record))
             if (visibleBtns.length === 0) return null
             return (
               <ButtonBoxRenderer
-                key={i}
+                key={`bbox-${i}`}
                 buttons={visibleBtns}
                 record={record}
                 model={model}
@@ -920,34 +1031,25 @@ function FormLayoutNode({
           }
           case 'group': {
             if (evalModifier(el.invisible, record)) return null
-            const cols = el.col ?? 2
+            const colClass =
+              el.col === 3 ? 'o_group_col_3'
+              : el.col === 4 ? 'o_group_col_4'
+              : 'o_group_col_2'
             return (
-              <div key={i} className="mb-4">
+              <div key={`grp-${i}`} className={colClass}>
                 {el.string && (
-                  <div className="mb-2 text-xs font-semibold text-text-secondary">{el.string}</div>
+                  <div className="o_horizontal_separator col-span-full">{el.string}</div>
                 )}
-                <div
-                  className="grid gap-x-6 gap-y-2"
-                  style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-                >
-                  <FormLayoutNode
-                    elements={el.elements}
-                    record={record}
-                    fields={fields}
-                    model={model}
-                    recordId={recordId}
-                    editMode={editMode}
-                    onChange={onChange}
-                    level={level + 1}
-                  />
-                </div>
+                {renderGroupItems(el.elements, {
+                  record, fields, model, recordId, editMode, onChange, onAction, onButtonAction, level: level + 1
+                })}
               </div>
             )
           }
           case 'notebook':
             return (
               <NotebookRenderer
-                key={i}
+                key={`nb-${i}`}
                 pages={el.pages}
                 record={record}
                 fields={fields}
@@ -955,6 +1057,8 @@ function FormLayoutNode({
                 recordId={recordId}
                 editMode={editMode}
                 onChange={onChange}
+                onAction={onAction}
+                onButtonAction={onButtonAction}
                 level={level}
               />
             )
@@ -979,7 +1083,7 @@ function FormLayoutNode({
             const colSpanStyle = el.colspan ? { gridColumn: `span ${el.colspan}` } : undefined
             if (el.nolabel) {
               return (
-                <div key={i} className={deco} style={colSpanStyle}>
+                <div key={`fld-${i}`} className={deco} style={colSpanStyle}>
                   <Widget
                     field={el}
                     value={record?.[el.name]}
@@ -997,7 +1101,7 @@ function FormLayoutNode({
             if (meta.type === 'boolean') {
               return (
                 <div
-                  key={i}
+                  key={`bool-${i}`}
                   className={`flex items-center gap-2 ${deco ?? ''}`}
                   style={colSpanStyle}
                 >
@@ -1011,7 +1115,7 @@ function FormLayoutNode({
                     model={model}
                     recordId={recordId}
                   />
-                  <label className="text-xs font-medium text-text-secondary">
+                  <label className="o_form_label">
                     {el.string || meta.string || el.name}
                     {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
                     {meta.help && <HelpPopover text={meta.help} />}
@@ -1021,11 +1125,11 @@ function FormLayoutNode({
             }
             return (
               <div
-                key={i}
+                key={`fld-${i}`}
                 className={`grid items-baseline gap-x-3 ${deco ?? ''}`}
                 style={{ gridTemplateColumns: 'auto 1fr', ...colSpanStyle }}
               >
-                <label className="truncate text-xs font-medium text-text-secondary py-1 text-right">
+                <label className="o_form_label truncate py-1 text-right">
                   {el.string || meta.string || el.name}
                   {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
                   {meta.help && <HelpPopover text={meta.help} />}
@@ -1044,12 +1148,12 @@ function FormLayoutNode({
             )
           }
           case 'separator':
-            return <hr key={i} className="my-2 border-border-subtle" />
+            return <div key={`sep-${i}`} className="o_horizontal_separator col-span-full">{el.string}</div>
           case 'newline':
-            return <div key={i} className="col-span-full" />
+            return <div key={`nl-${i}`} className="col-span-full" />
           case 'label':
             return (
-              <span key={i} className="text-sm font-medium text-text-primary">
+              <span key={`lbl-${i}`} className="text-sm font-medium text-text-primary">
                 {el.string}
               </span>
             )

@@ -45,9 +45,11 @@ describe('renderCell', () => {
     expect(renderCell('<b>Bold</b> text', meta)).toBe('Bold text')
   })
 
-  test('binary-like base64 string shows file icon', () => {
-    const longBase64 = 'A'.repeat(101)
-    expect(renderCell(longBase64)).toBe('📎 File')
+  test('binary type with model renders image tag', () => {
+    const meta = { type: 'binary', name: 'image_128' } as OdooFieldMeta
+    const result = renderCell('', meta, 'product.product', 1)
+    expect(result).toBeTruthy()
+    expect(typeof result).toBe('object')
   })
 
   test('selection value resolves label', () => {

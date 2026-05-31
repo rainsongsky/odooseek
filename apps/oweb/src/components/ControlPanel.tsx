@@ -38,6 +38,7 @@ export interface ControlPanelProps {
   onDuplicate?: () => void
   onArchive?: () => void
   onUnarchive?: () => void
+  onDelete?: () => void
   hasActiveField?: boolean
   // Callbacks for toolbar actions
   onPrintAction?: (actionId: number) => void
@@ -57,6 +58,7 @@ export function ControlPanel({
   onDuplicate,
   onArchive,
   onUnarchive,
+  onDelete,
   hasActiveField,
   onPrintAction,
   onActionExecuted,
@@ -66,7 +68,7 @@ export function ControlPanel({
 
   const hasPrint = (toolbar?.print?.length ?? 0) > 0
   const hasAction =
-    (toolbar?.action?.length ?? 0) > 0 || !!onDuplicate || !!onArchive || !!onUnarchive
+    (toolbar?.action?.length ?? 0) > 0 || !!onDuplicate || !!onArchive || !!onUnarchive || !!onDelete
   const showMenus = hasPrint || hasAction
   const showSearch = searchProps?.visible !== false && searchProps
   const showPager = pagerProps?.visible !== false && pagerProps
@@ -186,6 +188,18 @@ export function ControlPanel({
                           className="flex w-full items-center px-3 py-2 text-left text-xs text-text-primary hover:bg-hover/50"
                         >
                           Unarchive
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onDelete()
+                            setOpenMenu(null)
+                          }}
+                          className="flex w-full items-center px-3 py-2 text-left text-xs text-red-400 hover:bg-red-400/10"
+                        >
+                          Delete
                         </button>
                       )}
                     </div>

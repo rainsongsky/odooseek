@@ -101,11 +101,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Spawn Odoo Bus polling task
-    tokio::spawn(ws::poll_odoo_bus(
-        http_client,
-        odoo_url_clean,
-        event_tx,
-    ));
+    tokio::spawn(ws::poll_odoo_bus(http_client, odoo_url_clean, event_tx));
 
     // Build router
     let frontend_dir = config.frontend_dir.clone();
@@ -124,7 +120,12 @@ async fn main() -> anyhow::Result<()> {
         .layer(CompressionLayer::new())
         .layer(
             CorsLayer::new()
-                .allow_origin(tower_http::cors::Any)
+                .allow_origin([
+                    "http://localhost:5173".parse().unwrap(),
+                    "http://localhost:3000".parse().unwrap(),
+                    "http://127.0.0.1:5173".parse().unwrap(),
+                    "http://127.0.0.1:3000".parse().unwrap(),
+                ])
                 .allow_methods([
                     axum::http::Method::GET,
                     axum::http::Method::POST,

@@ -15,13 +15,13 @@ export const FIELD_TYPE_WIDTHS: Record<string, number> = {
 }
 export const DEFAULT_COL_WIDTH = 160
 
-export function renderCell(value: unknown, meta?: OdooFieldMeta): string {
+export function renderCell(value: unknown, meta?: OdooFieldMeta, model?: string, recordId?: number): React.ReactNode {
   if (value === null || value === undefined || value === false) return ''
   if (typeof value === 'boolean') return value ? '✓' : ''
   if (typeof value === 'string') {
     if (meta?.type === 'html') return stripHtml(value)
-    if (meta?.type === 'binary' || (value.length > 100 && /^[A-Za-z0-9+/=]+$/.test(value))) {
-      return '📎 File'
+    if (meta?.type === 'binary') {
+      return renderImageFromUrl(model, recordId, meta, value)
     }
     if (meta?.selection) {
       const pair = meta.selection.find(([k]) => k === value)
@@ -43,6 +43,27 @@ export function renderCell(value: unknown, meta?: OdooFieldMeta): string {
     return `${count} record${count !== 1 ? 's' : ''}`
   }
   return JSON.stringify(value)
+}
+
+function renderImageFromUrl(model?: string, recordId?: number, meta?: OdooFieldMeta, value?: string): React.ReactNode {
+  if (!model || !recordId) {
+    if (value && /^[A-Za-z0-9+/=]+$/.test(value)) {
+      return <img src={`data:image/png;base64,${value}`} alt="" className="h-8 w-8 rounded object-cover" />
+    }
+    return '🖼'
+  }
+  const fieldName = meta?.name ?? ''
+  return (
+    <img
+      src={`/api/web/image/${model}/${recordId}/${fieldName}`}
+      alt=""
+      className="h-8 w-8 rounded object-cover"
+      loading="lazy"
+      onError={(e) => {
+        ;(e.target as HTMLImageElement).style.display = 'none'
+      }}
+    />
+  )
 }
 
 function formatMonetary(value: number): string {

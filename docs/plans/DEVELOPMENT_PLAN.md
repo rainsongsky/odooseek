@@ -417,7 +417,7 @@ Phase 15 ████████████████████ 100% ✅ (
 
 ---
 
-**文档版本**: 8.0 (Phase 13-15 完成)
+**文档版本**: 9.0 (Phase 16-22 完成)
 **更新日期**: 2026-05-31
 **维护团队**: OdooSeek
 
@@ -458,3 +458,82 @@ Phase 15 ████████████████████ 100% ✅ (
 | 快捷操作计数 | #122 | search_count 实时计数 |
 | 日期头部 | #122 | 当前日期 + 用户信息 |
 | 响应式布局 | #122 | max-w-6xl 网格 |
+
+---
+
+## 二十一、Phase 16：全局错误处理 ✅ 已完成 (5/31)
+
+| 任务 | 说明 |
+|------|------|
+| RootErrorComponent | 路由级错误边界，显示错误信息 + "Try Again" 按钮 |
+| API 401 自动重定向 | `api.ts` 检测 401 自动跳转 `/login`，抛出 'Session expired' |
+| QueryClient 全局配置 | retry 跳过 Session expired，mutations.onError 全局处理 |
+| JSX 现代化 | `import { StrictMode }` + `import { createRoot }` 替代旧导入 |
+
+---
+
+## 二十二、Phase 17：登录页增强 ✅ 已完成 (5/31)
+
+| 任务 | 说明 |
+|------|------|
+| 密码显示/隐藏 | showPassword toggle + 眼睛图标 |
+| 输入验证 | db/login/password 必填检查 |
+| 友好错误分类 | 网络故障、401、服务器错误分别提示 |
+| 预填数据库名 | 从 session.db 预填 db 字段 |
+| 移除 Guest 按钮 | 仅保留登录功能 |
+| autoComplete 属性 | username / current-password |
+
+---
+
+## 二十三、Phase 18：Form 视图完善 ✅ 已完成 (5/31)
+
+| 任务 | 说明 |
+|------|------|
+| Form save invalidate 修复 | 新建记录使用 newRecordId 而非 recordId |
+| Sheet/Header 间距 | Header 区域与 Sheet 内容区之间增加间距 |
+
+---
+
+## 二十四、Phase 19：Calendar 增强 ✅ 已完成 (5/31)
+
+| 任务 | Issue | 说明 |
+|------|:-----:|------|
+| 事件创建 | #126 | onSelectSlot → callKw create |
+| 拖拽移动 | #126 | onEventDrop → callKw write (dateStart + dateStop) |
+| 拖拽调整时长 | #126 | onEventResize → callKw write (dateStop) |
+| Toast 通知 | #126 | 成功/失败 toast 提示 |
+
+---
+
+## 二十五、Phase 20：One2Many CRUD 补全 ✅ 已完成 (5/31)
+
+| 任务 | Issue | 说明 |
+|------|:-----:|------|
+| 稳定虚拟 ID | #127 | 使用负数 cmd[1] 替代 Date.now()+random，修复内联编辑 |
+| 精确保存定位 | #127 | handleSaveEdit 按 cmd[1] 定位命令，不再更新所有 [0,0,...] |
+| 删除新建记录 | #127 | 负数 ID 时移除 [0,0,...] 命令而非添加 [2,id] |
+| 测试覆盖 | #127 | 6 项 CRUD 测试 (创建/删除/稳定 ID/空状态) |
+
+---
+
+## 二十六、Phase 21：Form Autosave ✅ 已完成 (5/31)
+
+| 任务 | Issue | 说明 |
+|------|:-----:|------|
+| 草稿保存 | #128 | localStorage debounce 保存编辑中表单值 |
+| 草稿恢复 | #128 | 重新打开表单时从 localStorage 恢复 |
+| 保存后清除 | #128 | 成功保存后删除草稿 |
+| 自动保存 | #128 | 5s idle 自动保存 (仅已有记录) |
+| 快捷键 | #128 | Ctrl+S 保存 + Escape 取消 + beforeUnload 警告 |
+
+---
+
+## 二十七、Phase 22：搜索收藏 ✅ 已完成 (5/31)
+
+| 任务 | Issue | 说明 |
+|------|:-----:|------|
+| 加载过滤器 | #129 | useFavoriteFilters → ir.filters.get_filters |
+| 保存过滤器 | #129 | ir.filters.create_filter (含 domain + group_by context) |
+| 删除过滤器 | #129 | ir.filters.unlink |
+| SearchBar 集成 | #129 | ★ 按钮下拉 → 已保存列表 + 保存当前 + 删除 |
+| 测试覆盖 | #129 | 7 项 FavoriteFilters 组件测试 |

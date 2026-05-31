@@ -242,7 +242,7 @@ export interface ParsedKanbanView {
 // ── Phase 4: QWeb template AST ───────────────────────────────
 
 export type KanbanTemplateNode =
-  | { type: 'field'; name: string; widget?: string; class?: string }
+  | { type: 'field'; name: string; widget?: string; class?: string; options?: Record<string, unknown> }
   | { type: 'condition'; if?: string; elif?: string; else?: string; children: KanbanTemplateNode[] }
   | { type: 'loop'; foreach: string; as: string; children: KanbanTemplateNode[] }
   | { type: 'output'; expr: string; widget?: string }
@@ -255,6 +255,35 @@ export interface ParsedSearchView {
   fields: ViewField[]
   filters: SearchFilter[]
   groupByFilters: SearchGroupBy[]
+  searchPanel?: ParsedSearchPanel
+}
+
+export interface ParsedSearchPanel {
+  fields: SearchPanelField[]
+  class?: string
+}
+
+export interface SearchPanelField {
+  name: string
+  select: 'one' | 'multi'
+  icon?: string
+  enableCounters: boolean
+  limit?: number
+  groupBy?: string
+  color?: string
+}
+
+export interface SearchPanelCategory {
+  id: number | string
+  displayName: string
+  count?: number
+  parentId?: number | string | false
+  icon?: string
+  groupName?: string
+  groupCount?: number
+  __count?: number
+  display_name?: string
+  parent_id?: [number, string] | false
 }
 
 export interface SearchFilter {

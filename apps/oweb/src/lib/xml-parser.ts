@@ -22,6 +22,8 @@ import type {
   PivotMeasure,
   SearchFilter,
   SearchGroupBy,
+  ParsedSearchPanel,
+  SearchPanelField,
   StatButtonContent,
   StatButtonElement,
   ViewField,
@@ -480,11 +482,21 @@ function parseNode(node: ChildNode): KanbanTemplateNode | null {
 
   // <field> elements
   if (tag === 'field') {
+    const rawOptions = el.getAttribute('options')
+    let parsedOptions: Record<string, unknown> | undefined
+    if (rawOptions) {
+      try {
+        parsedOptions = JSON.parse(rawOptions.replace(/'/g, '"'))
+      } catch {
+        // ignore malformed options
+      }
+    }
     return {
       type: 'field',
       name: el.getAttribute('name') ?? '',
       widget: el.getAttribute('widget') ?? undefined,
       class: el.getAttribute('class') ?? undefined,
+      options: parsedOptions,
     }
   }
 
@@ -653,7 +665,10 @@ export function parseSearchXml(xml: string): ParsedSearchView {
     }
   })
 
-  return { type: 'search', fields: searchFields, filters: allFilters, groupByFilters }
+  const searchPanel = root.querySelector('searchpanel')
+  const searchPanelData = searchPanel ? parseSearchPanel(searchPanel) : undefined
+
+  return { type: 'search', fields: searchFields, filters: allFilters, groupByFilters, searchPanel: searchPanelData }
 }
 
 /** Parse Odoo <pivot> XML → ParsedPivotView */
@@ -771,4 +786,24 @@ export function parseCalendarXml(xml: string): ParsedCalendarView {
     quickCreate: root.getAttribute('quick_create') !== '0',
     hideTime: root.getAttribute('hide_time') === '1',
   }
+}
+
+/** Parse Odoo <searchpanel> XML */
+export function parseSearchPanel(el: Element): ParsedSearchPanel {
+  const fields: SearchPanelField[] = []
+  for (const child of Array.from(el.children)) {
+    if (child.tagName !== 'field') continue
+    const select = child.getAttribute('select') === 'multi' ? 'multi' : 'one'
+    const limit = child.getAttribute('limit')
+    fields.push({
+      name: child.getAttribute('name') ?? '',
+      select,
+      icon: child.getAttribute('icon') ?? undefined,
+      enableCounters: child.getAttribute('enable_counters') === '1',
+      limit: limit && limit !== 'false' ? Number(limit) || undefined : undefined,
+      groupBy: child.getAttribute('groupby') ?? undefined,
+      color: child.getAttribute('color') ?? undefined,
+    })
+  }
+  return { fields, class: el.getAttribute('class') ?? undefined }
 }

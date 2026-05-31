@@ -92,11 +92,120 @@ export function evalModifier(
   if (!expr || !record) return false
   if (expr === 'False' || expr === '0') return false
   if (expr === 'True' || expr === '1') return true
+
+  // Check if this is a domain-style expression: [...]  or & [...] [...] or | [...] [...]
+  const trimmed = expr.trim()
+  if (trimmed.startsWith('[') || trimmed.startsWith('&') || trimmed.startsWith('|')) {
+    try {
+      return evaluateModifierDomain(trimmed, record)
+    } catch {
+      return false
+    }
+  }
+
   try {
     return evaluateModifierExpr(expr, record)
   } catch {
     return false
   }
+}
+
+function evaluateModifierDomain(expr: string, record: Record<string, unknown>): boolean {
+  // Normalize: replace ( ) → [ ], and standardize quoting
+  const normalized = expr
+    .replace(/'/g, '"')
+    .replace(/\bFalse\b/g, 'false')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\(/g, '[')
+    .replace(/\)/g, ']')
+
+  let parsed: unknown[]
+  try {
+    parsed = JSON.parse(normalized) as unknown[]
+  } catch {
+    return false
+  }
+
+  // If it starts with & or |, it's a combined expression
+  if (expr.startsWith('&')) {
+    return evaluateDomainAnd(parsed as unknown[], record)
+  }
+  if (expr.startsWith('|')) {
+    return evaluateDomainOr(parsed as unknown[], record)
+  }
+
+  // Single domain list: [[field, op, value], ...]
+  return evaluateDomainList(normalized ? (JSON.parse(normalized) as unknown[]) : [], record)
+}
+
+function evaluateDomainAnd(items: unknown[], record: Record<string, unknown>): boolean {
+  // Domain operators: '&' prefix means all following conditions must be true
+  // Items structure: ['&', [condition1], [condition2]]   or   [['&'], [c1], [c2]]
+  const conditions = items.filter((item) => Array.isArray(item) && item.length > 0)
+  return conditions.every((cond) => evaluateDomainList(cond as unknown[], record))
+}
+
+function evaluateDomainOr(items: unknown[], record: Record<string, unknown>): boolean {
+  const conditions = items.filter((item) => Array.isArray(item) && item.length > 0)
+  return conditions.some((cond) => evaluateDomainList(cond as unknown[], record))
+}
+
+function evaluateDomainList(domain: unknown[], record: Record<string, unknown>): boolean {
+  // Each element is a triple [field, operator, value]
+  for (const item of domain) {
+    if (!Array.isArray(item) || item.length < 3) continue
+    const [field, op, expected] = item as [string, string, unknown]
+    const actual = record[field]
+    const actualStr = String(actual ?? '')
+    const expectedStr = String(expected ?? '')
+
+    let result = false
+    switch (op) {
+      case '=':
+        result = actual === expected || actualStr === expectedStr
+        break
+      case '!=':
+        result = actual !== expected && actualStr !== expectedStr
+        break
+      case '>':
+        result = Number(actual) > Number(expected)
+        break
+      case '<':
+        result = Number(actual) < Number(expected)
+        break
+      case '>=':
+        result = Number(actual) >= Number(expected)
+        break
+      case '<=':
+        result = Number(actual) <= Number(expected)
+        break
+      case 'in':
+        if (Array.isArray(expected)) {
+          result = expected.includes(actual) || expected.some((e: unknown) => String(e) === actualStr)
+        }
+        break
+      case 'not in':
+        if (Array.isArray(expected)) {
+          result = !expected.includes(actual) && !expected.some((e: unknown) => String(e) === actualStr)
+        }
+        break
+      case 'ilike':
+        result = actualStr.toLowerCase().includes(expectedStr.toLowerCase())
+        break
+      case 'not ilike':
+        result = !actualStr.toLowerCase().includes(expectedStr.toLowerCase())
+        break
+      case 'child_of':
+        // Simplified child_of: check if actual is hierarchical (parent_id chain)
+        result = actual === expected || actualStr === expectedStr
+        break
+      default:
+        result = actual === expected || actualStr === expectedStr
+    }
+    if (!result) return false
+  }
+  return true
 }
 
 function evaluateModifierExpr(expr: string, record: Record<string, unknown>): boolean {

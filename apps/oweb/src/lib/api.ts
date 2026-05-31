@@ -124,6 +124,63 @@ export function fieldsGet<T = unknown>(
   return callKw<T>(model, 'fields_get', [allfields], { attributes })
 }
 
+/// Call a model method via /web/dataset/call_button (for type="object" buttons)
+/// Returns an action dict if the method returns one, or false/null
+export function callButton<T = unknown>(
+  model: string,
+  method: string,
+  args: unknown[] = [],
+  kwargs: Record<string, unknown> = {},
+): Promise<T> {
+  return jsonRpc<T>(`/api/odoo/web/dataset/call_button/${model}/${method}`, {
+    model,
+    method,
+    args,
+    kwargs,
+  })
+}
+
+/// Load an action by its xml_id or database id
+export async function loadAction(
+  actionRef: string | number,
+  context: Record<string, unknown> = {},
+): Promise<OdooAction> {
+  // If it's a numeric id, read directly; if it's an xml_id, use _xml_id_to_id
+  if (typeof actionRef === 'number') {
+    return resolveAction(actionRef).then((r) => ({
+      type: 'ir.actions.act_window' as const,
+      res_model: r.model,
+      view_mode: r.viewMode,
+      domain: r.domain,
+      context: r.context,
+    }))
+  }
+  // For xml_id references, use the Odoo action load endpoint
+  return jsonRpc<OdooAction>('/api/odoo/web/action/load', {
+    action_id: actionRef,
+    context,
+  })
+}
+
+/// Odoo action types
+export type OdooAction = {
+  type: string
+  res_model?: string
+  view_mode?: string
+  views?: [number | false, string][]
+  domain?: unknown[] | string
+  context?: Record<string, unknown> | string
+  target?: 'current' | 'new' | 'fullscreen' | 'inline'
+  name?: string
+  display_name?: string
+  res_id?: number
+  id?: number
+  help?: string
+  flags?: Record<string, unknown>
+  report_type?: string
+  report_name?: string
+}
+
 /// Resolve an action ID to its target model name and view settings.
 /// Handles both ir.actions.act_window and ir.actions.server types.
 export async function resolveAction(actionId: number): Promise<{

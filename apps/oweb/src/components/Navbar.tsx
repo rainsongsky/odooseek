@@ -24,6 +24,21 @@ export function Navbar() {
 
   const [currentAppId, setCurrentAppId] = useState<number | null>(null)
   const [openSubmenu, setOpenSubmenu] = useState<number | null>(null)
+  const closeTimer = { current: null as ReturnType<typeof setTimeout> | null }
+
+  const handleMouseEnter = (sectionId: number) => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current)
+      closeTimer.current = null
+    }
+    setOpenSubmenu(sectionId)
+  }
+
+  const handleMouseLeave = () => {
+    closeTimer.current = setTimeout(() => {
+      setOpenSubmenu(null)
+    }, 200)
+  }
 
   const { data: menus } = useQuery<MenusData>({
     queryKey: ['odoo', 'menus'],
@@ -77,11 +92,7 @@ export function Navbar() {
   }, [navigate, toggleHomeMenu])
 
   // Close submenus on outside click
-  useEffect(() => {
-    const handler = () => setOpenSubmenu(null)
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [])
+  // (removed — hover handles show/hide now)
 
   // Odoo-aligned: section buttons are dropdown containers.
   // Click → toggle dropdown if children exist; navigate if leaf with action.
@@ -141,21 +152,45 @@ export function Navbar() {
 
             {sections.length > 0 && (
               <div className="ml-2 flex items-center gap-0.5 border-l border-border-subtle pl-2">
-                {sections.map((section) => (
-                  <div key={section.id} className="relative">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleSectionClick(section)
-                      }}
-                      className="rounded-md px-2.5 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover hover:text-text-primary"
+                {sections.map((section) => {
+                  const currentAction = currentSearch?.action as number | undefined
+                  const isActive =
+                    section.actionID != null &&
+                    section.actionID !== false &&
+                    Number(section.actionID) === currentAction
+                  return (
+                    <div
+                      key={section.id}
+                      className="relative"
+                      onMouseEnter={() => handleMouseEnter(section.id)}
+                      onMouseLeave={handleMouseLeave}
                     >
-                      {section.name}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleSectionClick(section)
+                        }}
+                        className={`rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-accent/15 text-accent'
+                            : 'text-text-secondary hover:bg-hover hover:text-text-primary'
+                        }`}
+                      >
+                        {section.name}
+                      </button>
 
                     {openSubmenu === section.id && section.children.length > 0 && (
-                      <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-lg border border-border-subtle bg-surface shadow-lg">
+                      <div
+                        className="absolute left-0 top-full z-50 mt-1 w-52 rounded-lg border border-border-subtle bg-surface shadow-lg"
+                        onMouseEnter={() => {
+                          if (closeTimer.current) {
+                            clearTimeout(closeTimer.current)
+                            closeTimer.current = null
+                          }
+                        }}
+                        onMouseLeave={handleMouseLeave}
+                      >
                         {section.children.map((sub) => (
                           <button
                             key={sub.id}
@@ -175,7 +210,7 @@ export function Navbar() {
                       </div>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </nav>

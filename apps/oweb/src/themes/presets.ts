@@ -130,8 +130,8 @@ export const PRESETS: ThemePreset[] = [
     defaultAccentId: 'indigo',
     accentSwatches: LIGHT_ACCENT_SWATCHES,
     colors: {
-      root: '#f5f3f0',
-      surface: '#eae7e3',
+      root: '#eae7e3',
+      surface: '#f5f3f0',
       elevated: '#ffffff',
       panel: '#f0ede9',
       'text-primary': '#1a1a1a',

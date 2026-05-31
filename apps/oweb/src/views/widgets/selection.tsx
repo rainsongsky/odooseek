@@ -8,10 +8,15 @@ export function SelectionWidget({
   meta,
 }: FieldWidgetProps) {
   if (readOnly) {
-    return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+    if (value === false || value === null || value === undefined)
+      return <span className="text-sm text-text-primary">—</span>
+    const pair = meta?.selection?.find(([k]) => k === value)
+    return <span className="text-sm text-text-primary">{pair ? pair[1] : String(value)}</span>
   }
   if (!meta?.selection?.length) {
-    return <span className="text-sm text-text-primary">{value != null ? String(value) : ''}</span>
+    if (value === false || value === null || value === undefined)
+      return <span className="text-sm text-text-primary">—</span>
+    return <span className="text-sm text-text-primary">{String(value)}</span>
   }
   return (
     <select

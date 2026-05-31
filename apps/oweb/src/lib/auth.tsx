@@ -14,6 +14,10 @@ interface AuthState {
   partner_display_name: string | null
   server_version: string | null
   home_action_id: number | null
+  user_companies?: unknown
+  web_base_url?: string
+  max_file_upload_size?: number
+  active_ids_limit?: number
   user_context?: { lang?: string; tz?: string; uid?: number }
 }
 
@@ -29,6 +33,9 @@ const ANONYMOUS: AuthState = {
   partner_display_name: null,
   server_version: null,
   home_action_id: null,
+  web_base_url: undefined,
+  max_file_upload_size: undefined,
+  active_ids_limit: undefined,
 }
 
 async function fetchSession(): Promise<AuthState> {

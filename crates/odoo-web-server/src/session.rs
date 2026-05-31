@@ -118,5 +118,8 @@ pub async fn logout(state: AppState, headers: HeaderMap) -> Result<Response, App
 
     let resp_headers = response.headers().clone();
 
-    Ok(json_response_with_cookies(&SessionInfo::anonymous(), &resp_headers))
+    Ok(json_response_with_cookies(
+        &SessionInfo::anonymous(),
+        &resp_headers,
+    ))
 }

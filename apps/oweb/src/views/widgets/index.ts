@@ -168,6 +168,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   remaining_days: RemainingDaysWidget,
   image_url: ImageUrlWidget,
   percentpie: PercentPieWidget,
+  contact_image: ImageFieldWidget,
 }
 
 export function getFieldWidget(

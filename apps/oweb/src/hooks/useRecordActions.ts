@@ -26,5 +26,12 @@ export function useRecordActions(model: string) {
     },
   })
 
-  return { duplicate, archive, unarchive }
+  const remove = useMutation({
+    mutationFn: (ids: number[]) => callKw(model, 'unlink', [ids]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'data', model] })
+    },
+  })
+
+  return { duplicate, archive, unarchive, remove }
 }

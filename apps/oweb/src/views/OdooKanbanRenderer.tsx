@@ -226,6 +226,7 @@ export function OdooKanbanRenderer({
         {(records ?? []).map((record) => (
           <KanbanCard
             key={record.id as number}
+            model={model}
             record={record}
             cardFields={cardFields}
             templateNodes={templateNodes}
@@ -252,6 +253,7 @@ export function OdooKanbanRenderer({
         return (
           <KanbanColumn
             key={colId}
+            model={model}
             stageId={colId}
             title={String(stageName)}
             count={colRecords.length}
@@ -290,6 +292,7 @@ function KanbanColumn({
   onQuickCreate,
   onDelete,
   onArchive,
+  model,
 }: {
   title: string
   stageId: number
@@ -306,6 +309,7 @@ function KanbanColumn({
   onQuickCreate?: (name: string, stageId: number) => void
   onDelete?: (id: number) => void
   onArchive?: (id: number) => void
+  model: string
 }) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -340,6 +344,7 @@ function KanbanColumn({
         {records.map((record) => (
           <KanbanCard
             key={record.id as number}
+            model={model}
             record={record}
             cardFields={cardFields}
             templateNodes={templateNodes}
@@ -445,6 +450,7 @@ function KanbanCard({
   onClick,
   onDelete,
   onArchive,
+  model,
 }: {
   record: Record<string, unknown>
   cardFields: ViewField[]
@@ -454,11 +460,54 @@ function KanbanCard({
   onClick?: (id: number) => void
   onDelete?: (id: number) => void
   onArchive?: (id: number) => void
+  model: string
 }) {
   const colorIdx = highlightColor ? Number(record[highlightColor]) : 0
   const borderColor =
     colorIdx > 0 ? KANBAN_COLORS[Math.min(colorIdx, KANBAN_COLORS.length - 1)] : undefined
   const recordId = record.id as number
+
+  let mainNodes = templateNodes
+  let asideNode: KanbanTemplateNode | undefined
+  if (templateNodes && templateNodes.length > 0) {
+    const asideIdx = templateNodes.findIndex((n) => n.type === 'html' && n.tag === 'aside')
+    if (asideIdx >= 0) {
+      asideNode = templateNodes[asideIdx]
+      mainNodes = [...templateNodes.slice(0, asideIdx), ...templateNodes.slice(asideIdx + 1)]
+    }
+  }
+
+  const content = mainNodes && mainNodes.length > 0 ? (
+    mainNodes.map((node, i) => (
+      <KanbanNode key={i} node={node} record={record} fields={fields} model={model} recordId={recordId} />
+    ))
+  ) : cardFields.length > 0 ? (
+    cardFields.map((f, fi) => {
+      const meta = fields[f.name]
+      if (!meta) return null
+      if (f.invisible && f.invisible >= 1) return null
+      const Widget = getFieldWidget(
+        { type: 'field', name: f.name, widget: f.widget },
+        meta.type,
+      )
+      return (
+        <div key={`${f.name}-${fi}`}>
+          <Widget
+            field={{ type: 'field', name: f.name, widget: f.widget }}
+            value={record[f.name]}
+            onChange={NOOP}
+            readOnly
+            meta={meta}
+            record={record}
+            model={model}
+            recordId={recordId}
+          />
+        </div>
+      )
+    })
+  ) : (
+    <span className="text-sm font-medium text-text-primary">{record.name as string}</span>
+  )
 
   return (
     <div
@@ -469,32 +518,15 @@ function KanbanCard({
       style={borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined}
     >
       <CardActions recordId={recordId} onEdit={onClick} onDelete={onDelete} onArchive={onArchive} />
-      {templateNodes && templateNodes.length > 0 ? (
-        templateNodes.map((node, i) => (
-          <KanbanNode key={i} node={node} record={record} fields={fields} />
-        ))
-      ) : cardFields.length > 0 ? (
-        cardFields.map((f, fi) => {
-          const meta = fields[f.name]
-          if (!meta) return null
-          if (f.invisible && f.invisible >= 1) return null
-          const Widget = getFieldWidget(
-            { type: 'field', name: f.name, widget: f.widget },
-            meta.type,
-          )
-          return (
-            <div key={`${f.name}-${fi}`}>
-              <Widget
-                field={{ type: 'field', name: f.name, widget: f.widget }}
-                value={record[f.name]}
-                onChange={NOOP}
-                readOnly
-              />
-            </div>
-          )
-        })
+      {asideNode ? (
+        <div className="flex flex-row gap-3">
+          <div className="flex-1">{content}</div>
+          <div className="shrink-0">
+            <KanbanNode node={asideNode} record={record} fields={fields} model={model} recordId={recordId} />
+          </div>
+        </div>
       ) : (
-        <span className="text-sm font-medium text-text-primary">{record.name as string}</span>
+        content
       )}
     </div>
   )
@@ -597,19 +629,87 @@ const KANBAN_COLORS = [
   '#d63384',
 ]
 
+function formatKanbanField(value: unknown, meta: OdooFieldMeta): string {
+  if (value == null || value === false) return ''
+  if (typeof value === 'boolean') return value ? '\u2713' : ''
+  if (typeof value === 'string') {
+    if (meta.type === 'html') return value.replace(/<[^>]+>/g, '')
+    if (meta.selection) {
+      const sel = meta.selection.find(([k]) => k === value)
+      return sel ? sel[1] : value
+    }
+    return value
+  }
+  if (typeof value === 'number') {
+    if (meta.type === 'monetary') return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    if (meta.type === 'float') {
+      const s = value.toLocaleString()
+      if (s.endsWith('.00')) return s.slice(0, -3)
+      return s
+    }
+    if (meta.type === 'integer') return value.toLocaleString()
+    return String(value)
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 2 && typeof value[0] === 'number' && typeof value[1] === 'string') {
+      return value[1] || `#${value[0]}`
+    }
+    return `${value.length} records`
+  }
+  return String(value ?? '')
+}
+
 function KanbanNode({
   node,
   record,
   fields,
+  model,
+  recordId,
 }: {
   node: KanbanTemplateNode
   record: Record<string, unknown>
   fields: Record<string, OdooFieldMeta>
+  model: string
+  recordId: number
 }) {
   switch (node.type) {
     case 'field': {
       const meta = fields[node.name]
       if (!meta) return null
+
+      if (node.widget === 'image' && (meta.type === 'binary' || meta.name.toLowerCase().startsWith('image'))) {
+        const size = node.options?.size as [number, number] | undefined
+        if (size && Array.isArray(size)) {
+          return (
+            <img
+              src={`/api/web/image/${model}/${recordId}/${node.name}`}
+              className={node.class}
+              width={size[0]}
+              height={size[1]}
+              loading="lazy"
+              onError={(e) => { (e.target as HTMLElement).style.display = 'none' }}
+            />
+          )
+        }
+        const imgClass = (node.options?.img_class as string) ?? 'h-8 w-8 rounded object-cover'
+        return (
+          <img
+            src={`/api/web/image/${model}/${recordId}/${node.name}`}
+            className={[node.class, imgClass].filter(Boolean).join(' ')}
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLElement).style.display = 'none' }}
+          />
+        )
+      }
+
+      if (!node.widget) {
+        return (
+          <div className={node.class}>
+            {formatKanbanField(record[node.name], meta)}
+          </div>
+        )
+      }
+
       const Widget = getFieldWidget(
         { type: 'field', name: node.name, widget: node.widget },
         meta.type,
@@ -617,10 +717,14 @@ function KanbanNode({
       return (
         <div className={node.class}>
           <Widget
-            field={{ type: 'field', name: node.name, widget: node.widget }}
+            field={{ type: 'field', name: node.name, widget: node.widget, options: node.options }}
             value={record[node.name]}
             onChange={NOOP}
             readOnly
+            meta={meta}
+            record={record}
+            model={model}
+            recordId={recordId}
           />
         </div>
       )
@@ -630,7 +734,7 @@ function KanbanNode({
         if (!evalCondition(node.if, record)) {
           // Try elif/else children
           const alt = node.children.find((c) => c.type === 'condition')
-          if (alt) return <KanbanNode node={alt} record={record} fields={fields} />
+          if (alt) return <KanbanNode node={alt} record={record} fields={fields} model={model} recordId={recordId} />
           return null
         }
         return (
@@ -638,7 +742,7 @@ function KanbanNode({
             {node.children
               .filter((c) => c.type !== 'condition')
               .map((c, i) => (
-                <KanbanNode key={i} node={c} record={record} fields={fields} />
+                <KanbanNode key={i} node={c} record={record} fields={fields} model={model} recordId={recordId} />
               ))}
           </>
         )
@@ -650,14 +754,14 @@ function KanbanNode({
               {node.children
                 .filter((c) => c.type !== 'condition')
                 .map((c, i) => (
-                  <KanbanNode key={i} node={c} record={record} fields={fields} />
+                  <KanbanNode key={i} node={c} record={record} fields={fields} model={model} recordId={recordId} />
                 ))}
             </>
           )
         }
         // Try next elif/else
         const next = node.children.find((c) => c.type === 'condition')
-        if (next) return <KanbanNode node={next} record={record} fields={fields} />
+        if (next) return <KanbanNode node={next} record={record} fields={fields} model={model} recordId={recordId} />
         return null
       }
       // t-else — always true
@@ -666,7 +770,7 @@ function KanbanNode({
           {node.children
             .filter((c) => c.type !== 'condition')
             .map((c, i) => (
-              <KanbanNode key={i} node={c} record={record} fields={fields} />
+              <KanbanNode key={i} node={c} record={record} fields={fields} model={model} recordId={recordId} />
             ))}
         </>
       )
@@ -684,7 +788,7 @@ function KanbanNode({
               loopRecord[node.as] = item
             }
             return node.children.map((c, j) => (
-              <KanbanNode key={`${i}-${j}`} node={c} record={loopRecord} fields={fields} />
+              <KanbanNode key={`${i}-${j}`} node={c} record={loopRecord} fields={fields} model={model} recordId={recordId} />
             ))
           })}
         </>
@@ -699,7 +803,7 @@ function KanbanNode({
         node.tag,
         { className: node.class, key: undefined },
         ...node.children.map((c, i) => (
-          <KanbanNode key={i} node={c} record={record} fields={fields} />
+          <KanbanNode key={i} node={c} record={record} fields={fields} model={model} recordId={recordId} />
         )),
       )
     case 'text':
@@ -708,7 +812,7 @@ function KanbanNode({
       return (
         <div className="mt-2 border-t border-border-subtle pt-2 text-xs text-text-muted">
           {node.children.map((c, i) => (
-            <KanbanNode key={i} node={c} record={record} fields={fields} />
+            <KanbanNode key={i} node={c} record={record} fields={fields} model={model} recordId={recordId} />
           ))}
         </div>
       )

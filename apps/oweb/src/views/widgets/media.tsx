@@ -1,10 +1,20 @@
 import { useRef, useState } from 'react'
 import type { FieldWidgetProps } from './index'
 
-export function BinaryWidget({ field, value, onChange, readOnly, meta, record }: FieldWidgetProps) {
+export function BinaryWidget({
+  field,
+  value,
+  onChange,
+  readOnly,
+  meta,
+  record,
+  model,
+  recordId,
+}: FieldWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const isImage =
     field.widget === 'image' ||
+    field.widget === 'contact_image' ||
     (meta?.type === 'binary' &&
       (field.name?.includes('image') ||
         field.name?.includes('photo') ||
@@ -18,6 +28,9 @@ export function BinaryWidget({ field, value, onChange, readOnly, meta, record }:
         onChange={onChange}
         readOnly={readOnly}
         meta={meta}
+        record={record}
+        model={model}
+        recordId={recordId}
       />
     )
   }
@@ -93,15 +106,28 @@ export function ImageFieldWidget({
   const opts = (field.options as Record<string, unknown>) ?? {}
   const maxW = Number(opts.max_width) || 1024
   const maxH = Number(opts.max_height) || 1024
+  const sizeOpt = opts.size as [number, number] | undefined
+  const previewImage = opts.preview_image as string | undefined
+  const imgClass = (opts.img_class as string) ?? ''
+  const enableZoom = opts.zoom === true || opts.zoom === 'true'
+  const isContact = field.widget === 'contact_image'
   const base64 = value as string | false | null | undefined
   const hasBase64 = base64 != null && base64 !== false && base64 !== ''
 
-  // Prefer base64 data; fallback to Odoo /web/image URL when record exists
-  const src = hasBase64
-    ? `data:image/png;base64,${base64}`
-    : model && recordId
-      ? `/api/web/image/${model}/${recordId}/${field.name}`
-      : ''
+  // Size from options, or defaults based on widget type
+  const displayW = sizeOpt?.[0] ?? (isContact ? 130 : 128)
+  const displayH = sizeOpt?.[1] ?? (isContact ? 130 : 158)
+
+  // Build image src: prefer base64 → Odoo URL for main field → preview_image fallback
+  let src = ''
+  if (hasBase64) {
+    src = `data:image/png;base64,${base64}`
+  } else if (previewImage && model && recordId) {
+    // When preview_image is set, Odoo uses the thumbnail field as display
+    src = `/api/web/image/${model}/${recordId}/${previewImage}`
+  } else if (model && recordId) {
+    src = `/api/web/image/${model}/${recordId}/${field.name}`
+  }
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -128,15 +154,41 @@ export function ImageFieldWidget({
     img.src = URL.createObjectURL(file)
   }
 
+  const imgStyle = { width: displayW, height: displayH }
+  const rounded = isContact ? 'rounded-full' : 'rounded'
+  const baseImgClass = `object-contain border border-border-subtle ${rounded} ${imgClass}`.trim()
+
   if (readOnly) {
-    if (!src) return <span className="text-sm text-text-muted">—</span>
+    if (!src) {
+      // Show placeholder silhouette
+      return (
+        <div
+          className={`flex items-center justify-center bg-border-default/20 ${rounded} ${imgClass}`}
+          style={imgStyle}
+        >
+          <svg
+            width={displayW * 0.5}
+            height={displayH * 0.5}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="text-text-muted"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M20 21a8 8 0 1 0-16 0" />
+          </svg>
+        </div>
+      )
+    }
     return (
       <>
         <img
           src={src}
           alt={field.string || field.name}
-          onClick={() => setZoomed(true)}
-          className="max-h-32 max-w-32 cursor-zoom-in rounded border border-border-subtle object-contain hover:opacity-90 transition-opacity"
+          onClick={enableZoom ? () => setZoomed(true) : undefined}
+          className={`${baseImgClass} ${enableZoom ? 'cursor-zoom-in hover:opacity-90 transition-opacity' : ''}`}
+          style={imgStyle}
         />
         {zoomed && (
           <div
@@ -157,12 +209,26 @@ export function ImageFieldWidget({
 
   return (
     <div className="flex flex-col gap-2">
-      {src && (
-        <img
-          src={src}
-          alt={field.string || field.name}
-          className="max-h-32 max-w-32 rounded border border-border-subtle object-contain"
-        />
+      {src ? (
+        <img src={src} alt={field.string || field.name} className={baseImgClass} style={imgStyle} />
+      ) : (
+        <div
+          className={`flex items-center justify-center bg-border-default/20 ${rounded}`}
+          style={imgStyle}
+        >
+          <svg
+            width={displayW * 0.5}
+            height={displayH * 0.5}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="text-text-muted"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M20 21a8 8 0 1 0-16 0" />
+          </svg>
+        </div>
       )}
       <div className="flex items-center gap-2">
         <input

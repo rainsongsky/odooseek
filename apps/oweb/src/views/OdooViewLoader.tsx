@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { lazy, useCallback, useEffect, useMemo, useState, Suspense } from 'react'
+import { lazy, useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
+import { FormDialogOverlay, type FormDialogItem } from '../components/FormDialog'
+import { SearchPanel } from '../components/SearchPanel'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
-import { callKw } from '../lib/api'
+import { callKw, type OdooAction } from '../lib/api'
 import type { OdooFieldMeta, ViewToolbar, ViewType } from '../lib/odoo-types'
 import { generateReport } from '../lib/report'
 import { cacheKey, getCachedViews, setCachedViews } from '../lib/view-cache'
@@ -84,7 +86,60 @@ export function OdooViewLoader({
   const [domain, setDomain] = useState<unknown[]>(initialDomain)
   const [groupBy, setGroupBy] = useState<string[]>([])
   const toast = useToast()
-  const { duplicate, archive, unarchive } = useRecordActions(model)
+  const [recordId, setRecordId] = useState<number | undefined>(_recordId)
+  const [formDialogs, setFormDialogs] = useState<FormDialogItem[]>([])
+  const formDialogIdRef = useRef(0)
+  const [searchPanelDomain, setSearchPanelDomain] = useState<unknown[]>([])
+  useEffect(() => { setRecordId(_recordId) }, [_recordId])
+
+  const effectiveDomain = useMemo(
+    () => [...initialDomain, ...domain, ...searchPanelDomain],
+    [initialDomain, domain, searchPanelDomain],
+  )
+
+  const { duplicate, archive, unarchive, remove } = useRecordActions(model)
+
+  const openFormDialog = useCallback((action: OdooAction) => {
+    const id = ++formDialogIdRef.current
+    setFormDialogs((prev) => [...prev, { id, action }])
+  }, [])
+
+  const closeFormDialog = useCallback((id: number) => {
+    setFormDialogs((prev) => prev.filter((d) => d.id !== id))
+  }, [])
+
+  const handleFormAction = useCallback(
+    (action: OdooAction) => {
+      if (action.type === 'ir.actions.act_window') {
+        if (action.target === 'new') {
+          openFormDialog(action)
+          return
+        }
+        if (action.res_model) {
+          const newViewType = (action.view_mode?.split(',')[0] as ViewType) ?? 'list'
+          if (action.res_id) {
+            onRowClick?.(action.res_id)
+          } else if (action.res_model !== model || newViewType !== viewType) {
+            onSwitchView?.(newViewType)
+          } else {
+            onBackToList?.()
+          }
+        }
+      } else if (action.type === 'ir.actions.act_url') {
+        const url = (action as Record<string, unknown>).url as string | undefined
+        if (url) window.open(url, '_blank')
+      } else if (action.type === 'ir.actions.report') {
+        const rawAction = action as Record<string, unknown>
+        const actionId = rawAction.id ?? rawAction.report_name
+        generateReport(Number(actionId || 0), recordId ? [recordId] : [])
+      } else if (action.type === 'ir.actions.server') {
+        toast.info('Action executed')
+      } else if (action.type === 'ir.actions.act_window_close') {
+        onBackToList?.()
+      }
+    },
+    [model, viewType, recordId, onRowClick, onSwitchView, onBackToList, toast, openFormDialog],
+  )
 
   type ViewData = {
     views: Record<string, { arch: string; id: number; toolbar?: ViewToolbar }>
@@ -108,28 +163,28 @@ export function OdooViewLoader({
   }, [viewData, ck])
 
   const { data: recordNameData } = useQuery({
-    queryKey: ['odoo', 'read', model, _recordId, 'display_name'],
+    queryKey: ['odoo', 'read', model, recordId, 'display_name'],
     queryFn: () =>
-      callKw<Array<Record<string, unknown>>>(model, 'read', [[_recordId], ['display_name']]),
-    enabled: viewType === 'form' && !!_recordId,
+      callKw<Array<Record<string, unknown>>>(model, 'read', [[recordId], ['display_name']]),
+    enabled: viewType === 'form' && !!recordId,
     staleTime: 30_000,
   })
 
   const handlePrintAction = useCallback(
     async (actionId: number) => {
       try {
-        const ids = _recordId ? [_recordId] : []
+        const ids = recordId ? [recordId] : []
         await generateReport(actionId, ids.length > 0 ? ids : [0])
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to generate report')
       }
     },
-    [_recordId, toast],
+    [recordId, toast],
   )
 
   const handleDuplicate = useCallback(() => {
-    if (!_recordId) return
-    duplicate.mutate(_recordId, {
+    if (!recordId) return
+    duplicate.mutate(recordId, {
       onSuccess: (newId) => {
         toast.success('Record duplicated')
         onRecordCreated?.(newId)
@@ -138,11 +193,11 @@ export function OdooViewLoader({
         toast.error(err instanceof Error ? err.message : 'Failed to duplicate record')
       },
     })
-  }, [_recordId, duplicate, toast, onRecordCreated])
+  }, [recordId, duplicate, toast, onRecordCreated])
 
   const handleArchive = useCallback(() => {
-    if (!_recordId) return
-    archive.mutate([_recordId], {
+    if (!recordId) return
+    archive.mutate([recordId], {
       onSuccess: () => {
         toast.success('Record archived')
         onBackToList?.()
@@ -151,11 +206,11 @@ export function OdooViewLoader({
         toast.error(err instanceof Error ? err.message : 'Failed to archive record')
       },
     })
-  }, [_recordId, archive, toast, onBackToList])
+  }, [recordId, archive, toast, onBackToList])
 
   const handleUnarchive = useCallback(() => {
-    if (!_recordId) return
-    unarchive.mutate([_recordId], {
+    if (!recordId) return
+    unarchive.mutate([recordId], {
       onSuccess: () => {
         toast.success('Record unarchived')
       },
@@ -163,7 +218,20 @@ export function OdooViewLoader({
         toast.error(err instanceof Error ? err.message : 'Failed to unarchive record')
       },
     })
-  }, [_recordId, unarchive, toast])
+  }, [recordId, unarchive, toast])
+
+  const handleDelete = useCallback(() => {
+    if (!recordId) return
+    remove.mutate([recordId], {
+      onSuccess: () => {
+        toast.success('Record deleted')
+        onBackToList?.()
+      },
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete record')
+      },
+    })
+  }, [recordId, remove, toast, onBackToList])
 
   const handleSearch = useCallback((newDomain: unknown[]) => {
     setDomain(newDomain)
@@ -172,6 +240,41 @@ export function OdooViewLoader({
   const handleGroupByChange = useCallback((groupBys: string[]) => {
     setGroupBy(groupBys)
   }, [])
+
+  const activeView = viewData?.views?.[viewType]
+  const searchView = viewData?.views?.search
+  const modelData = viewData?.models?.[model]
+  const fields: Record<string, OdooFieldMeta> = modelData?.fields ?? {}
+  const searchData = searchView ? parseSearchXml(searchView.arch) : null
+
+  const dateFilters = useMemo(() => {
+    const dateFields = (searchData?.fields ?? []).filter(
+      (f) => f.name.endsWith('_date') || f.name === 'create_date' || f.name === 'write_date',
+    )
+    if (dateFields.length === 0) return []
+    const result: Array<{ name: string; string: string; domain: unknown[] }> = []
+    const presets = [
+      { key: 'today', label: 'Today', start: () => { const d = new Date(); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+      { key: 'last7', label: 'Last 7 Days', start: () => { const d = new Date(); d.setDate(d.getDate()-6); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+      { key: 'last30', label: 'Last 30 Days', start: () => { const d = new Date(); d.setDate(d.getDate()-29); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+      { key: 'mtd', label: 'Month to Date', start: () => { const d = new Date(new Date().getFullYear(), new Date().getMonth(), 1); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+      { key: 'lastMonth', label: 'Last Month', start: () => { const d = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1); return d }, end: () => { const d = new Date(new Date().getFullYear(), new Date().getMonth(), 0); d.setHours(23,59,59,999); return d } },
+      { key: 'ytd', label: 'Year to Date', start: () => { const d = new Date(new Date().getFullYear(), 0, 1); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+      { key: 'last12m', label: 'Last 12 Months', start: () => { const d = new Date(); d.setFullYear(d.getFullYear()-1); d.setDate(d.getDate()+1); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+    ]
+    const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ')
+    for (const f of dateFields) {
+      for (const p of presets) {
+        result.push({ name: `date_${f.name}_${p.key}`, string: `${f.string || f.name}: ${p.label}`, domain: [[f.name, '>=', fmt(p.start())], [f.name, '<=', fmt(p.end())]] })
+      }
+    }
+    return result
+  }, [searchData])
+
+  const allFilters = useMemo(
+    () => [...(searchData?.filters ?? []), ...dateFilters],
+    [searchData?.filters, dateFilters],
+  )
 
   if (isLoading) {
     return (
@@ -189,12 +292,6 @@ export function OdooViewLoader({
     )
   }
 
-  const activeView = viewData?.views?.[viewType]
-  const searchView = viewData?.views?.search
-  const modelData = viewData?.models?.[model]
-  const fields: Record<string, OdooFieldMeta> = modelData?.fields ?? {}
-  const searchData = searchView ? parseSearchXml(searchView.arch) : null
-
   if (!activeView) {
     return (
       <div className="rounded-lg border border-border-subtle bg-surface/50 py-12 text-center text-sm text-text-muted">
@@ -208,6 +305,7 @@ export function OdooViewLoader({
   const recordName = (recordNameData?.[0]?.display_name as string) || undefined
   const toolbar = activeView?.toolbar
   const hasActiveField = 'active' in fields
+  const searchPanel = searchData?.searchPanel
 
   const showSearch =
     viewType === 'list' ||
@@ -216,7 +314,7 @@ export function OdooViewLoader({
     viewType === 'graph' ||
     viewType === 'calendar'
 
-  return (
+  const renderContent = () => (
     <div className="flex flex-1 flex-col overflow-auto">
       <ControlPanel
         breadcrumbs={{ model, viewType, viewTitle, recordName, onBackToList }}
@@ -229,7 +327,7 @@ export function OdooViewLoader({
                 onGroupByChange: handleGroupByChange,
                 placeholder: `Search ${model}...`,
                 searchFields: searchData?.fields,
-                filters: searchData?.filters,
+                filters: allFilters,
                 groupByFilters: searchData?.groupByFilters,
               }
             : { visible: false, onSearch: () => {} }
@@ -242,10 +340,11 @@ export function OdooViewLoader({
         showCreate={!!onCreateClick}
         onPrintAction={handlePrintAction}
         model={model}
-        selectedIds={_recordId ? [_recordId] : []}
-        onDuplicate={viewType === 'form' && _recordId ? handleDuplicate : undefined}
-        onArchive={viewType === 'form' && _recordId ? handleArchive : undefined}
-        onUnarchive={viewType === 'form' && _recordId ? handleUnarchive : undefined}
+        selectedIds={recordId ? [recordId] : []}
+        onDuplicate={viewType === 'form' && recordId ? handleDuplicate : undefined}
+        onArchive={viewType === 'form' && recordId ? handleArchive : undefined}
+        onUnarchive={viewType === 'form' && recordId ? handleUnarchive : undefined}
+        onDelete={viewType === 'form' && recordId ? handleDelete : undefined}
         hasActiveField={hasActiveField}
       />
       {viewType === 'list' && (
@@ -253,7 +352,7 @@ export function OdooViewLoader({
           model={model}
           arch={activeView.arch}
           fields={fields}
-          domain={domain}
+          domain={effectiveDomain}
           groupBy={groupBy}
           onRowClick={onRowClick}
         />
@@ -265,9 +364,10 @@ export function OdooViewLoader({
             model={model}
             arch={activeView.arch}
             fields={fields}
-            recordId={_recordId}
+            recordId={recordId}
             onRecordCreated={onRecordCreated}
             onDirtyChange={onDirtyChange}
+            onAction={handleFormAction}
           />
         </Suspense>
       )}
@@ -277,7 +377,7 @@ export function OdooViewLoader({
             model={model}
             arch={activeView.arch}
             fields={fields}
-            domain={domain}
+            domain={effectiveDomain}
             groupBy={groupBy}
             onRecordClick={onRowClick}
           />
@@ -285,12 +385,12 @@ export function OdooViewLoader({
       )}
       {viewType === 'pivot' && (
         <Suspense fallback={<ViewSkeleton />}>
-          <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+          <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={effectiveDomain} />
         </Suspense>
       )}
       {viewType === 'graph' && (
         <Suspense fallback={<ViewSkeleton />}>
-          <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={domain} />
+          <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={effectiveDomain} />
         </Suspense>
       )}
       {viewType === 'calendar' && (
@@ -299,12 +399,31 @@ export function OdooViewLoader({
             model={model}
             arch={activeView.arch}
             fields={fields}
-            domain={domain}
+            domain={effectiveDomain}
             onRecordClick={onRowClick}
           />
         </Suspense>
       )}
     </div>
+  )
+
+  return (
+    <>
+      {searchPanel && showSearch ? (
+        <div className="flex flex-1 overflow-auto">
+          <SearchPanel
+            model={model}
+            searchPanel={searchPanel}
+            domain={[...initialDomain, ...domain]}
+            onCategoryChange={setSearchPanelDomain}
+          />
+          {renderContent()}
+        </div>
+      ) : (
+        renderContent()
+      )}
+      <FormDialogOverlay dialogs={formDialogs} onClose={closeFormDialog} parentModel={model} />
+    </>
   )
 }
 

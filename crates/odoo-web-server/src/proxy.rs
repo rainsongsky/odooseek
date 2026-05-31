@@ -92,11 +92,7 @@ pub async fn proxy_image(
             data: None,
         }));
     }
-    let odoo_url = format!(
-        "{}/web/image/{}",
-        state.odoo_url,
-        image_path
-    );
+    let odoo_url = format!("{}/web/image/{}", state.odoo_url, image_path);
     tracing::debug!("Proxying image request to: {odoo_url}");
 
     let mut request = state.http_client.get(&odoo_url);

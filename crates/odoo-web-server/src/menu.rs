@@ -18,10 +18,7 @@ pub async fn get_menus(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    let url = format!(
-        "{}/web/webclient/load_menus?unique=1",
-        state.odoo_url
-    );
+    let url = format!("{}/web/webclient/load_menus?unique=1", state.odoo_url);
 
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -61,10 +58,7 @@ pub async fn get_menus(
 /// GET /api/menu — legacy endpoint, returns root menu items
 /// Kept for backward compatibility during migration.
 pub async fn get_menu(State(state): State<AppState>) -> Result<Response, AppError> {
-    let odoo_url = format!(
-        "{}/web/dataset/call_kw",
-        state.odoo_url
-    );
+    let odoo_url = format!("{}/web/dataset/call_kw", state.odoo_url);
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",

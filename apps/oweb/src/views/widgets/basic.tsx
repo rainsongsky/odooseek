@@ -5,7 +5,8 @@ import { FIELD_INPUT_CLASS } from './index'
 
 export function CharWidget({ field, value, onChange, readOnly, meta }: FieldWidgetProps) {
   if (readOnly) {
-    const v = (value as string) ?? ''
+    const v = value === false || value === null || value === undefined ? '' : String(value)
+    if (!v) return <span className="text-sm text-text-primary">—</span>
     if (field.widget === 'password' && v)
       return <span className="text-sm text-text-primary">{'•'.repeat(v.length)}</span>
     return <span className="text-sm text-text-primary">{v}</span>

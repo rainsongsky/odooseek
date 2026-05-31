@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { callKw, searchRead } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 interface ChatterProps {
   model: string
@@ -30,6 +31,7 @@ type ComposeMode = 'idle' | 'comment' | 'note'
 
 export function Chatter({ model, recordId }: ChatterProps) {
   const queryClient = useQueryClient()
+  const { session } = useAuth()
   const [composeMode, setComposeMode] = useState<ComposeMode>('idle')
   const [composeBody, setComposeBody] = useState('')
 
@@ -87,9 +89,29 @@ export function Chatter({ model, recordId }: ChatterProps) {
     },
   })
 
+  const followMutation = useMutation({
+    mutationFn: () =>
+      callKw(model, 'message_subscribe', [[recordId as number]], {
+        partner_ids: [session.partner_id],
+        subtype_ids: false,
+      }),
+    onSuccess: invalidateChatter,
+  })
+
+  const unfollowMutation = useMutation({
+    mutationFn: () =>
+      callKw(model, 'message_unsubscribe', [[recordId as number]], {
+        partner_ids: [session.partner_id],
+      }),
+    onSuccess: invalidateChatter,
+  })
+
   if (!enabled) return null
 
   const followerCount = followers?.length ?? 0
+  const isFollowing =
+    followers?.some((f) => Array.isArray(f.partner_id) && f.partner_id[0] === session.partner_id) ??
+    false
 
   return (
     <div className="border-t border-border-subtle px-4 py-3">
@@ -102,7 +124,26 @@ export function Chatter({ model, recordId }: ChatterProps) {
             {followerCount} follower{followerCount !== 1 ? 's' : ''}
           </span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-2">
+          {isFollowing ? (
+            <button
+              type="button"
+              onClick={() => unfollowMutation.mutate()}
+              disabled={unfollowMutation.isPending}
+              className="rounded px-2 py-0.5 text-[11px] font-medium text-text-secondary hover:bg-hover"
+            >
+              {unfollowMutation.isPending ? '...' : 'Unfollow'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => followMutation.mutate()}
+              disabled={followMutation.isPending}
+              className="rounded px-2 py-0.5 text-[11px] font-medium text-accent hover:bg-accent/10"
+            >
+              {followMutation.isPending ? '...' : 'Follow'}
+            </button>
+          )}
           {composeMode === 'idle' && (
             <>
               <button

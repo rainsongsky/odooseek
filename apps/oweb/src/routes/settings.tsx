@@ -1,37 +1,157 @@
+import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { callKw } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 function SettingsPage() {
+  const { session } = useAuth()
+
+  const { data: modules } = useQuery({
+    queryKey: ['odoo', 'installed-modules'],
+    queryFn: async () => {
+      const res = await callKw<Array<{ name: string; shortdesc: string; latest_version: string }>>(
+        'ir.module.module',
+        'search_read',
+        [[['state', '=', 'installed']]],
+        { fields: ['name', 'shortdesc', 'latest_version'], limit: 200, order: 'name' },
+      )
+      return res ?? []
+    },
+    staleTime: 60_000,
+  })
+
+  const { data: langList } = useQuery({
+    queryKey: ['odoo', 'languages'],
+    queryFn: async () => {
+      const res = await callKw<Array<Record<string, unknown>>>('res.lang', 'search_read', [
+        [['active', '=', true]],
+        { fields: ['code', 'name'], limit: 50 },
+      ])
+      return (res ?? []).map((r) => [String(r.code), String(r.name)] as [string, string])
+    },
+    staleTime: 60_000,
+  })
+
+  const companies = session.user_companies as
+    | [number, string][]
+    | { allowed_companies: Array<{ id: number; name: string }> }
+    | undefined
+  const companyList: Array<{ id: number; name: string }> = Array.isArray(companies)
+    ? companies.map(([id, name]) => ({ id, name }))
+    : Array.isArray((companies as Record<string, unknown>)?.allowed_companies)
+      ? ((companies as Record<string, unknown>).allowed_companies as Array<{
+          id: number
+          name: string
+        }>)
+      : []
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-8">
-      <div className="w-full max-w-2xl">
-        <h2 className="mb-8 text-center text-2xl font-semibold text-text-primary">Settings</h2>
+    <div className="flex flex-1 flex-col overflow-auto">
+      <div className="mx-auto w-full max-w-3xl px-6 py-8">
+        <h2 className="mb-6 text-xl font-semibold text-text-primary">Settings</h2>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
-            <h3 className="mb-3 text-sm font-semibold text-text-primary">Appearance</h3>
+          {/* User Profile */}
+          <Section title="User Profile">
+            <KVRow label="Name" value={session.name} />
+            <KVRow label="Username" value={session.username} />
+            <KVRow label="User ID" value={session.uid} />
+            <KVRow label="Partner" value={session.partner_display_name} />
+            <KVRow
+              label="Language"
+              value={(session.user_context as Record<string, string>)?.lang ?? 'en_US'}
+            />
+            <KVRow
+              label="Timezone"
+              value={(session.user_context as Record<string, string>)?.tz ?? 'UTC'}
+            />
+            <KVRow label="Admin" value={session.is_admin ? 'Yes' : 'No'} />
+            <KVRow label="System" value={session.is_system ? 'Yes' : 'No'} />
+          </Section>
+
+          {/* Odoo Server */}
+          <Section title="Odoo Server">
+            <KVRow label="Database" value={session.db} />
+            <KVRow label="Version" value={session.server_version} />
+            <KVRow label="Web Base URL" value={session.web_base_url} />
+            <KVRow
+              label="Max Upload Size"
+              value={
+                session.max_file_upload_size
+                  ? `${(session.max_file_upload_size / 1024 / 1024).toFixed(0)} MB`
+                  : undefined
+              }
+            />
+            <KVRow label="Active IDs Limit" value={session.active_ids_limit} />
+          </Section>
+
+          {/* Companies */}
+          {companyList.length > 0 && (
+            <Section title={`Companies (${companyList.length})`}>
+              <div className="flex flex-wrap gap-2">
+                {companyList.map((c) => (
+                  <span
+                    key={c.id}
+                    className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
+                  >
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Installed Modules */}
+          {modules && modules.length > 0 && (
+            <Section title={`Installed Modules (${modules.length})`}>
+              <div className="max-h-60 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border-subtle">
+                      <th className="py-1 text-left font-medium text-text-secondary">Module</th>
+                      <th className="py-1 text-left font-medium text-text-secondary">
+                        Description
+                      </th>
+                      <th className="py-1 text-right font-medium text-text-secondary">Version</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modules.map((m) => (
+                      <tr key={m.name} className="border-b border-border-subtle/50">
+                        <td className="py-1 font-mono text-text-primary">{m.name}</td>
+                        <td className="py-1 text-text-secondary">{m.shortdesc}</td>
+                        <td className="py-1 text-right text-text-muted">{m.latest_version}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+          )}
+
+          {/* Languages */}
+          {langList && langList.length > 0 && (
+            <Section title={`Languages (${langList.length})`}>
+              <div className="flex flex-wrap gap-2">
+                {langList.map(([code, name]) => (
+                  <span
+                    key={code}
+                    className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
+                  >
+                    {name} ({code})
+                  </span>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Appearance */}
+          <Section title="Appearance">
             <ThemeToggle />
-          </div>
+          </Section>
 
-          <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
-            <h3 className="mb-3 text-sm font-semibold text-text-primary">Odoo Connection</h3>
-            <dl className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <dt className="text-text-secondary">API Endpoint</dt>
-                <dd className="font-mono text-text-primary">/api/odoo/jsonrpc</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-text-secondary">Proxy Mode</dt>
-                <dd className="text-text-primary">Nginx Same-Origin</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-text-secondary">Auth Method</dt>
-                <dd className="text-text-primary">Session Cookie</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="rounded-xl border border-border-subtle bg-surface/50 p-6">
-            <h3 className="mb-3 text-sm font-semibold text-text-primary">Technology Stack</h3>
+          {/* Technology Stack */}
+          <Section title="Technology Stack">
             <div className="flex flex-wrap gap-2">
               {[
                 'React 19',
@@ -41,7 +161,7 @@ function SettingsPage() {
                 'Vite 8',
                 'Bun',
                 'Tailwind CSS 4',
-                'Lucide Icons',
+                'Rust (axum)',
               ].map((tech) => (
                 <span
                   key={tech}
@@ -51,9 +171,29 @@ function SettingsPage() {
                 </span>
               ))}
             </div>
-          </div>
+          </Section>
         </div>
       </div>
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border-subtle bg-surface/50 p-5">
+      <h3 className="mb-3 text-sm font-semibold text-text-primary">{title}</h3>
+      {children}
+    </div>
+  )
+}
+
+function KVRow({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className="flex items-baseline justify-between border-b border-border-subtle/30 py-1.5 last:border-b-0">
+      <span className="text-xs text-text-secondary">{label}</span>
+      <span className="text-xs font-medium text-text-primary">
+        {value != null && value !== false ? String(value) : '—'}
+      </span>
     </div>
   )
 }

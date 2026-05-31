@@ -868,7 +868,7 @@ export function OdooListRenderer({
                 >
                   {isGroupField ? (
                     <>
-                      <span className="font-medium">{renderCell(val, meta)}</span>
+                      <span className="font-medium">{renderCell(val, meta, model)}</span>
                       <span className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-text-muted">
                         {String(count)}
                       </span>
@@ -893,7 +893,7 @@ export function OdooListRenderer({
                     </>
                   ) : (
                     <span className="text-text-muted">
-                      {val !== undefined && val !== null ? renderCell(val, meta) : ''}
+                      {val !== undefined && val !== null ? renderCell(val, meta, model) : ''}
                     </span>
                   )}
                 </td>
@@ -933,7 +933,7 @@ export function OdooListRenderer({
                       type="checkbox"
                       checked={selectedIds.has(recordId)}
                       onChange={() => toggleRow(recordId, false, 0)}
-                      className="accent-accent"
+                      className="h-4 w-4 cursor-pointer rounded accent-accent"
                     />
                   </td>
                   {visibleColumns.map((col, ci) => {
@@ -979,7 +979,7 @@ export function OdooListRenderer({
                           .filter(Boolean)
                           .join(' ')}
                       >
-                        {renderCell(record[col.name], fields[col.name])}
+                        {renderCell(record[col.name], fields[col.name], model, record.id as number)}
                       </td>
                     )
                   })}
@@ -1086,7 +1086,7 @@ export function OdooListRenderer({
                               type="checkbox"
                               checked={!hiddenCols.has(col.name)}
                               onChange={() => toggleColumn(col.name)}
-                              className="accent-accent"
+                              className="h-4 w-4 cursor-pointer rounded accent-accent"
                             />
                             {label}
                           </label>
@@ -1320,7 +1320,7 @@ export function OdooListRenderer({
                         if (el) el.indeterminate = someSelected
                       }}
                       onChange={toggleAll}
-                      className="accent-accent"
+                      className="h-4 w-4 cursor-pointer rounded accent-accent"
                     />
                   </th>
                   {visibleColumns.map((col, ci) => {
@@ -1478,7 +1478,7 @@ export function OdooListRenderer({
                               checked={selectedIds.has(recordId)}
                               onChange={() => toggleRow(recordId, false, i)}
                               onClick={(e) => toggleRow(recordId, e.shiftKey, i)}
-                              className="accent-accent"
+                              className="h-4 w-4 cursor-pointer rounded accent-accent"
                             />
                           </td>
                           {visibleColumns.map((col, ci) => {
@@ -1543,7 +1543,8 @@ export function OdooListRenderer({
                               <td
                                 key={`d-${col.name}-${ci}`}
                                 title={(() => {
-                                  const t = renderCell(record[col.name], fields[col.name])
+                                  const t = renderCell(record[col.name], fields[col.name], model, record.id as number)
+                                  if (typeof t !== 'string') return undefined
                                   return t.length > 30 ? t : undefined
                                 })()}
                                 className={[
@@ -1564,7 +1565,7 @@ export function OdooListRenderer({
                                 }}
                                 style={isEditable && !isReadonly && meta?.type === 'boolean' ? { cursor: 'pointer' } : undefined}
                               >
-                                {renderCell(record[col.name], fields[col.name])}
+                                {renderCell(record[col.name], fields[col.name], model, record.id as number)}
                               </td>
                             )
                           })}
