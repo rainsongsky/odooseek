@@ -273,3 +273,14 @@ body,
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Page Transition ────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeIn 0.15s ease-out;
+}

@@ -12,7 +12,7 @@ function RootLayout() {
       <Navbar />
       <HomeMenuOverlay />
       <CommandPalette />
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col page-enter">
         <Outlet />
       </main>
       <div className="flex items-center justify-end border-t border-border-subtle bg-root px-4 py-1">
