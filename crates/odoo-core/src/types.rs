@@ -44,7 +44,7 @@ pub struct JsonRpcError {
 
 /// Session info returned to oweb frontend (camelCase JSON).
 /// Built manually in session.rs from Odoo 19 CE's snake_case response.
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SessionInfo {
     #[serde(default)]
     pub authenticated: bool,
@@ -78,12 +78,30 @@ impl SessionInfo {
     }
 }
 
-/// Login request body
-#[derive(Debug, Deserialize)]
+/// Login request body — password is excluded from debug/serialize output.
+#[derive(Deserialize)]
 pub struct LoginRequest {
     pub db: String,
     pub login: String,
-    pub password: String,
+    #[serde(skip_serializing)]
+    password: String,
+}
+
+impl LoginRequest {
+    pub fn password(&self) -> &str {
+        &self.password
+    }
+}
+
+// Manual Debug impl that hides the password
+impl std::fmt::Debug for LoginRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LoginRequest")
+            .field("db", &self.db)
+            .field("login", &self.login)
+            .field("password", &"***")
+            .finish()
+    }
 }
 
 #[cfg(test)]
@@ -176,7 +194,19 @@ mod tests {
         let req: LoginRequest = serde_json::from_str(raw).unwrap();
         assert_eq!(req.db, "odoo");
         assert_eq!(req.login, "admin");
-        assert_eq!(req.password, "secret");
+        assert_eq!(req.password(), "secret");
+    }
+
+    #[test]
+    fn login_request_debug_hides_password() {
+        let req = LoginRequest {
+            db: "db".into(),
+            login: "user".into(),
+            password: "secret".into(),
+        };
+        let debug_str = format!("{:?}", req);
+        assert!(debug_str.contains("***"));
+        assert!(!debug_str.contains("secret"));
     }
 
     #[test]

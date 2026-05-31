@@ -114,7 +114,7 @@ pub async fn login(state: AppState, body: LoginRequest) -> Result<Response, AppE
         "params": {
             "db": body.db,
             "login": body.login,
-            "password": body.password,
+            "password": body.password(),
         },
         "id": 1,
     });
