@@ -1,0 +1,27 @@
+{
+  "name": "@odooseek/odoo-client",
+  "version": "0.1.0",
+  "description": "Framework-agnostic Odoo 19 CE JSON-RPC client with view XML parser",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "files": ["src/"],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["odoo", "json-rpc", "erp", "xml-parser", "bff"],
+  "license": "MIT",
+  "peerDependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0",
+    "vitest": "^4.0",
+    "@testing-library/react": "^16.0"
+  }
+}

@@ -1,0 +1,391 @@
+// Odoo 19 CE view type definitions
+
+export type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
+
+export interface OdooFieldMeta {
+  name: string
+  type: string // char, text, integer, float, boolean, date, datetime, selection, many2one, many2many, one2many, binary, html, reference, monetary
+  string: string // display label
+  required: boolean
+  readonly: boolean
+  relation?: string
+  domain?: unknown
+  selection?: [string, string][]
+  help?: string
+  store: boolean
+  searchable: boolean
+  sortable: boolean
+  widget?: string
+  onChange?: boolean
+}
+
+export interface ViewField {
+  name: string
+  string?: string
+  type?: string
+  widget?: string
+  options?: Record<string, unknown>
+  invisible?: number
+  columnInvisible?: string
+  optional?: 'show' | 'hide'
+  required?: boolean
+  readonly?: boolean
+  nolabel?: boolean
+  placeholder?: string
+  sum?: string
+  avg?: string
+  min?: string
+  max?: string
+  operator?: string
+  filter_domain?: unknown
+  class?: string
+  decoration_bf?: string
+  decoration_it?: string
+  decoration_danger?: string
+  decoration_warning?: string
+  decoration_success?: string
+  decoration_info?: string
+  decoration_muted?: string
+}
+
+export interface ParsedListView {
+  type: 'list'
+  string: string
+  editable?: string
+  create?: boolean
+  delete?: boolean
+  defaultOrder?: string
+  noOpen?: boolean
+  openFormView?: boolean
+  exportXlsx?: boolean
+  limit?: number
+  countLimit?: number
+  groupsLimit?: number
+  groupCreate?: boolean
+  groupEdit?: boolean
+  groupDelete?: boolean
+  multiEdit?: boolean
+  columns: ListColumn[]
+  decorations: Record<string, string>
+  controlButtons?: ControlButton[]
+  rowClass?: string
+}
+
+export interface ControlButton {
+  type: 'create' | 'delete'
+  string?: string
+  invisible?: string
+}
+
+export interface ListButtonElement {
+  type: 'button'
+  name: string
+  string?: string
+  buttonType?: 'object' | 'action'
+  icon?: string
+  invisible?: string
+  states?: string
+  confirm?: string
+  class?: string
+}
+
+export interface ListButtonGroup {
+  type: 'button_group'
+  buttons: ListButtonElement[]
+}
+
+export type ListColumn = ViewField | ListButtonElement | ListButtonGroup
+
+export interface ParsedFormView {
+  type: 'form'
+  string: string
+  elements: FormElement[]
+}
+
+export type FormElement =
+  | HeaderElement
+  | SheetElement
+  | GroupElement
+  | NotebookElement
+  | FieldElement
+  | ButtonElement
+  | ButtonBoxElement
+  | SeparatorElement
+  | NewlineElement
+  | LabelElement
+
+export interface HeaderElement {
+  type: 'header'
+  buttons: ButtonElement[]
+}
+
+export interface ButtonElement {
+  type: 'button'
+  name: string
+  string?: string
+  buttonType?: 'object' | 'action' | 'edit'
+  class?: string
+  icon?: string
+  invisible?: string
+  states?: string
+  confirm?: string
+}
+
+export interface ButtonBoxElement {
+  type: 'button_box'
+  name?: string
+  buttons: StatButtonElement[]
+}
+
+export interface StatButtonElement {
+  type: 'stat_button'
+  name: string
+  string?: string
+  buttonType?: 'object' | 'action'
+  icon?: string
+  invisible?: string
+  confirm?: string
+  content?: StatButtonContent
+}
+
+export type StatButtonContent =
+  | { type: 'field'; fieldName: string; string?: string }
+  | { type: 'custom'; valueField?: string; textFallback?: string }
+
+export interface SheetElement {
+  type: 'sheet'
+  elements: FormElement[]
+}
+
+export interface GroupElement {
+  type: 'group'
+  string?: string
+  invisible?: string
+  col?: number
+  elements: FormElement[]
+}
+
+export interface NotebookElement {
+  type: 'notebook'
+  pages: { string: string; invisible?: string; elements: FormElement[] }[]
+}
+
+export interface FieldElement {
+  type: 'field'
+  name: string
+  widget?: string
+  string?: string
+  options?: Record<string, unknown>
+  invisible?: string
+  required?: string | boolean
+  readonly?: string | boolean
+  nolabel?: boolean
+  colspan?: number
+  placeholder?: string
+  mode?: string
+  subViews?: {
+    list?: O2mSubView
+    form?: O2mFormSubView
+  }
+}
+
+export interface O2mSubView {
+  columns: ViewField[]
+  editable?: string
+  decorations: Record<string, string>
+  create?: boolean
+  delete?: boolean
+}
+
+export interface O2mFormSubView {
+  elements: FormElement[]
+}
+
+export type O2mCommand =
+  | [0, number, Record<string, unknown>]
+  | [1, number, Record<string, unknown>]
+  | [2, number]
+  | [4, number]
+  | [5, 0]
+  | [6, 0, number[]]
+
+export interface SeparatorElement {
+  type: 'separator'
+  string?: string
+}
+
+export interface NewlineElement {
+  type: 'newline'
+}
+
+export interface LabelElement {
+  type: 'label'
+  string: string
+}
+
+export interface KanbanProgressbar {
+  field: string
+  colors: Record<string, string> // e.g. {"planned": "success", "today": "warning", "overdue": "danger"}
+}
+
+export interface ParsedKanbanView {
+  type: 'kanban'
+  string: string
+  fields: string[]
+  template: string // raw template HTML
+  templateNodes?: KanbanTemplateNode[] // AST (Phase 4)
+  defaultGroupBy?: string
+  highlightColor?: string // e.g. "color"
+  progressbar?: KanbanProgressbar
+}
+
+// ── Phase 4: QWeb template AST ───────────────────────────────
+
+export type KanbanTemplateNode =
+  | { type: 'field'; name: string; widget?: string; class?: string; options?: Record<string, unknown> }
+  | { type: 'condition'; if?: string; elif?: string; else?: string; children: KanbanTemplateNode[] }
+  | { type: 'loop'; foreach: string; as: string; children: KanbanTemplateNode[] }
+  | { type: 'output'; expr: string; widget?: string }
+  | { type: 'html'; tag: string; class?: string; children: KanbanTemplateNode[] }
+  | { type: 'text'; content: string }
+  | { type: 'footer'; children: KanbanTemplateNode[] }
+
+export interface ParsedSearchView {
+  type: 'search'
+  fields: ViewField[]
+  filters: SearchFilter[]
+  groupByFilters: SearchGroupBy[]
+  searchPanel?: ParsedSearchPanel
+}
+
+export interface ParsedSearchPanel {
+  fields: SearchPanelField[]
+  class?: string
+}
+
+export interface SearchPanelField {
+  name: string
+  select: 'one' | 'multi'
+  icon?: string
+  enableCounters: boolean
+  limit?: number
+  groupBy?: string
+  color?: string
+}
+
+export interface SearchPanelCategory {
+  id: number | string
+  displayName: string
+  count?: number
+  parentId?: number | string | false
+  icon?: string
+  groupName?: string
+  groupCount?: number
+  __count?: number
+  display_name?: string
+  parent_id?: [number, string] | false
+}
+
+export interface SearchFilter {
+  name: string
+  string: string
+  domain: unknown[]
+  help?: string
+  context?: string
+}
+
+export interface SearchGroupBy {
+  name: string
+  string: string
+  fieldName: string
+  interval?: string
+}
+
+export interface ReadGroupResult {
+  __domain: unknown[]
+  __context: unknown
+  [key: string]: unknown // grouped field values + _count suffixed fields
+}
+
+export interface ParsedPivotView {
+  type: 'pivot'
+  string: string
+  disableLinking?: boolean
+  defaultOrder?: string
+  rowFields: PivotField[]
+  colFields: PivotField[]
+  measures: PivotMeasure[]
+}
+
+export interface PivotField {
+  name: string
+  string?: string
+  interval?: string // day, week, month, quarter, year
+}
+
+export interface PivotMeasure {
+  name: string
+  string?: string
+  operator?: string // sum, avg, count
+}
+
+export interface GraphField {
+  name: string
+  string?: string
+  interval?: string
+}
+
+export interface GraphMeasure {
+  name: string
+  string?: string
+  operator?: string
+}
+
+export interface ParsedGraphView {
+  type: 'graph'
+  string: string
+  graphType: 'bar' | 'line' | 'pie' | 'area'
+  rowFields: GraphField[]
+  colFields: GraphField[]
+  measures: GraphMeasure[]
+  stacked?: boolean
+  orderBy?: string
+}
+
+export interface ParsedCalendarView {
+  type: 'calendar'
+  string: string
+  dateStart: string
+  dateStop?: string
+  colorField?: string
+  mode: 'day' | 'week' | 'month'
+  fields: string[]
+  avatarField?: string
+  eventLimit?: number
+  quickCreate?: boolean
+  hideTime?: boolean
+}
+
+export interface ToolbarAction {
+  id: number
+  name: string
+  type?: string
+  binding_view_types?: string
+  domain?: string
+  sequence?: number
+}
+
+export interface ViewToolbar {
+  print: ToolbarAction[]
+  action: ToolbarAction[]
+}
+
+export interface IrFilterRecord {
+  id: number
+  name: string
+  user_id: [number, string] | false
+  domain: string
+  context: Record<string, unknown>
+  sort: string
+  is_default: boolean
+}
