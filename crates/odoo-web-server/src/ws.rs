@@ -103,7 +103,13 @@ async fn connect_odoo_ws(
     let ws_url = format!("{}/websocket", ws_url);
     info!("Connecting to Odoo WebSocket at {ws_url}");
 
-    let (ws_stream, _) = tokio_tungstenite::connect_async(&ws_url)
+    let request = http::Request::builder()
+        .uri(&ws_url)
+        .header("Origin", base)
+        .body(())
+        .map_err(|e| format!("Failed to build WS request: {e}"))?;
+
+    let (ws_stream, _) = tokio_tungstenite::connect_async(request)
         .await
         .map_err(|e| format!("WS connection failed: {e}"))?;
 

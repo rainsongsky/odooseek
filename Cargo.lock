@@ -1064,6 +1064,7 @@ dependencies = [
  "axum",
  "clap",
  "futures",
+ "http",
  "odoo-core",
  "reqwest",
  "serde",
