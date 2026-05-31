@@ -31,6 +31,7 @@ pub async fn poll_odoo_bus(
     // Fallback: HTTP polling
     let bus_url = format!("{}/websocket/peek_notifications", base);
     let mut last: i64 = 0;
+    let mut first_poll = true;
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
@@ -41,10 +42,11 @@ pub async fn poll_odoo_bus(
             "params": {
                 "channels": [],
                 "last": last,
-                "is_first_poll": false,
+                "is_first_poll": first_poll,
             },
             "id": 1,
         });
+        first_poll = false;
 
         let response = match client.post(&bus_url).json(&payload).send().await {
             Ok(r) => r,

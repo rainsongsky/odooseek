@@ -233,6 +233,7 @@ fn matches_proxy_header(name: &str) -> bool {
             | "x-frame-options"
             | "content-security-policy"
             | "strict-transport-security"
+            | "location"
     )
 }
 
@@ -241,6 +242,27 @@ fn try_build_cache_key(body: &axum::body::Bytes) -> Result<String, ()> {
     let params = json.get("params").ok_or(())?;
     let model = params.get("model").and_then(|v| v.as_str()).ok_or(())?;
     let method = params.get("method").and_then(|v| v.as_str()).ok_or(())?;
+
+    // Never cache write operations
+    if WRITE_METHODS.contains(&method) {
+        return Err(());
+    }
     let args = params.get("args").ok_or(())?;
     Ok(cache::cache_key(model, method, args))
 }
+
+/// Methods that must never be cached (mutations)
+const WRITE_METHODS: &[&str] = &[
+    "create",
+    "write",
+    "unlink",
+    "copy",
+    "button_immediate_install",
+    "button_immediate_upgrade",
+    "toggle_active",
+    "action_archive",
+    "action_unarchive",
+    "message_post",
+    "message_subscribe",
+    "message_unsubscribe",
+];

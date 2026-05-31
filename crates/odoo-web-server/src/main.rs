@@ -255,8 +255,17 @@ async fn proxy_image(
     State(state): State<AppState>,
     path: axum::extract::Path<String>,
     headers: HeaderMap,
+    query: axum::extract::Query<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, AppError> {
-    proxy::proxy_image(state, path, headers).await
+    let query_str = url::form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(query.iter().map(|(k, v)| (k, v)))
+        .finish();
+    let full_path = if query_str.is_empty() {
+        path.0
+    } else {
+        format!("{}?{}", path.0, query_str)
+    };
+    proxy::proxy_image(state, axum::extract::Path(full_path), headers).await
 }
 
 async fn proxy_logo(
