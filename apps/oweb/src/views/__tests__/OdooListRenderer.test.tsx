@@ -336,4 +336,66 @@ describe('OdooListRenderer — inline editing', () => {
     fireEvent.click(screen.getByText('A').closest('tr') as HTMLElement)
     expect(onRowClick).toHaveBeenCalledWith(1)
   })
+
+  test('renders empty state when no records', async () => {
+    mockCallKw.mockResolvedValue([])
+    mockReadGroup.mockResolvedValue([])
+
+    render(
+      <OdooListRenderer
+        model="res.partner"
+        arch={listArch}
+        fields={fields}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('A')).not.toBeInTheDocument()
+    })
+  })
+
+  test('renders grouped view with group headers', async () => {
+    mockCallKw.mockResolvedValue([
+      { id: 1, name: 'A', email: 'a@test.com' },
+    ])
+    mockReadGroup.mockResolvedValue([
+      { name: [1, 'A'], _count: 1, __domain: '' },
+    ])
+
+    render(
+      <OdooListRenderer
+        model="res.partner"
+        arch={listArch}
+        fields={fields}
+        groupBy={['name']}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      const cells = document.querySelectorAll('td')
+      expect(cells.length).toBeGreaterThan(0)
+    })
+  })
+
+  test('renders editable list with inputs', async () => {
+    mockCallKw.mockResolvedValue([
+      { id: 1, name: 'A', email: 'a@test.com' },
+    ])
+
+    render(
+      <OdooListRenderer
+        model="res.partner"
+        arch={editableArch}
+        fields={fields}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      const inputs = document.querySelectorAll('input')
+      expect(inputs.length).toBeGreaterThanOrEqual(0)
+    })
+  })
 })

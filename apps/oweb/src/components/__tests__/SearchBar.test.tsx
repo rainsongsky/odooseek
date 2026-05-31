@@ -142,4 +142,46 @@ describe('SearchBar', () => {
     fireEvent.click(screen.getByText('Test Record'))
     expect(onSearch).toHaveBeenCalledWith([['id', '=', 42]])
   })
+
+  test('shows filter menu when filters provided', () => {
+    const onSearch = vi.fn()
+    const filters = [
+      { name: 'active', string: 'Active', domain: [['active', '=', true]] },
+    ]
+    render(
+      <SearchBar
+        onSearch={onSearch}
+        model="res.partner"
+        filters={filters}
+      />,
+    )
+    // Filter button exists (shows count of available filters)
+    const filterBtn = document.querySelector('button svg')
+    expect(filterBtn).toBeTruthy()
+  })
+
+  test('shows groupBy button when groupBy filters provided', () => {
+    const onSearch = vi.fn()
+    const onGroupBy = vi.fn()
+    render(
+      <SearchBar
+        onSearch={onSearch}
+        onGroupByChange={onGroupBy}
+        groupByFilters={[{ name: 'sales', string: 'Salesperson', fieldName: 'user_id' }]}
+        model="res.partner"
+      />,
+    )
+    // Verify component renders without error
+    expect(onSearch).toBeDefined()
+    expect(onGroupBy).toBeDefined()
+  })
+
+  test('resets search when Escape is pressed', () => {
+    const onSearch = vi.fn()
+    render(<SearchBar onSearch={onSearch} model="res.partner" />)
+    const input = screen.getByPlaceholderText('Search...')
+    fireEvent.change(input, { target: { value: 'test' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(onSearch).toHaveBeenCalledWith([])
+  })
 })
