@@ -64,3 +64,13 @@ createRoot(document.getElementById('root') as HTMLElement).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Global error monitoring for unhandled errors and rejections
+if (import.meta.env.PROD) {
+  window.addEventListener('error', (e) => {
+    console.error('Unhandled error:', e.error?.message ?? e.message, e.error?.stack)
+  })
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('Unhandled rejection:', e.reason?.message ?? e.reason)
+  })
+}
