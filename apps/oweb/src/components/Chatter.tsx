@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import DOMPurify from 'dompurify'
 import { callKw, searchRead } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
@@ -236,7 +237,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
             <div
               className="prose prose-xs mt-1 max-w-none text-xs text-text-primary"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: Odoo chatter body is HTML
-              dangerouslySetInnerHTML={{ __html: msg.body }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.body) }}
             />
           )}
         </div>

@@ -124,6 +124,8 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           triggerOnchange([], defaults)
         })
         .catch(() => {
+          setSaveError('Failed to load defaults. Some fields may be empty.')
+          setTimeout(() => setSaveError(null), 5000)
           setEditMode(true)
         })
     }
@@ -675,6 +677,7 @@ function StatButton({
 }) {
   const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   let value: React.ReactNode = ''
   let text = button.string ?? ''
@@ -700,8 +703,9 @@ function StatButton({
         await callKw('ir.actions.server', 'run', [[Number(button.name)]])
       }
       queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
-    } catch {
-      // action failed silently
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Action failed. Please try again.')
+      setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
     }
@@ -712,11 +716,12 @@ function StatButton({
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="flex items-center gap-2 rounded px-3 py-1.5 text-xs text-text-secondary hover:bg-hover transition-colors disabled:opacity-50"
+      title={error ?? undefined}
+      className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${error ? 'text-red-400 bg-red-400/10 hover:bg-red-400/20' : 'text-text-secondary hover:bg-hover'}`}
     >
-      {button.icon && <i className={`fa ${button.icon} text-sm text-text-muted`} />}
+      {button.icon && <i className={`fa ${button.icon} text-sm ${error ? 'text-red-400' : 'text-text-muted'}`} />}
       {value !== '' && <span className="font-semibold text-text-primary">{value}</span>}
-      <span>{text}</span>
+      <span>{error ?? text}</span>
     </button>
   )
 }
