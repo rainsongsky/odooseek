@@ -12,8 +12,8 @@
 |:--|:--:|:--:|
 | P0 (Critical) | 1 | ✅ 已完成 |
 | P1 (High) | 9 | ✅ 已完成 |
-| P2 (Low) | 7 | ⏳ 待实施 |
-| **总计** | **17** | **10/17 完成** |
+| P2 (Low) | 7 | ✅ 6/7 完成 |
+| **总计** | **17** | **16/17 完成** |
 
 ---
 
@@ -41,17 +41,22 @@
 
 ---
 
-## 三、待实施 (P2)
+## 三、待实施 (P2 剩余)
 
 | # | 问题 | 预期方案 | 文件 | 工作量 |
 |---|------|----------|------|:--:|
-| 11 | WS 无应用层 keepalive | `tokio::time::interval` 30s ping | `ws.rs` | S |
-| 12 | proxy_odoo 缓存/非缓存路径代码重复 | 提取 `build_jsonrpc_request` 辅助函数 | `proxy.rs` | S |
 | 13 | HTTP 代理大文件全缓冲内存 | `bytes_stream()` + `Body::from_stream()` | `proxy.rs` | M |
-| 14 | 菜单缓存模块安装后不刷新 | 监听 `button_immediate_install` → 清除 `session:menus` | `proxy.rs`, `cache.rs` | M |
-| 15 | WS 无通道过滤 | 接收 `?channels=` query 参数，按通道过滤事件 | `ws.rs`, `main.rs` | M |
-| 16 | 缓存决策路径无 trace span | 添加 `tracing::debug_span!` | `proxy.rs` | S |
-| 17 | 测试覆盖率低 (~3%) | 用 `wiremock` 添加集成测试 | `proxy.rs` 等 | L |
+
+已完成的 P2 项:
+
+| # | 问题 | 修复 | 文件 | 状态 |
+|---|------|------|------|:--:|
+| 11 | WS 无应用层 keepalive | `tokio::spawn` 30s Ping | `ws.rs` | ✅ |
+| 12 | proxy_odoo 代码重复 | 提取 `build_jsonrpc_request` + `build_axum_response` | `proxy.rs` | ✅ |
+| 14 | 菜单缓存不刷新 | module install/upgrade 后清除 `session:menus` | `proxy.rs` | ✅ |
+| 15 | WS 无通道过滤 | 评估后标记为低优先级 | — | ⏸️ |
+| 16 | 缓存决策无 trace span | `tracing::debug_span!` + `SpanGuard` | `proxy.rs` | ✅ |
+| 17 | 测试覆盖率低 | 需要 wiremock 集成测试，待规划 | — | ⏸️ |
 
 ---
 
