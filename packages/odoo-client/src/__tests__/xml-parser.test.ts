@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import type { ViewField } from '../../lib/odoo-types'
+import type { ViewField } from '../types'
 import {
   parseCalendarXml,
   parseFormXml,
@@ -8,7 +8,7 @@ import {
   parseListXml,
   parsePivotXml,
   parseSearchXml,
-} from '../../lib/xml-parser'
+} from '../xml-parser'
 
 describe('parseListXml', () => {
   test('parses basic list fields', () => {

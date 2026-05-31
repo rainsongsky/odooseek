@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import type { OdooFieldMeta } from '../odoo-types'
+import type { OdooFieldMeta } from '../types'
 import { DEFAULT_COL_WIDTH, FIELD_TYPE_WIDTHS, renderCell } from '../list-formatters'
 
 describe('FIELD_TYPE_WIDTHS', () => {

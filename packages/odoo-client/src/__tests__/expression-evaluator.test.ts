@@ -4,9 +4,9 @@ import {
   evalModifier,
   getDecorationClass,
   getValue,
-} from '../../lib/expression-evaluator'
-import type { KanbanTemplateNode } from '../../lib/odoo-types'
-import { parseKanbanTemplate } from '../../lib/xml-parser'
+} from '../expression-evaluator'
+import type { KanbanTemplateNode } from '../types'
+import { parseKanbanTemplate } from '../xml-parser'
 
 describe('parseKanbanTemplate', () => {
   test('parses simple field elements', () => {

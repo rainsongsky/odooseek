@@ -1,4 +1,4 @@
-import type { OdooFieldMeta } from './odoo-types'
+import type { OdooFieldMeta } from './types'
 
 export const FIELD_TYPE_WIDTHS: Record<string, number> = {
   boolean: 50,
