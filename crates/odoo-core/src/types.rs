@@ -44,10 +44,18 @@ pub struct LoginRequest {
     pub db: String,
     pub login: String,
     #[serde(skip_serializing)]
-    password: String,
+    pub(crate) password: String,
 }
 
 impl LoginRequest {
+    pub fn new(db: &str, login: &str, password: &str) -> Self {
+        Self {
+            db: db.into(),
+            login: login.into(),
+            password: password.into(),
+        }
+    }
+
     pub fn password(&self) -> &str {
         &self.password
     }
