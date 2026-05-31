@@ -38,14 +38,24 @@ function LoginPage() {
         credentials: 'include',
         body: JSON.stringify({ db: db.trim(), login: login.trim(), password }),
       })
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('Invalid credentials')
-        const err = await res.json().catch(() => null)
-        throw new Error(err?.message || `Server error (${res.status})`)
-      }
       const data = await res.json()
+
+      // Check JSON-RPC error from Odoo (BFF returns 200 for Odoo errors)
+      if (data?.error) {
+        const errMsg = data.error?.data?.message
+          || data.error?.message
+          || data.error?.data?.arguments?.[0]
+          || 'Login failed'
+        throw new Error(typeof errMsg === 'string' ? errMsg : 'Login failed')
+      }
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired. Please login again.')
+        throw new Error(data?.message || `Server error (${res.status})`)
+      }
+
       if (!data.authenticated) {
-        throw new Error('Invalid username or password')
+        throw new Error('Login failed — check your credentials')
       }
       refetch()
       navigate({ to: '/dashboard' })

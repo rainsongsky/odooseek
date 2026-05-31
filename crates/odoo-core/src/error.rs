@@ -20,6 +20,9 @@ pub enum OdooError {
     #[error("Configuration error: {0}")]
     Config(String),
 
+    #[error("Authentication failed: {0}")]
+    LoginFailed(String),
+
     #[error("Not authenticated")]
     NotAuthenticated,
 

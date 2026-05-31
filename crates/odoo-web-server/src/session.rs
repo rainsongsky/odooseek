@@ -130,17 +130,16 @@ pub async fn login(state: AppState, body: LoginRequest) -> Result<Response, AppE
     let resp_headers = response.headers().clone();
     let json_body: serde_json::Value = response.json().await?;
 
-    // Check for JSON-RPC error
+    // Check for JSON-RPC error — login failures should always be client errors
     if let Some(err) = json_body.get("error") {
-        return Err(AppError(OdooError::Api {
-            code: err.get("code").and_then(|c| c.as_i64()).unwrap_or(0),
-            message: err
-                .get("message")
-                .and_then(|m| m.as_str())
-                .unwrap_or("unknown")
-                .into(),
-            data: err.get("data").cloned(),
-        }));
+        let msg = err
+            .get("data")
+            .and_then(|d| d.get("message"))
+            .or_else(|| err.get("message"))
+            .and_then(|m| m.as_str())
+            .unwrap_or("Authentication failed");
+
+        return Err(AppError(OdooError::LoginFailed(msg.into())));
     }
 
     let mut info = match json_body.get("result") {

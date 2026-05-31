@@ -58,7 +58,7 @@ impl IntoResponse for AppError {
                 });
                 (StatusCode::BAD_GATEWAY, axum::Json(body)).into_response()
             }
-            OdooError::NotAuthenticated => {
+            OdooError::NotAuthenticated | OdooError::LoginFailed(_) => {
                 let body = serde_json::json!({
                     "error": true,
                     "message": self.0.to_string(),
