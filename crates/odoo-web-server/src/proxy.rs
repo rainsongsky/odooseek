@@ -24,11 +24,15 @@ pub async fn proxy_odoo(
 
     // Try cache for read-only cacheable methods
     if let Ok(cache_key) = try_build_cache_key(&body) {
-        if let Some(cached) = state.cache.get(&cache_key).await {
-            tracing::debug!("Cache hit → returning cached response");
+        let span = tracing::debug_span!("proxy_cache", key = %cache_key);
+        if let Some(cached) = {
+            let _guard = span.enter();
+            state.cache.get(&cache_key).await
+        } {
+            tracing::debug!("Cache hit");
             return Ok(Json(cached).into_response());
         }
-        tracing::debug!("Proxying (cacheable) JSON-RPC to: {odoo_url}");
+        tracing::debug!("Cache miss");
 
         let mut request = state
             .http_client
