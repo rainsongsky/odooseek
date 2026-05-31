@@ -51,6 +51,8 @@ import {
   RemainingDaysWidget,
   UrlWidget,
   WebRibbonWidget,
+  KanbanActivityWidget,
+  RottingWidget,
 } from './utility'
 
 export interface FieldWidgetProps {
@@ -171,6 +173,8 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   percentpie: PercentPieWidget,
   contact_image: ImageFieldWidget,
   web_ribbon: WebRibbonWidget,
+  kanban_activity: KanbanActivityWidget,
+  rotting: RottingWidget,
 }
 
 export function getFieldWidget(

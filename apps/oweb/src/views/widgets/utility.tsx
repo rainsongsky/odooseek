@@ -371,3 +371,37 @@ export function WebRibbonWidget({ field, record }: FieldWidgetProps) {
     </div>
   )
 }
+
+// ── Kanban Activity Widget ──────────────────────────────────────────
+
+export function KanbanActivityWidget({ value }: FieldWidgetProps) {
+  const state = String(value ?? '')
+  const config: Record<string, { color: string; label: string }> = {
+    planned: { color: 'bg-emerald-500', label: 'Planned' },
+    today: { color: 'bg-amber-500', label: 'Today' },
+    overdue: { color: 'bg-red-500', label: 'Overdue' },
+  }
+  const info = config[state]
+  if (!info) return null
+
+  return (
+    <span className="inline-flex items-center gap-1 text-xs">
+      <span className={`h-2 w-2 rounded-full ${info.color}`} />
+      <span className="text-text-muted">{info.label}</span>
+    </span>
+  )
+}
+
+// ── Rotting Widget (CRM stage duration) ─────────────────────────────
+
+export function RottingWidget({ value }: FieldWidgetProps) {
+  const days = Number(value)
+  if (isNaN(days) || days <= 0) return null
+
+  const isOverdue = days > 14
+  return (
+    <span className={`text-xs ${isOverdue ? 'text-red-400 font-medium' : 'text-text-muted'}`}>
+      {days}d
+    </span>
+  )
+}
