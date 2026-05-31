@@ -4,7 +4,7 @@
 //! behind a proxy that doesn't support WebSocket), fall back to HTTP polling.
 
 use axum::extract::ws::{Message, WebSocket};
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 use tokio::sync::broadcast;
 use tracing::{debug, info, warn};
 
@@ -108,7 +108,21 @@ async fn connect_odoo_ws(
         .map_err(|e| format!("WS connection failed: {e}"))?;
 
     info!("Odoo WebSocket connected");
-    let (_, mut read) = ws_stream.split();
+    let (mut write, mut read) = ws_stream.split();
+
+    // Send periodic ping to keep connection alive through proxies/LBs
+    let keepalive = tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+            if write
+                .send(tokio_tungstenite::tungstenite::Message::Ping(vec![]))
+                .await
+                .is_err()
+            {
+                break;
+            }
+        }
+    });
 
     while let Some(msg) = read.next().await {
         match msg {
@@ -125,11 +139,11 @@ async fn connect_odoo_ws(
                 warn!("Odoo WebSocket error: {e}, reconnecting...");
                 break;
             }
-            _ => {} // ignore ping/pong/binary
+            _ => {}
         }
     }
 
-    // Reconnect after a delay
+    keepalive.abort();
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     Err("Disconnected - will retry".into())
 }
