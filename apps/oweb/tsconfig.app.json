@@ -17,7 +17,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@odooseek/odoo-client": ["../../packages/odoo-client/src/index.ts"]
     }
   },
   "include": ["src"]

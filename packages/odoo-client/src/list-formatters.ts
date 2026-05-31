@@ -1,4 +1,4 @@
-import type { OdooFieldMeta } from './types.js'
+import type { OdooFieldMeta } from './types'
 
 export const FIELD_TYPE_WIDTHS: Record<string, number> = {
   boolean: 50,
@@ -15,14 +15,12 @@ export const FIELD_TYPE_WIDTHS: Record<string, number> = {
 }
 export const DEFAULT_COL_WIDTH = 160
 
-export function renderCell(value: unknown, meta?: OdooFieldMeta, model?: string, recordId?: number): React.ReactNode {
+export function renderCell(value: unknown, meta?: OdooFieldMeta, _model?: string, _recordId?: number): string {
   if (value === null || value === undefined || value === false) return ''
   if (typeof value === 'boolean') return value ? '✓' : ''
   if (typeof value === 'string') {
-    if (meta?.type === 'html') return stripHtml(value)
-    if (meta?.type === 'binary') {
-      return renderImageFromUrl(model, recordId, meta, value)
-    }
+    if (meta?.type === 'html') return value.replace(/<[^>]*>/g, '')
+    if (meta?.type === 'binary') return '🖼'
     if (meta?.selection) {
       const pair = meta.selection.find(([k]) => k === value)
       if (pair) return pair[1]
@@ -30,8 +28,12 @@ export function renderCell(value: unknown, meta?: OdooFieldMeta, model?: string,
     return value
   }
   if (typeof value === 'number') {
-    if (meta?.type === 'monetary') return formatMonetary(value)
-    if (meta?.type === 'float') return formatFloat(value, meta)
+    if (meta?.type === 'monetary')
+      return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    if (meta?.type === 'float') {
+      const s = value.toFixed(2)
+      return s.endsWith('.00') ? s.slice(0, -3) : s
+    }
     if (meta?.type === 'integer') return value.toLocaleString()
     return String(value)
   }
@@ -43,38 +45,4 @@ export function renderCell(value: unknown, meta?: OdooFieldMeta, model?: string,
     return `${count} record${count !== 1 ? 's' : ''}`
   }
   return JSON.stringify(value)
-}
-
-function renderImageFromUrl(model?: string, recordId?: number, meta?: OdooFieldMeta, value?: string): React.ReactNode {
-  if (!model || !recordId) {
-    if (value && /^[A-Za-z0-9+/=]+$/.test(value)) {
-      return <img src={`data:image/png;base64,${value}`} alt="" className="h-8 w-8 rounded object-cover" />
-    }
-    return '🖼'
-  }
-  const fieldName = meta?.name ?? ''
-  return (
-    <img
-      src={`/api/web/image/${model}/${recordId}/${fieldName}`}
-      alt=""
-      className="h-8 w-8 rounded object-cover"
-      loading="lazy"
-      onError={(e) => {
-        ;(e.target as HTMLImageElement).style.display = 'none'
-      }}
-    />
-  )
-}
-
-function formatMonetary(value: number): string {
-  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function formatFloat(value: number, _meta?: OdooFieldMeta): string {
-  const str = value.toFixed(2)
-  return str.endsWith('.00') ? str.slice(0, -3) : str
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').slice(0, 100)
 }
