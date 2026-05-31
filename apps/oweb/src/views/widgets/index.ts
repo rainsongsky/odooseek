@@ -50,6 +50,7 @@ import {
   ProgressbarWidget,
   RemainingDaysWidget,
   UrlWidget,
+  WebRibbonWidget,
 } from './utility'
 
 export interface FieldWidgetProps {
@@ -169,6 +170,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   image_url: ImageUrlWidget,
   percentpie: PercentPieWidget,
   contact_image: ImageFieldWidget,
+  web_ribbon: WebRibbonWidget,
 }
 
 export function getFieldWidget(

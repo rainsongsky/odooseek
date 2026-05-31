@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { callKw } from '../../lib/api'
+import { evalCondition } from '../../lib/expression-evaluator'
 import { formatRemainingDays } from '../../lib/field-formatters'
 import { CharWidget } from './basic'
 import type { FieldWidgetProps } from './index'
@@ -339,6 +340,34 @@ export function PercentPieWidget({ value }: FieldWidgetProps) {
         />
       </svg>
       <span className="text-xs text-text-muted">{pct.toFixed(1)}%</span>
+    </div>
+  )
+}
+
+// ── Web Ribbon Widget ────────────────────────────────────────────────
+
+export function WebRibbonWidget({ field, record }: FieldWidgetProps) {
+  const opts = (field.options as Record<string, unknown>) ?? {}
+  const title = (opts.title as string) ?? ''
+  const bgColor = (opts.bg_color as string) ?? 'text-bg-danger'
+
+  if (!title) return null
+  if (field.invisible && record && evalCondition(field.invisible, record)) return null
+
+  const colorMap: Record<string, string> = {
+    'text-bg-danger': 'bg-red-500',
+    'text-bg-warning': 'bg-amber-500',
+    'text-bg-success': 'bg-emerald-500',
+    'text-bg-info': 'bg-blue-500',
+  }
+  const bg = colorMap[bgColor] ?? 'bg-red-500'
+
+  return (
+    <div
+      className={`pointer-events-none absolute -right-2 -top-2 z-10 rounded px-2 py-0.5 text-[10px] font-bold text-white shadow ${bg}`}
+      style={{ transform: 'rotate(3deg)' }}
+    >
+      {title}
     </div>
   )
 }
