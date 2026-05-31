@@ -16,6 +16,8 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'esnext',
+    cssMinify: 'lightningcss',
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -30,6 +32,9 @@ export default defineConfig({
           }
           if (id.includes('node_modules/react-big-calendar') || id.includes('node_modules/date-fns')) {
             return 'vendor-calendar'
+          }
+          if (id.includes('node_modules/dompurify')) {
+            return 'vendor-dompurify'
           }
         },
       },
