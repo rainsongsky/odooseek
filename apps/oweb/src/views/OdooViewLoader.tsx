@@ -3,6 +3,7 @@ import { lazy, useCallback, useEffect, useMemo, useRef, useState, Suspense } fro
 import { ControlPanel } from '../components/ControlPanel'
 import { FormDialogOverlay, type FormDialogItem } from '../components/FormDialog'
 import { SearchPanel } from '../components/SearchPanel'
+import { EmptyState, KanbanSkeleton, ListSkeleton } from '../components/Skeleton'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
 import { callKw, type OdooAction } from '../lib/api'
@@ -289,11 +290,7 @@ export function OdooViewLoader({
   )
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-      </div>
-    )
+    return internalViewType === 'kanban' ? <KanbanSkeleton /> : <ListSkeleton />
   }
 
   if (error) {
