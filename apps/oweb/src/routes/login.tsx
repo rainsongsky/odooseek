@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useAuth } from '../lib/auth'
+import { OAuthCallbackPage } from './auth/oauth/callback'
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -17,6 +18,11 @@ function LoginPage() {
   useEffect(() => {
     if (isAuthenticated) navigate({ to: '/dashboard' })
   }, [isAuthenticated, navigate])
+
+  // If this is an OAuth callback, render the callback handler instead
+  if (window.location.pathname === '/auth/oauth/callback') {
+    return <OAuthCallbackPage />
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,6 +137,20 @@ function LoginPage() {
             {loading ? 'Signing in...' : t('login.submit')}
           </button>
         </form>
+
+        <div className="mt-6 border-t border-border-subtle pt-4">
+          <p className="mb-3 text-center text-xs text-text-muted">Or sign in with</p>
+          <button
+            type="button"
+            onClick={() => {
+              const oauthUrl = `/api/odoo-http/auth_oauth/signin?provider=google&redirect=${encodeURIComponent(window.location.origin + '/auth/oauth/callback')}`
+              window.location.href = oauthUrl
+            }}
+            className="w-full rounded-lg border border-border-default bg-surface px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover"
+          >
+            Google
+          </button>
+        </div>
       </div>
     </div>
   )
