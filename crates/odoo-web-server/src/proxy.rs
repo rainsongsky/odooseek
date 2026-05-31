@@ -223,21 +223,37 @@ async fn proxy_send(
 }
 
 fn matches_proxy_header(name: &str) -> bool {
-    let lower = name.to_lowercase();
+    matches_proxy_header_bytes(name.as_bytes())
+}
+
+fn matches_proxy_header_bytes(name: &[u8]) -> bool {
     matches!(
-        lower.as_str(),
-        "set-cookie"
-            | "content-type"
-            | "content-length"
-            | "content-disposition"
-            | "cache-control"
-            | "etag"
-            | "last-modified"
-            | "x-content-type-options"
-            | "x-frame-options"
-            | "content-security-policy"
-            | "strict-transport-security"
-            | "location"
+        name,
+        b"Set-Cookie"
+            | b"set-cookie"
+            | b"SET-COOKIE"
+            | b"Content-Type"
+            | b"content-type"
+            | b"Content-Length"
+            | b"content-length"
+            | b"Content-Disposition"
+            | b"content-disposition"
+            | b"Cache-Control"
+            | b"cache-control"
+            | b"ETag"
+            | b"etag"
+            | b"Last-Modified"
+            | b"last-modified"
+            | b"X-Content-Type-Options"
+            | b"x-content-type-options"
+            | b"X-Frame-Options"
+            | b"x-frame-options"
+            | b"Content-Security-Policy"
+            | b"content-security-policy"
+            | b"Strict-Transport-Security"
+            | b"strict-transport-security"
+            | b"Location"
+            | b"location"
     )
 }
 
@@ -247,26 +263,27 @@ fn try_build_cache_key(body: &axum::body::Bytes) -> Result<String, ()> {
     let model = params.get("model").and_then(|v| v.as_str()).ok_or(())?;
     let method = params.get("method").and_then(|v| v.as_str()).ok_or(())?;
 
-    // Never cache write operations
-    if WRITE_METHODS.contains(&method) {
+    // Never cache write operations (O(log n) binary search on sorted list)
+    if WRITE_METHODS.binary_search(&method).is_ok() {
         return Err(());
     }
     let args = params.get("args").ok_or(())?;
     Ok(cache::cache_key(model, method, args))
 }
 
-/// Methods that must never be cached (mutations)
-const WRITE_METHODS: &[&str] = &[
-    "create",
-    "write",
-    "unlink",
-    "copy",
-    "button_immediate_install",
-    "button_immediate_upgrade",
-    "toggle_active",
+/// Methods that must never be cached (mutations).
+/// Sorted alphabetically for binary search lookup.
+static WRITE_METHODS: [&str; 12] = [
     "action_archive",
     "action_unarchive",
+    "button_immediate_install",
+    "button_immediate_upgrade",
+    "copy",
+    "create",
     "message_post",
     "message_subscribe",
     "message_unsubscribe",
+    "toggle_active",
+    "unlink",
+    "write",
 ];

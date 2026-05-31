@@ -64,7 +64,10 @@ pub fn forward_set_cookie_headers(
 
 /// Serialize a value to JSON bytes for use as a response body.
 pub fn to_json_bytes<T: serde::Serialize>(data: &T) -> Vec<u8> {
-    serde_json::to_vec(data).unwrap_or_default()
+    serde_json::to_vec(data).unwrap_or_else(|e| {
+        tracing::error!("Failed to serialize response: {e}");
+        vec![]
+    })
 }
 
 /// Build a JSON response with Set-Cookie forwarding.
