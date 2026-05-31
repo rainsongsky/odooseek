@@ -1,6 +1,6 @@
 # odoo-web-server 技术设计文档
 
-> **版本**: 2.1  
+> **版本**: 2.2  
 > **日期**: 2026-05-31  
 > **定位**: Odoo 19 CE 的 Rust BFF (Backend For Frontend) 网关
 
@@ -444,7 +444,7 @@ Cargo.toml (workspace)
 
 ---
 
-**文档版本**: 2.1  
+**文档版本**: 2.2  
 **创建日期**: 2026-05-31  
 **更新日期**: 2026-05-31  
 **维护团队**: OdooSeek
@@ -520,3 +520,115 @@ odoo/addons/bus/      ← 实时事件总线 (WebSocket 推送)
 ```
 
 **总计**：BFF 对接 Odoo 的 **9 个控制器模块** + `bus` 事件模块，覆盖 **16 个专用端点** + **2 个通用代理端点**。
+
+---
+
+## 附录 B：BFF 与 Odoo `base` / `web` 模块的映射关系
+
+### B.1 三层架构
+
+OdooSeek 项目通过 BFF 同时对接 Odoo 的两个基础模块：
+
+```
+┌─────────────────────────────────────────┐
+│              OdooSeek BFF                │
+│          (odoo-web-server :3000)         │
+└─────────────────────────────────────────┘
+         │                       │
+    JSON-RPC 代理          HTTP 端点代理
+         │                       │
+         ▼                       ▼
+┌─────────────────┐    ┌─────────────────────┐
+│  Odoo `base`    │    │  Odoo `web` 模块     │
+│  模块            │    │  (addons/web)        │
+│  (addons/base)   │    │                      │
+│                  │    │  依赖: base           │
+│  ORM 引擎        │    │  被45+模块依赖        │
+│  元数据表 (ir.*) │    │  服务端5% / 前端95%   │
+│  访问控制        │    │                      │
+│  工作流          │    │  控制器: controllers/ │
+│  报表引擎        │    │  ORM桥: models/       │
+│  QWeb 模板       │    │  会话: session.py     │
+└─────────────────┘    └─────────────────────┘
+```
+
+### B.2 `base` 模块映射
+
+BFF **不直接调用** `base` 模块的任何 Python 类或函数。所有 `base` 的能力都通过 **Odoo ORM 的 JSON-RPC 接口**间接使用：
+
+| base 提供的能力 | BFF 调用方式 | BFF 端点 | BFF 模块 |
+|----------------|-------------|----------|----------|
+| 模型 CRUD (`search`, `read`, `write`, `create`, `unlink`) | `call_kw(model, method, args)` | `POST /api/odoo/web/dataset/call_kw` | `proxy.rs` |
+| 字段元数据 (`fields_get`) | `call_kw(model, 'fields_get', ...)` | 同上 | `proxy.rs` |
+| 视图定义 (`get_views`) | `call_kw(model, 'get_views', ...)` | 同上 | `proxy.rs` |
+| 默认值 (`default_get`) | `call_kw(model, 'default_get', ...)` | 同上 | `proxy.rs` |
+| 字段联动 (`onchange`) | `call_kw(model, 'onchange', ...)` | 同上 | `proxy.rs` |
+| 自动补全 (`name_search`) | `call_kw(model, 'name_search', ...)` | 同上 | `proxy.rs` |
+| 菜单查询 (`ir.ui.menu.search_read`) | `call_kw` | `GET /api/menu` (旧版) | `menu.rs` |
+| 动作读取 (`ir.actions.act_window.read`) | `frontend: loadAction()` → BFF → `call_kw` | `POST /api/odoo/web/action/load` | `proxy.rs` |
+| 服务器动作 (`ir.actions.server.run`) | `frontend: loadAction()` → BFF → `call_kw` | `POST /api/odoo/web/action/run` | `proxy.rs` |
+| 报表动作 (`ir.actions.report.read`) | BFF 内部调用 | `GET /api/report/download` | `report.rs` |
+| 用户/会话 (`res.users`) | BFF 内部调用 | `GET /api/session/login` | `session.rs` |
+| 模块列表 (`ir.module.module`) | BFF 内部调用 | `GET /api/session/modules` | `session.rs` |
+| 语言列表 (`res.lang`) | BFF 内部调用 | `GET /api/session/languages` | `session.rs` |
+
+**关键原则**: BFF 永远不访问 `base` 的 Python 源码或直接调用 `base` 的任何类。所有交互都是标准的 JSON-RPC 调用，与任何其他 Odoo 客户端（浏览器 SPA、移动端）完全一致。
+
+### B.3 `web` 模块映射
+
+BFF 对接 `web` 模块的 **控制器层**（HTTP/JSON-RPC 端点），每个端点对应一个控制器文件：
+
+| BFF 端点 | `web` 控制器文件 | 类/方法 | 认证 |
+|----------|-----------------|--------|:--:|
+| `GET /api/session` | `controllers/session.py` | `Session.get_session_info()` | user |
+| `POST /api/session/login` | `controllers/session.py` | `Session.authenticate()` | none |
+| `POST /api/session/logout` | `controllers/session.py` | `Session.destroy()` | user |
+| `GET /api/session/languages` | `controllers/session.py` | `Session.get_lang_list()` | none |
+| `GET /api/session/modules` | `controllers/session.py` | `Session.modules()` | user |
+| `GET /api/session/check` | `controllers/session.py` | `Session.check()` | user |
+| `GET /api/menus` | `controllers/webclient.py` | `WebClient.load_menus()` | user |
+| `GET /api/translations` | `controllers/webclient.py` | `WebClient.translations()` | public |
+| `POST /api/odoo/web/dataset/call_kw` | `controllers/dataset.py` | `DataSet.call_kw()` | user |
+| `POST /api/odoo/web/dataset/call_button/*` | `controllers/dataset.py` | `DataSet.call_button()` | user |
+| `GET /api/web/image/{*path}` | `controllers/binary.py` | `Binary.image()` | public |
+| `GET /api/web/content/{*path}` | `controllers/binary.py` | `Binary.content_*()` | user |
+| `GET /api/logo` | `controllers/binary.py` | `Binary.company_logo()` | none |
+| `GET /api/report/download` | `controllers/report.py` | `Report` | user |
+| `GET /api/report/barcode/{*path}` | `controllers/report.py` | `Report.barcode()` | public |
+| `POST /api/odoo/web/action/load` | `controllers/action.py` | `Action.load()` | user |
+| `POST /api/odoo/web/action/run` | `controllers/action.py` | `Action.run()` | user |
+| `ANY /api/odoo-http/{*path}` | 所有控制器 | 通用透传 | 取决于端点 |
+| `WS /ws/events` | `controllers/websocket.py` | Bus 事件 | public |
+
+### B.4 不需要对接的部分
+
+BFF **不处理** Odoo `web` 模块的客户端（Owl SPA）、CSS/SCSS 样式、以及 QWeb 模板渲染。这些都是 oweb React 前端负责替换的部分。
+
+BFF 也不处理 `web` 模块的以下几个控制器端点：
+
+| 端点 | 原因 |
+|------|------|
+| `/web/database/*` | 数据库管理，运维层面，BFF 不代理 |
+| `/web/tests`, `/web/tests/legacy` | QUnit 测试，仅开发使用 |
+| `/web/set_profiling`, `/web/speedscope/*` | 性能分析，仅开发使用 |
+| `/web/manifest.webmanifest` | PWA manifest，oweb 可自定义 |
+| `/web/service-worker.js` | Service Worker，oweb 可自定义 |
+| `/web/sign/get_fonts` | 签名字体，低频功能 |
+| `/web/pivot/export_xlsx` | Pivot 导出，可通过 HTTP 代理 |
+| `/json/*` | 实验性 REST API，低频使用 |
+
+### B.5 BFF 增强
+
+BFF 在 Odoo 原生 `base`/`web` 模块基础上，额外提供了：
+
+| 增强项 | 实现 |
+|--------|------|
+| Session 响应增强 | `GET /api/session` 注入缓存的 menus + apps 数据 |
+| JSON-RPC 缓存 | `cache.rs` — TTL 差异化缓存 (fields_get 24h, get_views 1h…) |
+| WebSocket 桥接 | `ws.rs` — 优先直连 WS，降级 5s 轮询 |
+| 安全头转发 | X-Frame-Options, CSP, HSTS 自动转发 |
+| 双压缩防护 | 跳过 Odoo 的 Content-Encoding，统一用 CompressionLayer |
+| Session 过期检测 | code 100 → HTTP 401（前端自动重定向登录） |
+| 请求体限制 | 10MB 全局限制 |
+| 报表/条码辅助端点 | `/api/report/download`, `/api/report/barcode/*` |
+| 通用 HTTP 代理 | `/api/odoo-http/{*path}` 支持 GET/POST multipart |
