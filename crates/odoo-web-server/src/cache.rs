@@ -54,6 +54,13 @@ impl ResponseCache {
         };
         self.inner.write().await.insert(key.to_string(), entry);
     }
+
+    pub async fn invalidate(&self, prefix: &str) {
+        self.inner
+            .write()
+            .await
+            .retain(|k, _| !k.starts_with(prefix));
+    }
 }
 
 impl Default for ResponseCache {

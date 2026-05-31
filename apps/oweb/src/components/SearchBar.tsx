@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { nameSearch } from '@odooseek/odoo-client'
 import type { SearchFilter, SearchGroupBy, ViewField } from '@odooseek/odoo-client'
+import { nameSearch } from '@odooseek/odoo-client'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FavoriteFilters } from './FavoriteFilters'
 
-function buildDateDomains(fieldName: string): { key: string; label: string; domain: unknown[] }[] {
+function _buildDateDomains(fieldName: string): { key: string; label: string; domain: unknown[] }[] {
   const now = new Date()
-  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  const _fmt = (d: Date) => d.toISOString().slice(0, 10)
   const startOfDay = (d: Date) => {
     const s = new Date(d)
     s.setHours(0, 0, 0, 0)
@@ -17,32 +17,85 @@ function buildDateDomains(fieldName: string): { key: string; label: string; doma
     return e.toISOString().slice(0, 19).replace('T', ' ')
   }
   const presets: { key: string; label: string; domain: unknown[] }[] = [
-    { key: 'today', label: 'Today', domain: [[fieldName, '>=', startOfDay(now)], [fieldName, '<=', endOfDay(now)]] },
+    {
+      key: 'today',
+      label: 'Today',
+      domain: [
+        [fieldName, '>=', startOfDay(now)],
+        [fieldName, '<=', endOfDay(now)],
+      ],
+    },
   ]
   {
-    const s = new Date(now); s.setDate(s.getDate() - 6)
-    presets.push({ key: 'last7', label: 'Last 7 Days', domain: [[fieldName, '>=', startOfDay(s)], [fieldName, '<=', endOfDay(now)]] })
+    const s = new Date(now)
+    s.setDate(s.getDate() - 6)
+    presets.push({
+      key: 'last7',
+      label: 'Last 7 Days',
+      domain: [
+        [fieldName, '>=', startOfDay(s)],
+        [fieldName, '<=', endOfDay(now)],
+      ],
+    })
   }
   {
-    const s = new Date(now); s.setDate(s.getDate() - 29)
-    presets.push({ key: 'last30', label: 'Last 30 Days', domain: [[fieldName, '>=', startOfDay(s)], [fieldName, '<=', endOfDay(now)]] })
+    const s = new Date(now)
+    s.setDate(s.getDate() - 29)
+    presets.push({
+      key: 'last30',
+      label: 'Last 30 Days',
+      domain: [
+        [fieldName, '>=', startOfDay(s)],
+        [fieldName, '<=', endOfDay(now)],
+      ],
+    })
   }
   {
     const s = new Date(now.getFullYear(), now.getMonth(), 1)
-    presets.push({ key: 'mtd', label: 'Month to Date', domain: [[fieldName, '>=', startOfDay(s)], [fieldName, '<=', endOfDay(now)]] })
+    presets.push({
+      key: 'mtd',
+      label: 'Month to Date',
+      domain: [
+        [fieldName, '>=', startOfDay(s)],
+        [fieldName, '<=', endOfDay(now)],
+      ],
+    })
   }
   {
     const e = new Date(now.getFullYear(), now.getMonth(), 0)
     const s = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    presets.push({ key: 'lastMonth', label: 'Last Month', domain: [[fieldName, '>=', startOfDay(s)], [fieldName, '<=', endOfDay(e)]] })
+    presets.push({
+      key: 'lastMonth',
+      label: 'Last Month',
+      domain: [
+        [fieldName, '>=', startOfDay(s)],
+        [fieldName, '<=', endOfDay(e)],
+      ],
+    })
   }
   {
     const s = new Date(now.getFullYear(), 0, 1)
-    presets.push({ key: 'ytd', label: 'Year to Date', domain: [[fieldName, '>=', startOfDay(s)], [fieldName, '<=', endOfDay(now)]] })
+    presets.push({
+      key: 'ytd',
+      label: 'Year to Date',
+      domain: [
+        [fieldName, '>=', startOfDay(s)],
+        [fieldName, '<=', endOfDay(now)],
+      ],
+    })
   }
   {
-    const s = new Date(now); s.setFullYear(s.getFullYear() - 1); s.setDate(s.getDate() + 1)
-    presets.push({ key: 'last12m', label: 'Last 12 Months', domain: [[fieldName, '>=', startOfDay(s)], [fieldName, '<=', endOfDay(now)]] })
+    const s = new Date(now)
+    s.setFullYear(s.getFullYear() - 1)
+    s.setDate(s.getDate() + 1)
+    presets.push({
+      key: 'last12m',
+      label: 'Last 12 Months',
+      domain: [
+        [fieldName, '>=', startOfDay(s)],
+        [fieldName, '<=', endOfDay(now)],
+      ],
+    })
   }
   return presets
 }

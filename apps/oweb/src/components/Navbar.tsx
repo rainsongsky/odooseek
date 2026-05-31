@@ -1,10 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { useTranslations } from 'use-intl'
-import { Home, LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
-import { useHomeMenu } from '../hooks/useHomeMenu'
-import { useAuth } from '../lib/auth'
 import {
   fetchMenus,
   getAppSections,
@@ -12,6 +5,14 @@ import {
   type MenusData,
   type MenuTreeNode,
 } from '@odooseek/odoo-client'
+import { useQuery } from '@tanstack/react-query'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { useTranslations } from 'use-intl'
+import { LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
+import { useHomeMenu } from '../hooks/useHomeMenu'
+import { useAuth } from '../lib/auth'
+import { ThemeToggle } from './ThemeToggle'
 
 export function Navbar() {
   const t = useTranslations()
@@ -55,20 +56,19 @@ export function Navbar() {
   useEffect(() => {
     if (!menus) return
     // Route-based detection for hardcoded module paths
-	const routeAppMap: Record<string, string> = {
-		crm: 'crm',
-		sale: 'sale',
-		inventory: 'stock',
-		accounting: 'account',
-	}
+    const routeAppMap: Record<string, string> = {
+      crm: 'crm',
+      sale: 'sale',
+      inventory: 'stock',
+      accounting: 'account',
+    }
     const topSegment = currentPath.split('/')[1]
     const knownModule = routeAppMap[topSegment]
     if (knownModule) {
       // Find the app whose actionPath or xmlid contains the module name
       const app = apps.find(
         (a) =>
-          a.xmlid?.startsWith(`${knownModule}.`) ||
-          (a.actionPath && a.actionPath === topSegment),
+          a.xmlid?.startsWith(`${knownModule}.`) || (a.actionPath && a.actionPath === topSegment),
       )
       if (app) {
         setCurrentAppId(app.id as number)
@@ -203,37 +203,38 @@ export function Navbar() {
                         {section.name}
                       </button>
 
-                    {openSubmenu === section.id && section.children.length > 0 && (
-                      <div
-                        className="absolute left-0 top-full z-50 mt-1 w-52 rounded-lg border border-border-subtle bg-surface shadow-lg"
-                        onMouseEnter={() => {
-                          if (closeTimer.current) {
-                            clearTimeout(closeTimer.current)
-                            closeTimer.current = null
-                          }
-                        }}
-                        onMouseLeave={handleMouseLeave}
-                      >
-                        {section.children.map((sub) => (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (sub.actionID) {
-                                navigate({ to: '/web', search: { action: sub.actionID } })
-                              }
-                              setOpenSubmenu(null)
-                            }}
-                            className="flex w-full items-center px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-hover/50"
-                          >
-                            {sub.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )})}
+                      {openSubmenu === section.id && section.children.length > 0 && (
+                        <div
+                          className="absolute left-0 top-full z-50 mt-1 w-52 rounded-lg border border-border-subtle bg-surface shadow-lg"
+                          onMouseEnter={() => {
+                            if (closeTimer.current) {
+                              clearTimeout(closeTimer.current)
+                              closeTimer.current = null
+                            }
+                          }}
+                          onMouseLeave={handleMouseLeave}
+                        >
+                          {section.children.map((sub) => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (sub.actionID) {
+                                  navigate({ to: '/web', search: { action: sub.actionID } })
+                                }
+                                setOpenSubmenu(null)
+                              }}
+                              className="flex w-full items-center px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-hover/50"
+                            >
+                              {sub.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </nav>
@@ -251,6 +252,7 @@ export function Navbar() {
         >
           <Settings className="h-4 w-4" />
         </Link>
+        <ThemeToggle />
         {isAuthenticated ? (
           <>
             <span className="px-2.5 py-1.5 text-xs text-text-secondary">

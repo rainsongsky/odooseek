@@ -1,10 +1,10 @@
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { DialogProvider } from '../../hooks/useDialog'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooFormRenderer } from '../OdooFormRenderer'
 
 const mockCallKw = vi.fn()
@@ -175,7 +175,9 @@ describe('OdooFormRenderer', () => {
       return Promise.resolve(undefined)
     })
 
-    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} />, { wrapper })
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} context={{}} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Save')).toBeInTheDocument()
@@ -203,7 +205,9 @@ describe('OdooFormRenderer', () => {
       return Promise.resolve(undefined)
     })
 
-    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} />, { wrapper })
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} context={{}} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Save')).toBeInTheDocument()
@@ -454,7 +458,9 @@ describe('OdooFormRenderer', () => {
       return Promise.resolve(undefined)
     })
 
-    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} />, { wrapper })
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} context={{}} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Save')).toBeInTheDocument()

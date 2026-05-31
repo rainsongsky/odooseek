@@ -1,19 +1,18 @@
-import { fireEvent } from '@testing-library/react'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooPivotRenderer } from '../OdooPivotRenderer'
 
 const mockCallKw = vi.fn()
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-}
+      callKw: (...args: unknown[]) => mockCallKw(...args),
+    },
   }
 })
 
@@ -165,9 +164,7 @@ describe('OdooPivotRenderer', () => {
   })
 
   test('shows flip axes button', async () => {
-    mockCallKw.mockResolvedValueOnce([
-      { stage_id: 'New', 'amount:sum': 100 },
-    ])
+    mockCallKw.mockResolvedValueOnce([{ stage_id: 'New', 'amount:sum': 100 }])
 
     render(<OdooPivotRenderer model="crm.lead" arch={pivotArch} fields={fields} />, { wrapper })
 
@@ -177,9 +174,7 @@ describe('OdooPivotRenderer', () => {
   })
 
   test('shows export CSV button', async () => {
-    mockCallKw.mockResolvedValueOnce([
-      { stage_id: 'New', 'amount:sum': 100 },
-    ])
+    mockCallKw.mockResolvedValueOnce([{ stage_id: 'New', 'amount:sum': 100 }])
 
     render(<OdooPivotRenderer model="crm.lead" arch={pivotArch} fields={fields} />, { wrapper })
 
@@ -189,9 +184,7 @@ describe('OdooPivotRenderer', () => {
   })
 
   test('shows measure toggle buttons for multiple measures', async () => {
-    mockCallKw.mockResolvedValueOnce([
-      { stage_id: 'New', 'amount:sum': 100, 'quantity:sum': 5 },
-    ])
+    mockCallKw.mockResolvedValueOnce([{ stage_id: 'New', 'amount:sum': 100, 'quantity:sum': 5 }])
 
     render(<OdooPivotRenderer model="sale.order" arch={multiMeasureArch} fields={fields} />, {
       wrapper,

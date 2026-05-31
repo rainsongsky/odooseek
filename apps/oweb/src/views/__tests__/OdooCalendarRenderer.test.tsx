@@ -1,19 +1,19 @@
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooCalendarRenderer } from '../OdooCalendarRenderer'
 
 const mockSearchRead = vi.fn()
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  searchRead: (...args: unknown[]) => mockSearchRead(...args),
-  callKw: vi.fn(),
-}
+      searchRead: (...args: unknown[]) => mockSearchRead(...args),
+      callKw: vi.fn(),
+    },
   }
 })
 
@@ -168,11 +168,152 @@ describe('OdooCalendarRenderer', () => {
 
   test('shows loading spinner', () => {
     mockSearchRead.mockReturnValue(new Promise(() => {}))
-
     render(<OdooCalendarRenderer model="calendar.event" arch={calendarArch} fields={fields} />, {
       wrapper,
     })
-
     expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
+})
+
+describe('OdooCalendarRenderer Phase 24', () => {
+  const calArchPhase24 = `<calendar string="Meetings" date_start="start" date_stop="stop" color="partner_id" event_open_popup="1">
+    <field name="name"/>
+    <field name="partner_id"/>
+  </calendar>`
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    createWrapper()
+  })
+
+  test('privacy: private event shows "Busy" for non-attendee', async () => {
+    mockSearchRead.mockResolvedValueOnce([
+      {
+        id: 1,
+        display_name: 'Secret Meeting',
+        start: '2026-06-01 10:00:00',
+        stop: '2026-06-01 11:00:00',
+        effective_privacy: 'private',
+      },
+    ])
+
+    render(
+      <OdooCalendarRenderer
+        model="calendar.event"
+        arch={calArchPhase24}
+        fields={fields}
+        onRecordClick={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Busy')).toBeInTheDocument()
+    })
+  })
+
+  test('privacy: non-private event shows original title', async () => {
+    mockSearchRead.mockResolvedValueOnce([
+      {
+        id: 2,
+        display_name: 'Public Standup',
+        start: '2026-06-01 09:00:00',
+        stop: '2026-06-01 09:30:00',
+        effective_privacy: 'public',
+      },
+    ])
+
+    render(
+      <OdooCalendarRenderer
+        model="calendar.event"
+        arch={calArchPhase24}
+        fields={fields}
+        onRecordClick={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Public Standup')).toBeInTheDocument()
+    })
+  })
+
+  test('RSVP: declined event renders with title visible', async () => {
+    mockSearchRead.mockResolvedValueOnce([
+      {
+        id: 3,
+        display_name: 'Team Sync',
+        start: '2026-06-01 14:00:00',
+        stop: '2026-06-01 15:00:00',
+        current_status: 'declined',
+      },
+    ])
+
+    render(
+      <OdooCalendarRenderer
+        model="calendar.event"
+        arch={calArchPhase24}
+        fields={fields}
+        onRecordClick={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Team Sync')).toBeInTheDocument()
+    })
+  })
+
+  test('RSVP: accepted event shows normally', async () => {
+    mockSearchRead.mockResolvedValueOnce([
+      {
+        id: 4,
+        display_name: 'Accepted Meeting',
+        start: '2026-06-01 16:00:00',
+        stop: '2026-06-01 17:00:00',
+        current_status: 'accepted',
+      },
+    ])
+
+    render(
+      <OdooCalendarRenderer
+        model="calendar.event"
+        arch={calArchPhase24}
+        fields={fields}
+        onRecordClick={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Accepted Meeting')).toBeInTheDocument()
+    })
+  })
+
+  test('recurrence: recurring event flag set', async () => {
+    mockSearchRead.mockResolvedValueOnce([
+      {
+        id: 5,
+        display_name: 'Weekly Standup',
+        start: '2026-06-01 09:00:00',
+        stop: '2026-06-01 09:30:00',
+        recurrency: true,
+        recurrence_display_name: 'Weekly standup (every Monday)',
+      },
+    ])
+
+    render(
+      <OdooCalendarRenderer
+        model="calendar.event"
+        arch={calArchPhase24}
+        fields={fields}
+        onRecordClick={vi.fn()}
+      />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Weekly Standup')).toBeInTheDocument()
+    })
   })
 })

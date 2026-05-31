@@ -1,0 +1,18 @@
+// Auto-generated barrel export — DO NOT EDIT
+
+export type { AccountMoveRecord, AccountMoveFieldName, AccountMoveSearchResult } from './models/account.move'
+export type { AccountMoveLineRecord, AccountMoveLineFieldName, AccountMoveLineSearchResult } from './models/account.move.line'
+export type { CalendarEventRecord, CalendarEventFieldName, CalendarEventSearchResult } from './models/calendar.event'
+export type { CrmLeadRecord, CrmLeadFieldName, CrmLeadSearchResult } from './models/crm.lead'
+export type { IrFiltersRecord, IrFiltersFieldName, IrFiltersSearchResult } from './models/ir.filters'
+export type { MailActivityRecord, MailActivityFieldName, MailActivitySearchResult } from './models/mail.activity'
+export type { MailActivityTypeRecord, MailActivityTypeFieldName, MailActivityTypeSearchResult } from './models/mail.activity.type'
+export type { MailFollowersRecord, MailFollowersFieldName, MailFollowersSearchResult } from './models/mail.followers'
+export type { MailMessageRecord, MailMessageFieldName, MailMessageSearchResult } from './models/mail.message'
+export type { ResPartnerRecord, ResPartnerFieldName, ResPartnerSearchResult } from './models/res.partner'
+export type { ResUsersRecord, ResUsersFieldName, ResUsersSearchResult } from './models/res.users'
+export type { SaleOrderRecord, SaleOrderFieldName, SaleOrderSearchResult } from './models/sale.order'
+export type { SaleOrderLineRecord, SaleOrderLineFieldName, SaleOrderLineSearchResult } from './models/sale.order.line'
+export type { StockMoveRecord, StockMoveFieldName, StockMoveSearchResult } from './models/stock.move'
+export type { StockMoveLineRecord, StockMoveLineFieldName, StockMoveLineSearchResult } from './models/stock.move.line'
+export type { StockPickingRecord, StockPickingFieldName, StockPickingSearchResult } from './models/stock.picking'

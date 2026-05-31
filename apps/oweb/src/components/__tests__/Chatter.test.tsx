@@ -9,11 +9,11 @@ const mockCallKw = vi.fn()
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  searchRead: (...args: unknown[]) => mockSearchRead(...args),
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-}
+      searchRead: (...args: unknown[]) => mockSearchRead(...args),
+      callKw: (...args: unknown[]) => mockCallKw(...args),
+    },
   }
 })
 

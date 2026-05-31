@@ -1,9 +1,8 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import React, { Suspense, useCallback, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import type { OdooAction } from '@odooseek/odoo-client'
+import type { OdooAction, OdooFieldMeta } from '@odooseek/odoo-client'
 import { callKw } from '@odooseek/odoo-client'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import React, { Suspense, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 
 interface FormDialogItem {
@@ -52,9 +51,7 @@ function FormDialogBody({
   const action = item.action
   const model = action.res_model ?? parentModel
   const viewId =
-    action.views && action.views.length > 0 && action.views[0][0]
-      ? action.views[0][0]
-      : undefined
+    action.views && action.views.length > 0 && action.views[0][0] ? action.views[0][0] : undefined
 
   const { data: viewData, isLoading } = useQuery({
     queryKey: ['odoo', 'dialog', 'get_views', model, item.id],

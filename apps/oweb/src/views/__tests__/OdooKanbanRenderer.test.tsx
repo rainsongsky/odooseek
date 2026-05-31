@@ -1,7 +1,7 @@
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooKanbanRenderer } from '../OdooKanbanRenderer'
 
 const { mockCallKw, mockReadGroup } = vi.hoisted(() => ({
@@ -12,11 +12,11 @@ const { mockCallKw, mockReadGroup } = vi.hoisted(() => ({
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  callKw: mockCallKw,
-  readGroup: mockReadGroup,
-}
+      callKw: mockCallKw,
+      readGroup: mockReadGroup,
+    },
   }
 })
 vi.mock('../../components/ConfirmDialog', () => ({
@@ -42,9 +42,37 @@ const simpleKanbanArch = `<kanban>
 </kanban>`
 
 const kanbanFields: Record<string, OdooFieldMeta> = {
-  name: { name: 'name', type: 'char', string: 'Name', required: true, readonly: false, store: true, searchable: true, sortable: true },
-  expected_revenue: { name: 'expected_revenue', type: 'monetary', string: 'Revenue', required: false, readonly: false, store: true, searchable: true, sortable: true },
-  partner_id: { name: 'partner_id', type: 'many2one', string: 'Partner', required: false, readonly: false, relation: 'res.partner', store: true, searchable: true, sortable: true },
+  name: {
+    name: 'name',
+    type: 'char',
+    string: 'Name',
+    required: true,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  expected_revenue: {
+    name: 'expected_revenue',
+    type: 'monetary',
+    string: 'Revenue',
+    required: false,
+    readonly: false,
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
+  partner_id: {
+    name: 'partner_id',
+    type: 'many2one',
+    string: 'Partner',
+    required: false,
+    readonly: false,
+    relation: 'res.partner',
+    store: true,
+    searchable: true,
+    sortable: true,
+  },
 }
 
 const sampleRecords = [
@@ -64,14 +92,9 @@ describe('OdooKanbanRenderer', () => {
   test('renders kanban cards from search_read data', async () => {
     mockCallKw.mockResolvedValue(sampleRecords)
 
-    render(
-      <OdooKanbanRenderer
-        model="crm.lead"
-        arch={simpleKanbanArch}
-        fields={kanbanFields}
-      />,
-      { wrapper },
-    )
+    render(<OdooKanbanRenderer model="crm.lead" arch={simpleKanbanArch} fields={kanbanFields} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Opportunity A')).toBeInTheDocument()
@@ -99,14 +122,9 @@ describe('OdooKanbanRenderer', () => {
   test('shows loading state initially', () => {
     mockCallKw.mockReturnValue(new Promise(() => {})) // never resolves
 
-    render(
-      <OdooKanbanRenderer
-        model="crm.lead"
-        arch={simpleKanbanArch}
-        fields={kanbanFields}
-      />,
-      { wrapper },
-    )
+    render(<OdooKanbanRenderer model="crm.lead" arch={simpleKanbanArch} fields={kanbanFields} />, {
+      wrapper,
+    })
 
     expect(document.querySelector('.animate-spin')).toBeInTheDocument()
   })

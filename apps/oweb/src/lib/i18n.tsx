@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { IntlProvider } from 'use-intl'
 import { useAuth } from './auth'
-import enMessages from './locales/en.json'
-import zhMessages from './locales/zh.json'
-import frMessages from './locales/fr.json'
 import deMessages from './locales/de.json'
+import enMessages from './locales/en.json'
 import esMessages from './locales/es.json'
+import frMessages from './locales/fr.json'
+import zhMessages from './locales/zh.json'
 
 const DEFAULT_LOCALE = 'en'
 
@@ -19,11 +19,22 @@ const FALLBACK: Record<string, Record<string, unknown>> = {
 }
 
 const LOCALE_MAP: Record<string, string> = {
-  zh: 'zh', zh_CN: 'zh', zh_TW: 'zh',
-  en: 'en', en_US: 'en',
-  fr: 'fr', fr_FR: 'fr', fr_BE: 'fr', fr_CA: 'fr',
-  de: 'de', de_DE: 'de', de_CH: 'de',
-  es: 'es', es_ES: 'es', es_MX: 'es', es_AR: 'es',
+  zh: 'zh',
+  zh_CN: 'zh',
+  zh_TW: 'zh',
+  en: 'en',
+  en_US: 'en',
+  fr: 'fr',
+  fr_FR: 'fr',
+  fr_BE: 'fr',
+  fr_CA: 'fr',
+  de: 'de',
+  de_DE: 'de',
+  de_CH: 'de',
+  es: 'es',
+  es_ES: 'es',
+  es_MX: 'es',
+  es_AR: 'es',
 }
 
 let _cache: { locale: string; data: Record<string, unknown> } | null = null

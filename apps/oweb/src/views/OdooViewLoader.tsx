@@ -1,18 +1,23 @@
+import type { OdooFieldMeta, ViewToolbar, ViewType } from '@odooseek/odoo-client'
+import {
+  cacheKey,
+  callKw,
+  generateReport,
+  getCachedViews,
+  type OdooAction,
+  parseSearchXml,
+  setCachedViews,
+} from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
-import { lazy, useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
 import { DataExportDialog } from '../components/DataExportDialog'
-import { FormDialogOverlay, type FormDialogItem } from '../components/FormDialog'
+import { type FormDialogItem, FormDialogOverlay } from '../components/FormDialog'
 import { ImportDialog } from '../components/ImportDialog'
 import { SearchPanel } from '../components/SearchPanel'
-import { EmptyState, KanbanSkeleton, ListSkeleton } from '../components/Skeleton'
+import { KanbanSkeleton, ListSkeleton } from '../components/Skeleton'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
-import { callKw, type OdooAction } from '@odooseek/odoo-client'
-import type { OdooFieldMeta, ViewToolbar, ViewType } from '@odooseek/odoo-client'
-import { generateReport } from '@odooseek/odoo-client'
-import { cacheKey, getCachedViews, setCachedViews } from '@odooseek/odoo-client'
-import { parseSearchXml } from '@odooseek/odoo-client'
 import { OdooListRenderer } from './OdooListRenderer'
 
 // Lazy-loaded views — only fetched when the user switches to that view type
@@ -52,6 +57,7 @@ interface ViewLoaderProps {
   viewType: ViewType
   viewId?: number
   domain?: unknown[]
+  context?: Record<string, unknown>
   recordId?: number
   availableViews?: ViewType[]
   onRowClick?: (recordId: number) => void
@@ -68,6 +74,7 @@ export function OdooViewLoader({
   viewType,
   viewId,
   domain: initialDomain = [],
+  context = {},
   recordId: _recordId,
   availableViews,
   onRowClick,
@@ -89,12 +96,16 @@ export function OdooViewLoader({
   const [domain, setDomain] = useState<unknown[]>(initialDomain)
   const [groupBy, setGroupBy] = useState<string[]>([])
   const [internalViewType, setInternalViewType] = useState(viewType)
-  const [internalRecordId, setInternalRecordId] = useState<number | undefined>(_recordId)
+  const [_internalRecordId, setInternalRecordId] = useState<number | undefined>(_recordId)
   const toast = useToast()
 
   // Sync external props when they change
-  useEffect(() => { setInternalViewType(viewType) }, [viewType])
-  useEffect(() => { setInternalRecordId(_recordId) }, [_recordId])
+  useEffect(() => {
+    setInternalViewType(viewType)
+  }, [viewType])
+  useEffect(() => {
+    setInternalRecordId(_recordId)
+  }, [_recordId])
 
   // Default create handler: switch to form view with no record
   const handleCreate = useCallback(() => {
@@ -107,7 +118,9 @@ export function OdooViewLoader({
   const [showImport, setShowImport] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [searchPanelDomain, setSearchPanelDomain] = useState<unknown[]>([])
-  useEffect(() => { setRecordId(_recordId) }, [_recordId])
+  useEffect(() => {
+    setRecordId(_recordId)
+  }, [_recordId])
 
   const effectiveDomain = useMemo(
     () => [...initialDomain, ...domain, ...searchPanelDomain],
@@ -271,18 +284,117 @@ export function OdooViewLoader({
     if (dateFields.length === 0) return []
     const result: Array<{ name: string; string: string; domain: unknown[] }> = []
     const presets = [
-      { key: 'today', label: 'Today', start: () => { const d = new Date(); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
-      { key: 'last7', label: 'Last 7 Days', start: () => { const d = new Date(); d.setDate(d.getDate()-6); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
-      { key: 'last30', label: 'Last 30 Days', start: () => { const d = new Date(); d.setDate(d.getDate()-29); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
-      { key: 'mtd', label: 'Month to Date', start: () => { const d = new Date(new Date().getFullYear(), new Date().getMonth(), 1); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
-      { key: 'lastMonth', label: 'Last Month', start: () => { const d = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1); return d }, end: () => { const d = new Date(new Date().getFullYear(), new Date().getMonth(), 0); d.setHours(23,59,59,999); return d } },
-      { key: 'ytd', label: 'Year to Date', start: () => { const d = new Date(new Date().getFullYear(), 0, 1); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
-      { key: 'last12m', label: 'Last 12 Months', start: () => { const d = new Date(); d.setFullYear(d.getFullYear()-1); d.setDate(d.getDate()+1); d.setHours(0,0,0,0); return d }, end: () => { const d = new Date(); d.setHours(23,59,59,999); return d } },
+      {
+        key: 'today',
+        label: 'Today',
+        start: () => {
+          const d = new Date()
+          d.setHours(0, 0, 0, 0)
+          return d
+        },
+        end: () => {
+          const d = new Date()
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
+      {
+        key: 'last7',
+        label: 'Last 7 Days',
+        start: () => {
+          const d = new Date()
+          d.setDate(d.getDate() - 6)
+          d.setHours(0, 0, 0, 0)
+          return d
+        },
+        end: () => {
+          const d = new Date()
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
+      {
+        key: 'last30',
+        label: 'Last 30 Days',
+        start: () => {
+          const d = new Date()
+          d.setDate(d.getDate() - 29)
+          d.setHours(0, 0, 0, 0)
+          return d
+        },
+        end: () => {
+          const d = new Date()
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
+      {
+        key: 'mtd',
+        label: 'Month to Date',
+        start: () => {
+          const d = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+          return d
+        },
+        end: () => {
+          const d = new Date()
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
+      {
+        key: 'lastMonth',
+        label: 'Last Month',
+        start: () => {
+          const d = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)
+          return d
+        },
+        end: () => {
+          const d = new Date(new Date().getFullYear(), new Date().getMonth(), 0)
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
+      {
+        key: 'ytd',
+        label: 'Year to Date',
+        start: () => {
+          const d = new Date(new Date().getFullYear(), 0, 1)
+          return d
+        },
+        end: () => {
+          const d = new Date()
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
+      {
+        key: 'last12m',
+        label: 'Last 12 Months',
+        start: () => {
+          const d = new Date()
+          d.setFullYear(d.getFullYear() - 1)
+          d.setDate(d.getDate() + 1)
+          d.setHours(0, 0, 0, 0)
+          return d
+        },
+        end: () => {
+          const d = new Date()
+          d.setHours(23, 59, 59, 999)
+          return d
+        },
+      },
     ]
     const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ')
     for (const f of dateFields) {
       for (const p of presets) {
-        result.push({ name: `date_${f.name}_${p.key}`, string: `${f.string || f.name}: ${p.label}`, domain: [[f.name, '>=', fmt(p.start())], [f.name, '<=', fmt(p.end())]] })
+        result.push({
+          name: `date_${f.name}_${p.key}`,
+          string: `${f.string || f.name}: ${p.label}`,
+          domain: [
+            [f.name, '>=', fmt(p.start())],
+            [f.name, '<=', fmt(p.end())],
+          ],
+        })
       }
     }
     return result
@@ -380,6 +492,7 @@ export function OdooViewLoader({
             arch={activeView.arch}
             fields={fields}
             recordId={recordId}
+            context={context}
             onRecordCreated={onRecordCreated}
             onDirtyChange={onDirtyChange}
             onAction={handleFormAction}
@@ -400,12 +513,22 @@ export function OdooViewLoader({
       )}
       {viewType === 'pivot' && (
         <Suspense fallback={<ViewSkeleton />}>
-          <OdooPivotRenderer model={model} arch={activeView.arch} fields={fields} domain={effectiveDomain} />
+          <OdooPivotRenderer
+            model={model}
+            arch={activeView.arch}
+            fields={fields}
+            domain={effectiveDomain}
+          />
         </Suspense>
       )}
       {viewType === 'graph' && (
         <Suspense fallback={<ViewSkeleton />}>
-          <OdooGraphRenderer model={model} arch={activeView.arch} fields={fields} domain={effectiveDomain} />
+          <OdooGraphRenderer
+            model={model}
+            arch={activeView.arch}
+            fields={fields}
+            domain={effectiveDomain}
+          />
         </Suspense>
       )}
       {viewType === 'calendar' && (

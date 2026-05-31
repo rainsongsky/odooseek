@@ -1,6 +1,6 @@
+import type { ViewToolbar, ViewType } from '@odooseek/odoo-client'
 import { useState } from 'react'
 import { ChevronDown } from '@/lib/lucide-icons'
-import type { ViewToolbar, ViewType } from '@odooseek/odoo-client'
 import { OdooViewSwitcher } from '../views/OdooViewSwitcher'
 import { Breadcrumbs } from './Breadcrumbs'
 import { Pagination } from './Pagination'
@@ -72,7 +72,11 @@ export function ControlPanel({
 
   const hasPrint = (toolbar?.print?.length ?? 0) > 0
   const hasAction =
-    (toolbar?.action?.length ?? 0) > 0 || !!onDuplicate || !!onArchive || !!onUnarchive || !!onDelete
+    (toolbar?.action?.length ?? 0) > 0 ||
+    !!onDuplicate ||
+    !!onArchive ||
+    !!onUnarchive ||
+    !!onDelete
   const showMenus = hasPrint || hasAction
   const showSearch = searchProps?.visible !== false && searchProps
   const showPager = pagerProps?.visible !== false && pagerProps

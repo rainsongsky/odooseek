@@ -1,7 +1,5 @@
+import { callKw, evalCondition, formatRemainingDays } from '@odooseek/odoo-client'
 import { useCallback, useRef, useState } from 'react'
-import { callKw } from '@odooseek/odoo-client'
-import { evalCondition } from '@odooseek/odoo-client'
-import { formatRemainingDays } from '@odooseek/odoo-client'
 import { CharWidget } from './basic'
 import type { FieldWidgetProps } from './index'
 
@@ -396,7 +394,7 @@ export function KanbanActivityWidget({ value }: FieldWidgetProps) {
 
 export function RottingWidget({ value }: FieldWidgetProps) {
   const days = Number(value)
-  if (isNaN(days) || days <= 0) return null
+  if (Number.isNaN(days) || days <= 0) return null
 
   const isOverdue = days > 14
   return (

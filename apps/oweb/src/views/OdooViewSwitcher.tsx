@@ -1,3 +1,4 @@
+import type { ViewType } from '@odooseek/odoo-client'
 import {
   BarChart3,
   CalendarDays,
@@ -6,7 +7,6 @@ import {
   Table,
   TrendingUp,
 } from '@/lib/lucide-icons'
-import type { ViewType } from '@odooseek/odoo-client'
 import { prefetchView } from './OdooViewLoader'
 
 interface ViewSwitcherProps {

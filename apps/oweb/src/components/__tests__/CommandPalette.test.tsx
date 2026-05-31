@@ -62,11 +62,11 @@ vi.mock('../../lib/auth', () => ({
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  fetchMenus: vi.fn(),
-  flattenMenuItems: vi.fn(),
-}
+      fetchMenus: vi.fn(),
+      flattenMenuItems: vi.fn(),
+    },
   }
 })
 

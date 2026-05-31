@@ -100,6 +100,8 @@ export interface ParsedFormView {
   type: 'form'
   string: string
   elements: FormElement[]
+  jsClass?: string
+  title?: string
 }
 
 export type FormElement =
@@ -129,6 +131,8 @@ export interface ButtonElement {
   invisible?: string
   states?: string
   confirm?: string
+  special?: 'cancel'
+  context?: string
 }
 
 export interface ButtonBoxElement {
@@ -357,13 +361,19 @@ export interface ParsedCalendarView {
   string: string
   dateStart: string
   dateStop?: string
+  dateDelay?: string
+  allDay?: string
   colorField?: string
   mode: 'day' | 'week' | 'month'
   fields: string[]
+  fieldAttrs: Record<string, { invisible?: string; avatarField?: string; options?: Record<string, unknown> }>
   avatarField?: string
   eventLimit?: number
   quickCreate?: boolean
   hideTime?: boolean
+  eventOpenPopup?: boolean
+  quickCreateViewId?: number
+  multiEdit?: boolean
 }
 
 export interface ToolbarAction {

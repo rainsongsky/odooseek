@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
-import { callKw, searchRead } from '@odooseek/odoo-client'
 import type { ParsedSearchPanel, SearchPanelCategory } from '@odooseek/odoo-client'
+import { callKw, searchRead } from '@odooseek/odoo-client'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 
 interface SearchPanelProps {
   model: string
@@ -38,9 +38,7 @@ export function SearchPanel({ model, searchPanel, domain, onCategoryChange }: Se
                 }
               }
             }
-            const newDomain = domains.length > 0
-              ? [...domain, ...domains]
-              : domain
+            const newDomain = domains.length > 0 ? [...domain, ...domains] : domain
             onCategoryChange(newDomain)
           }}
         />
@@ -79,9 +77,8 @@ function SearchPanelSection({
     queryKey,
     queryFn: async () => {
       try {
-        const method = field.select === 'multi'
-          ? 'search_panel_select_multi_range'
-          : 'search_panel_select_range'
+        const method =
+          field.select === 'multi' ? 'search_panel_select_multi_range' : 'search_panel_select_range'
         const result = await callKw<{
           values: Array<{
             id: number | string
@@ -135,7 +132,11 @@ function SearchPanelSection({
     const raw = categories as SearchPanelCategory[]
     const mapped: SearchPanelCategory[] = raw.map((c) => ({
       id: c.id as number | string,
-      displayName: String(c.__count != null ? `${c.displayName ?? c.display_name ?? c.id} (${c.__count})` : (c.displayName ?? c.display_name ?? c.id)),
+      displayName: String(
+        c.__count != null
+          ? `${c.displayName ?? c.display_name ?? c.id} (${c.__count})`
+          : (c.displayName ?? c.display_name ?? c.id),
+      ),
       count: c.__count,
     }))
     if (field.limit && !showAll) {
@@ -192,9 +193,7 @@ function SearchPanelSection({
                   {cat.displayName || String(cat.id)}
                 </span>
                 {cat.count != null && (
-                  <span className="text-[10px] text-text-muted tabular-nums">
-                    {cat.count}
-                  </span>
+                  <span className="text-[10px] text-text-muted tabular-nums">{cat.count}</span>
                 )}
               </button>
             ))

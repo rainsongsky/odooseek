@@ -1,5 +1,5 @@
 import { getAccent, getPreset } from './presets.ts'
-import type { ThemeConfig } from './types.ts'
+import type { ThemeConfig, ThemePreset } from './types.ts'
 
 export function hexToRgb(hex: string): string {
   const h = hex.replace('#', '')
@@ -30,6 +30,13 @@ function deriveFromAccent(accentHex: string, isDark: boolean): Record<string, st
   }
 }
 
+function deriveFromPreset(preset: ThemePreset): Record<string, string> {
+  const { elevated, 'text-primary': textPrimary } = preset.colors
+  return {
+    'color-hover': `color-mix(in srgb, ${textPrimary} 6%, ${elevated})`,
+  }
+}
+
 export function applyTheme(config: ThemeConfig): void {
   const preset = getPreset(config.presetId)
   const accent = getAccent(preset, config.accentId)
@@ -37,6 +44,10 @@ export function applyTheme(config: ThemeConfig): void {
 
   for (const [key, value] of Object.entries(preset.colors)) {
     style.setProperty(`--color-${key}`, value)
+  }
+
+  for (const [key, value] of Object.entries(deriveFromPreset(preset))) {
+    style.setProperty(`--${key}`, value)
   }
 
   style.setProperty('--color-accent', accent.accent)

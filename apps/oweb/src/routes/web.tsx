@@ -1,10 +1,10 @@
+import type { ViewType } from '@odooseek/odoo-client'
+import { resolveAction } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useBlocker, useSearch } from '@tanstack/react-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
-import { resolveAction } from '@odooseek/odoo-client'
-import type { ViewType } from '@odooseek/odoo-client'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 
@@ -32,6 +32,7 @@ function WebPage() {
   const model = search.model ?? actionData?.model ?? 'res.partner'
   const actionViewModes = actionData?.viewMode
   const actionDomain = actionData?.domain
+  const actionContext = (actionData?.context ?? {}) as Record<string, unknown>
 
   const availableViews = useMemo(() => {
     if (!actionViewModes) return undefined
@@ -96,6 +97,7 @@ function WebPage() {
         model={model}
         viewType={effectiveViewType}
         domain={actionDomain}
+        context={actionContext}
         recordId={recordId}
         availableViews={availableViews}
         onRowClick={handleRowClick}

@@ -1,3 +1,19 @@
+import type {
+  ButtonBoxElement,
+  ButtonElement,
+  FormElement,
+  HeaderElement,
+  OdooFieldMeta,
+  StatButtonElement,
+} from '@odooseek/odoo-client'
+import {
+  callButton,
+  callKw,
+  evalModifier,
+  getDecorationClass as getDecoClass,
+  type OdooAction,
+  parseFormXml,
+} from '@odooseek/odoo-client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   forwardRef,
@@ -12,17 +28,6 @@ import { createPortal } from 'react-dom'
 import { ActivityPanel } from '../components/ActivityPanel'
 import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
-import { callButton, callKw, type OdooAction } from '@odooseek/odoo-client'
-import { evalModifier, getDecorationClass as getDecoClass } from '@odooseek/odoo-client'
-import type {
-  ButtonBoxElement,
-  ButtonElement,
-  FormElement,
-  HeaderElement,
-  OdooFieldMeta,
-  StatButtonElement,
-} from '@odooseek/odoo-client'
-import { parseFormXml } from '@odooseek/odoo-client'
 import { getFieldWidget } from './widgets'
 
 export interface OdooFormRendererRef {
@@ -34,13 +39,23 @@ interface FormRendererProps {
   arch: string
   fields: Record<string, OdooFieldMeta>
   recordId?: number
+  context?: Record<string, unknown>
   onRecordCreated?: (newId: number) => void
   onDirtyChange?: (dirty: boolean) => void
   onAction?: (action: OdooAction) => void
 }
 
 export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
-  { model, arch, fields, recordId, onRecordCreated, onDirtyChange, onAction }: FormRendererProps,
+  {
+    model,
+    arch,
+    fields,
+    recordId,
+    context = {},
+    onRecordCreated,
+    onDirtyChange,
+    onAction,
+  }: FormRendererProps,
   ref: React.Ref<OdooFormRendererRef>,
 ) {
   const queryClient = useQueryClient()
@@ -116,12 +131,19 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
 
   useEffect(() => {
     if (!recordId && !record) {
-      callKw<Record<string, unknown>>(model, 'default_get', [Object.keys(fields)], {})
+      callKw<Record<string, unknown>>(model, 'default_get', [Object.keys(fields)], { context })
         .then((defaults) => {
-          setFormValues(defaults)
-          baselineRef.current = { ...defaults }
+          const merged = { ...defaults }
+          for (const [k, v] of Object.entries(context)) {
+            if (k.startsWith('default_')) {
+              const fieldName = k.slice(8)
+              if (fieldName in fields) merged[fieldName] = v
+            }
+          }
+          setFormValues(merged)
+          baselineRef.current = { ...merged }
           setEditMode(true)
-          triggerOnchange([], defaults)
+          triggerOnchange([], merged)
         })
         .catch(() => {
           setSaveError('Failed to load defaults. Some fields may be empty.')
@@ -129,7 +151,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           setEditMode(true)
         })
     }
-  }, [model, recordId, triggerOnchange, record, fields])
+  }, [model, recordId, triggerOnchange, record, fields, context])
 
   const saveMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
@@ -158,13 +180,16 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     },
   })
 
-  const handleChange = useCallback((name: string, value: unknown) => {
-    setFormValues((prev) => {
-      const next = { ...prev, [name]: value }
-      triggerOnchange([name], next)
-      return next
-    })
-  }, [triggerOnchange])
+  const handleChange = useCallback(
+    (name: string, value: unknown) => {
+      setFormValues((prev) => {
+        const next = { ...prev, [name]: value }
+        triggerOnchange([name], next)
+        return next
+      })
+    },
+    [triggerOnchange],
+  )
 
   const handleSave = useCallback(async (): Promise<void> => {
     const missing: string[] = []
@@ -258,18 +283,39 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   }, [editMode])
 
   const handleActionButton = useCallback(
-    (btn: ButtonElement) => {
-      if (!newRecordId) return
+    async (btn: ButtonElement) => {
+      if (btn.special === 'cancel') {
+        onAction?.({ type: 'ir.actions.act_window_close' } as OdooAction)
+        return
+      }
+
+      if (btn.buttonType === 'edit') {
+        if (record?.[0]) {
+          setFormValues({ ...record[0] })
+          setEditMode(true)
+        }
+        return
+      }
+
+      if (btn.buttonType === 'action') {
+        const context: Record<string, unknown> = {
+          active_model: model,
+          active_id: newRecordId,
+          active_ids: [newRecordId],
+        }
+        try {
+          const { loadAction } = await import('@odooseek/odoo-client')
+          const action = await loadAction(btn.name, context)
+          if (action) onAction?.(action)
+        } catch (err: unknown) {
+          setSaveError(err instanceof Error ? err.message : 'Action failed')
+        }
+        return
+      }
+
+      if (!recordId && !newRecordId) return
 
       const executeAction = async () => {
-        if (btn.buttonType === 'edit') {
-          if (record?.[0]) {
-            setFormValues({ ...record[0] })
-            setEditMode(true)
-          }
-          return
-        }
-
         const context: Record<string, unknown> = {
           active_model: model,
           active_id: newRecordId,
@@ -278,20 +324,18 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
 
         try {
           if (btn.buttonType === 'object' || !btn.buttonType) {
-            const result = await callButton<OdooAction | false>(
-              model,
-              btn.name,
-              [[newRecordId]],
-              { context },
-            )
-            queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, newRecordId] })
+            let id = newRecordId
+            if (!newRecordId) {
+              const result = await callKw(model, 'create', [{}])
+              id = typeof result === 'number' ? result : 0
+            }
+            const result = await callButton<OdooAction | false>(model, btn.name, [[id]], {
+              context,
+            })
+            queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, id] })
             if (result && typeof result === 'object' && result.type) {
               onAction?.(result)
             }
-          } else if (btn.buttonType === 'action') {
-            const { loadAction } = await import('@odooseek/odoo-client')
-            const action = await loadAction(btn.name, context)
-            if (action) onAction?.(action)
           }
         } catch (err: unknown) {
           setSaveError(err instanceof Error ? err.message : 'Action failed')
@@ -311,7 +355,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
 
       executeAction()
     },
-    [model, newRecordId, record, queryClient, confirmDialog, onAction],
+    [model, newRecordId, record, recordId, queryClient, confirmDialog, onAction],
   )
 
   const handleStatusChange = useCallback(
@@ -365,20 +409,20 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
 
       <div ref={formRef} className="o_form_body flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
         <div className="o_form_sheet_bg mx-auto">
-        <div className="o_form_sheet">
-          <FormLayoutNode
-            elements={nonHeaderElements}
-            record={currentRecord}
-            fields={fields}
-            model={model}
-            recordId={recordId}
-            editMode={editMode}
-            onChange={handleChange}
-            onAction={onAction}
-            onButtonAction={handleActionButton}
-          />
-          {recordId && <FormTimestamps record={record?.[0]} />}
-        </div>
+          <div className="o_form_sheet">
+            <FormLayoutNode
+              elements={nonHeaderElements}
+              record={currentRecord}
+              fields={fields}
+              model={model}
+              recordId={recordId}
+              editMode={editMode}
+              onChange={handleChange}
+              onAction={onAction}
+              onButtonAction={handleActionButton}
+            />
+            {recordId && <FormTimestamps record={record?.[0]} />}
+          </div>
         </div>
         <div className="mx-auto max-w-[860px]">
           <ActivityPanel model={model} recordId={recordId} />
@@ -530,7 +574,9 @@ function HeaderBar({
   }
 
   return (
-    <div className={`sticky top-0 z-20 border-b border-border-subtle bg-surface px-4 py-1.5 transition-shadow ${scrolled ? 'shadow-md' : ''}`}>
+    <div
+      className={`sticky top-0 z-20 border-b border-border-subtle bg-surface px-4 py-1.5 transition-shadow ${scrolled ? 'shadow-md' : ''}`}
+    >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           {stateSelection.length > 1 && (
@@ -693,16 +739,33 @@ function StatButton({
   }
 
   const handleClick = useCallback(async () => {
-    if (loading || !recordId) return
+    if (loading) return
     if (button.confirm && !window.confirm(button.confirm)) return
+
+    if (button.buttonType === 'action') {
+      setLoading(true)
+      try {
+        await callKw('ir.actions.server', 'run', [[Number(button.name)]])
+        if (recordId) {
+          queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Action failed. Please try again.')
+        setTimeout(() => setError(null), 5000)
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    if (!recordId) return
+
     setLoading(true)
     try {
       if (button.buttonType === 'object') {
         await callKw(model, button.name, [[recordId]])
-      } else if (button.buttonType === 'action') {
-        await callKw('ir.actions.server', 'run', [[Number(button.name)]])
+        queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
       }
-      queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed. Please try again.')
       setTimeout(() => setError(null), 5000)
@@ -719,7 +782,9 @@ function StatButton({
       title={error ?? undefined}
       className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${error ? 'text-red-400 bg-red-400/10 hover:bg-red-400/20' : 'text-text-secondary hover:bg-hover'}`}
     >
-      {button.icon && <i className={`fa ${button.icon} text-sm ${error ? 'text-red-400' : 'text-text-muted'}`} />}
+      {button.icon && (
+        <i className={`fa ${button.icon} text-sm ${error ? 'text-red-400' : 'text-text-muted'}`} />
+      )}
       {value !== '' && <span className="font-semibold text-text-primary">{value}</span>}
       <span>{error ?? text}</span>
     </button>
@@ -1037,16 +1102,22 @@ function FormLayoutNode({
           case 'group': {
             if (evalModifier(el.invisible, record)) return null
             const colClass =
-              el.col === 3 ? 'o_group_col_3'
-              : el.col === 4 ? 'o_group_col_4'
-              : 'o_group_col_2'
+              el.col === 3 ? 'o_group_col_3' : el.col === 4 ? 'o_group_col_4' : 'o_group_col_2'
             return (
               <div key={`grp-${i}`} className={colClass}>
                 {el.string && (
                   <div className="o_horizontal_separator col-span-full">{el.string}</div>
                 )}
                 {renderGroupItems(el.elements, {
-                  record, fields, model, recordId, editMode, onChange, onAction, onButtonAction, level: level + 1
+                  record,
+                  fields,
+                  model,
+                  recordId,
+                  editMode,
+                  onChange,
+                  onAction,
+                  onButtonAction,
+                  level: level + 1,
                 })}
               </div>
             )
@@ -1153,7 +1224,11 @@ function FormLayoutNode({
             )
           }
           case 'separator':
-            return <div key={`sep-${i}`} className="o_horizontal_separator col-span-full">{el.string}</div>
+            return (
+              <div key={`sep-${i}`} className="o_horizontal_separator col-span-full">
+                {el.string}
+              </div>
+            )
           case 'newline':
             return <div key={`nl-${i}`} className="col-span-full" />
           case 'label':

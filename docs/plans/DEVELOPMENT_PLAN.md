@@ -537,3 +537,74 @@ Phase 15 ████████████████████ 100% ✅ (
 | 删除过滤器 | #129 | ir.filters.unlink |
 | SearchBar 集成 | #129 | ★ 按钮下拉 → 已保存列表 + 保存当前 + 删除 |
 | 测试覆盖 | #129 | 7 项 FavoriteFilters 组件测试 |
+
+---
+
+## 二十八、Phase 23-25：Calendar 视图原生功能对齐 ✅ 已完成 (6/1)
+
+> 详细技术方案：`CALENDAR_ALIGNMENT_PLAN.md`
+
+| Phase | Issue | 内容 |
+|:-----:|:-----:|------|
+| 23 | #142 | 核心交互：XML 解析器扩展、全天事件、事件弹出详情(CalendarPopover)、快速创建对话框、颜色系统对齐、日历表单视图 |
+| 24 | #143 | 业务逻辑：RSVP 按钮 (Yes/No/Maybe)、隐私锁图标 + "Busy" 替换、重复事件只读展示 |
+| 25 | #144 | 高级功能：重复更新策略对话框(RecurrenceUpdateDialog)、多选编辑(multiEdit)、视频会议链接 |
+
+**新增文件**: `CalendarPopover.tsx`, `CalendarQuickCreate.tsx`, `RecurrenceUpdateDialog.tsx`
+**修改文件**: `types.ts`, `xml-parser.ts`, `OdooCalendarRenderer.tsx`, `OdooViewLoader.tsx`, `OdooFormRenderer.tsx`
+
+---
+
+## 二十九、Phase 26-31：P0 工作流闭环补全 ✅ 已完成 (6/1)
+
+| Phase | Issue | 内容 |
+|:-----:|:-----:|------|
+| 26 | #132 | Action 按钮执行系统：object/action/special="cancel"、new record 自动保存、StatButton 修复 |
+| 27 | #133 | Context 传递系统：action→ViewLoader→Form default_xxx 合并 |
+| 28 | #134 | Dialog/Modal 系统：FormDialogOverlay + special="cancel" |
+| 29 | #135 | default_get + 删除/归档/复制（已有实现） |
+| 30 | #136 | 搜索面板 SearchPanel（已有实现） |
+
+**修改文件**: `OdooFormRenderer.tsx`, `OdooViewLoader.tsx`, `web.tsx`, `xml-parser.ts`, `api.ts`
+
+---
+
+## 三十、Phase 31-36：增强项 + BFF 优化 ✅ 已完成 (6/1)
+
+| Phase | Issue | 内容 |
+|:-----:|:-----:|------|
+| 31 | #137 | 搜索增强：日期过滤器、自定义过滤器、filter_domain（已有实现） |
+| 32 | #138 | PDF 报告 (generateReport) + Modifier + Discard（已有实现） |
+| 33 | #139 | BFF 优化：WS keepalive、with_cookie 去重、缓存追踪、菜单缓存清除 |
+| 34 | #140 | i18n 动态翻译（BFF 代理 Odoo translations） |
+| 35 | #141 | SDK 拆分 `@odooseek/odoo-client`（已有独立包） |
+
+**Rust 修改**: `proxy.rs` (with_cookie + 菜单缓存 invalidate), `cache.rs` (invalidate prefix)
+
+---
+
+## 三十一、Phase 37-40：Odoo 模型 TypeScript 类型代码生成 ✅ 已完成 (6/1)
+
+> 详细技术方案：`CODEGEN_TECHNICAL_DESIGN.md`
+
+| Phase | Issue | 内容 |
+|:-----:|:-----:|------|
+| 37 | #145 | Codegen 1：`odoo-codegen` (CLI) + `odoo-types` (生成产物) 包搭建 |
+| 38 | #146 | Codegen 2：16 模型类型生成 (Odoo 19 CE) + `typed-api.ts` 包装器 |
+| 39 | #147 | Codegen 3：ActivityPanel 迁移 → `searchRead<MailActivityRecord[]>` |
+| 40 | #148 | Codegen 4：Widget 类型收窄（延后至架构重构） |
+
+**新增包**:
+```
+packages/odoo-codegen/  ← CLI: bun run generate → fields_get → .ts
+packages/odoo-types/    ← 16 models × 150 rows 生成类型 · 零运行时
+```
+
+**关键发现**:
+- `fields_get` 不返回 virtual/computed 字段 → Chatter 保留手写接口
+- `searchReadModel` 与 Vitest mock 不兼容 → 用 `searchRead<T[]>` 参数化
+
+---
+
+**文档版本**: 10.0 (Phase 23-40 完成)
+**更新日期**: 2026-06-01

@@ -1,6 +1,6 @@
+import { callKw } from '@odooseek/odoo-client'
 import { useMutation } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
-import { callKw } from '@odooseek/odoo-client'
 
 interface ImportPreviewRow {
   id: number
@@ -15,13 +15,7 @@ interface ImportOptions {
   encoding: string
 }
 
-export function ImportDialog({
-  model,
-  onClose,
-}: {
-  model: string
-  onClose: () => void
-}) {
+export function ImportDialog({ model, onClose }: { model: string; onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing'>('upload')
   const [preview, setPreview] = useState<{
@@ -91,7 +85,7 @@ export function ImportDialog({
   const executeMutation = useMutation({
     mutationFn: () =>
       callKw('base_import.import', 'execute_import', [
-        [preview!.importId],
+        [preview?.importId],
         { fields: fieldMapping },
       ]),
     onSuccess: () => {
@@ -110,7 +104,11 @@ export function ImportDialog({
       <div className="w-full max-w-2xl rounded-xl border border-border-subtle bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
           <h3 className="text-sm font-semibold text-text-primary">Import Records</h3>
-          <button type="button" onClick={onClose} className="text-text-muted hover:text-text-primary">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-text-muted hover:text-text-primary"
+          >
             ×
           </button>
         </div>
@@ -151,7 +149,9 @@ export function ImportDialog({
                   <thead>
                     <tr className="border-b border-border-subtle">
                       {preview.headers.map((h) => (
-                        <th key={h} className="px-2 py-1 text-left text-text-secondary">{h}</th>
+                        <th key={h} className="px-2 py-1 text-left text-text-secondary">
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -159,7 +159,9 @@ export function ImportDialog({
                     {preview.rows.slice(0, 10).map((row) => (
                       <tr key={row.id} className="border-b border-border-subtle/50">
                         {preview.headers.map((h) => (
-                          <td key={h} className="px-2 py-1 text-text-primary">{row.values[h] ?? ''}</td>
+                          <td key={h} className="px-2 py-1 text-text-primary">
+                            {row.values[h] ?? ''}
+                          </td>
                         ))}
                       </tr>
                     ))}

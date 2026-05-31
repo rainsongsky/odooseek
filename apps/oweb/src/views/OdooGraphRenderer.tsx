@@ -1,3 +1,5 @@
+import type { OdooFieldMeta, ReadGroupResult } from '@odooseek/odoo-client'
+import { parseGraphXml, readGroup } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
 import {
@@ -19,10 +21,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { readGroup } from '@odooseek/odoo-client'
 import { ChevronDown } from '../lib/lucide-icons'
-import type { OdooFieldMeta, ReadGroupResult } from '@odooseek/odoo-client'
-import { parseGraphXml } from '@odooseek/odoo-client'
 
 const COLORS = [
   '#6366f1',
@@ -45,12 +44,7 @@ interface GraphRendererProps {
   domain?: unknown[]
 }
 
-export function OdooGraphRenderer({
-  model,
-  arch,
-  fields,
-  domain = [],
-}: GraphRendererProps) {
+export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRendererProps) {
   const graphView = useMemo(() => parseGraphXml(arch), [arch])
 
   const [chartType, setChartType] = useState<ChartType>(graphView.graphType)
@@ -61,9 +55,7 @@ export function OdooGraphRenderer({
     f.interval ? `${f.name}:${f.interval}` : f.name,
   )
 
-  const aggregateFields = graphView.measures
-    .filter((m) => m.name !== '__count')
-    .map((m) => m.name)
+  const aggregateFields = graphView.measures.filter((m) => m.name !== '__count').map((m) => m.name)
   if (aggregateFields.length === 0) aggregateFields.push('__count')
 
   const fieldsToQuery = [...groupByFields, ...aggregateFields]
@@ -206,7 +198,12 @@ export function OdooGraphRenderer({
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }}>
-                <Label value={activeMeasureLabel} angle={-90} position="insideLeft" style={{ fontSize: 11 }} />
+                <Label
+                  value={activeMeasureLabel}
+                  angle={-90}
+                  position="insideLeft"
+                  style={{ fontSize: 11 }}
+                />
               </YAxis>
               <Tooltip />
               <Legend />
@@ -227,7 +224,12 @@ export function OdooGraphRenderer({
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }}>
-                <Label value={activeMeasureLabel} angle={-90} position="insideLeft" style={{ fontSize: 11 }} />
+                <Label
+                  value={activeMeasureLabel}
+                  angle={-90}
+                  position="insideLeft"
+                  style={{ fontSize: 11 }}
+                />
               </YAxis>
               <Tooltip />
               <Legend />
@@ -249,7 +251,12 @@ export function OdooGraphRenderer({
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }}>
-                <Label value={activeMeasureLabel} angle={-90} position="insideLeft" style={{ fontSize: 11 }} />
+                <Label
+                  value={activeMeasureLabel}
+                  angle={-90}
+                  position="insideLeft"
+                  style={{ fontSize: 11 }}
+                />
               </YAxis>
               <Tooltip />
               <Legend />

@@ -1,18 +1,18 @@
+import type { FieldElement } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { FieldElement } from '@odooseek/odoo-client'
 import { getFieldWidget, PriorityWidget, TYPE_WIDGETS } from '../widgets'
 
 const mockCallKw = vi.fn()
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-}
+      callKw: (...args: unknown[]) => mockCallKw(...args),
+    },
   }
 })
 

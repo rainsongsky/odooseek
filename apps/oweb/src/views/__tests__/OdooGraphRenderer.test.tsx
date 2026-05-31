@@ -1,19 +1,18 @@
-import { fireEvent } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, test, vi } from 'vitest'
 import type { OdooFieldMeta } from '@odooseek/odoo-client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, test, vi } from 'vitest'
 import { OdooGraphRenderer } from '../OdooGraphRenderer'
 
 const mockCallKw = vi.fn()
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-  readGroup: (...args: unknown[]) => mockCallKw(...args),
-}
+      callKw: (...args: unknown[]) => mockCallKw(...args),
+      readGroup: (...args: unknown[]) => mockCallKw(...args),
+    },
   }
 })
 
@@ -126,9 +125,7 @@ describe('OdooGraphRenderer', () => {
 
   test('shows chart type selector with Bar default', async () => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    mockCallKw.mockResolvedValue([
-      { stage_id: 'New', amount: 100 },
-    ])
+    mockCallKw.mockResolvedValue([{ stage_id: 'New', amount: 100 }])
 
     render(<OdooGraphRenderer model="crm.lead" arch={barArch} fields={fields} />, { wrapper })
 
@@ -139,9 +136,7 @@ describe('OdooGraphRenderer', () => {
 
   test('shows Pie chart type for pie arch', async () => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    mockCallKw.mockResolvedValue([
-      { stage_id: 'New', __count: 5 },
-    ])
+    mockCallKw.mockResolvedValue([{ stage_id: 'New', __count: 5 }])
 
     render(<OdooGraphRenderer model="crm.lead" arch={pieArch} fields={fields} />, { wrapper })
 
@@ -152,9 +147,7 @@ describe('OdooGraphRenderer', () => {
 
   test('shows Area chart type for area arch', async () => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    mockCallKw.mockResolvedValue([
-      { 'date:month': '2026-05', amount: 500 },
-    ])
+    mockCallKw.mockResolvedValue([{ 'date:month': '2026-05', amount: 500 }])
 
     render(<OdooGraphRenderer model="crm.lead" arch={areaArch} fields={fields} />, { wrapper })
 
@@ -165,14 +158,11 @@ describe('OdooGraphRenderer', () => {
 
   test('shows measure selector when multiple measures exist', async () => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    mockCallKw.mockResolvedValue([
-      { stage_id: 'New', amount: 100, quantity: 5 },
-    ])
+    mockCallKw.mockResolvedValue([{ stage_id: 'New', amount: 100, quantity: 5 }])
 
-    render(
-      <OdooGraphRenderer model="sale.order" arch={multiMeasureArch} fields={fields} />,
-      { wrapper },
-    )
+    render(<OdooGraphRenderer model="sale.order" arch={multiMeasureArch} fields={fields} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       // Title renders
@@ -207,9 +197,7 @@ describe('OdooGraphRenderer', () => {
 
   test('chart type dropdown opens and shows options', async () => {
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    mockCallKw.mockResolvedValue([
-      { stage_id: 'New', amount: 100 },
-    ])
+    mockCallKw.mockResolvedValue([{ stage_id: 'New', amount: 100 }])
 
     render(<OdooGraphRenderer model="crm.lead" arch={barArch} fields={fields} />, { wrapper })
 

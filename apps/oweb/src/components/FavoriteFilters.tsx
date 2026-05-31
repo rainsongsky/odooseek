@@ -1,6 +1,6 @@
+import type { IrFilterRecord } from '@odooseek/odoo-client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFavoriteFilters } from '../hooks/useFavoriteFilters'
-import type { IrFilterRecord } from '@odooseek/odoo-client'
 
 interface FavoriteFiltersProps {
   model: string | undefined

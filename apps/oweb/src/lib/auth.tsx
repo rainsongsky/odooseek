@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createContext, type ReactNode, useContext } from 'react'
 import { redirect } from '@tanstack/react-router'
+import { createContext, type ReactNode, useContext } from 'react'
 
 interface AuthState {
   authenticated: boolean

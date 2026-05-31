@@ -1,15 +1,3 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import React, { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslations } from 'use-intl'
-import { ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, Settings } from '@/lib/lucide-icons'
-import { useConfirmDialog } from '../components/ConfirmDialog'
-import { ExportDialog } from '../components/ExportDialog'
-import { Pagination } from '../components/Pagination'
-import { useDialog } from '../hooks/useDialog'
-import { useRecordActions } from '../hooks/useRecordActions'
-import { callKw, readGroup } from '@odooseek/odoo-client'
-import { evalCondition, getDecorationClass } from '@odooseek/odoo-client'
-import { DEFAULT_COL_WIDTH, FIELD_TYPE_WIDTHS, renderCell } from '@odooseek/odoo-client'
 import type {
   FieldElement,
   ListButtonElement,
@@ -19,8 +7,27 @@ import type {
   ReadGroupResult,
   ViewField,
 } from '@odooseek/odoo-client'
-import { getColumnPrefs, setColumnPrefs } from '@odooseek/odoo-client'
-import { parseListXml } from '@odooseek/odoo-client'
+import {
+  callKw,
+  DEFAULT_COL_WIDTH,
+  evalCondition,
+  FIELD_TYPE_WIDTHS,
+  getColumnPrefs,
+  getDecorationClass,
+  parseListXml,
+  readGroup,
+  renderCell,
+  setColumnPrefs,
+} from '@odooseek/odoo-client'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import React, { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslations } from 'use-intl'
+import { ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, Settings } from '@/lib/lucide-icons'
+import { useConfirmDialog } from '../components/ConfirmDialog'
+import { ExportDialog } from '../components/ExportDialog'
+import { Pagination } from '../components/Pagination'
+import { useDialog } from '../hooks/useDialog'
+import { useRecordActions } from '../hooks/useRecordActions'
 import { getFieldWidget } from './widgets'
 
 interface ListRendererProps {
@@ -205,11 +212,15 @@ export function OdooListRenderer({
     setSelectedIds(new Set())
   }, [])
 
-  const sortIcon = useCallback((fieldName: string) => {
-    if (order === fieldName) return <ChevronUp className="inline h-3 w-3 text-accent" />
-    if (order === `${fieldName} desc`) return <ChevronDown className="inline h-3 w-3 text-accent" />
-    return <ArrowUpDown className="inline h-3 w-3 opacity-30" />
-  }, [order])
+  const sortIcon = useCallback(
+    (fieldName: string) => {
+      if (order === fieldName) return <ChevronUp className="inline h-3 w-3 text-accent" />
+      if (order === `${fieldName} desc`)
+        return <ChevronDown className="inline h-3 w-3 text-accent" />
+      return <ArrowUpDown className="inline h-3 w-3 opacity-30" />
+    },
+    [order],
+  )
 
   const data = (groupedData ?? []) as unknown[]
   const groupData = groupByActive ? (groupedData as ReadGroupResult[] | undefined) : null
@@ -264,7 +275,10 @@ export function OdooListRenderer({
         for (const op of ops) {
           if (byCurrency.size <= 1) {
             const vals = [...byCurrency.values()][0] ?? []
-            result[`${col.name}_${op.key}`] = { label: op.label, value: fmt(compute(vals, op.key), false) }
+            result[`${col.name}_${op.key}`] = {
+              label: op.label,
+              value: fmt(compute(vals, op.key), false),
+            }
           } else {
             const parts = [...byCurrency.entries()].map(
               ([cur, vals]) => `${fmt(compute(vals, op.key), false)} ${cur}`,
@@ -275,7 +289,10 @@ export function OdooListRenderer({
       } else {
         const vals = rows.map((r) => Number(r[col.name]) || 0)
         for (const op of ops) {
-          result[`${col.name}_${op.key}`] = { label: op.label, value: fmt(compute(vals, op.key), isInt) }
+          result[`${col.name}_${op.key}`] = {
+            label: op.label,
+            value: fmt(compute(vals, op.key), isInt),
+          }
         }
       }
     }
@@ -391,7 +408,8 @@ export function OdooListRenderer({
       const rowsCopy = [...rows]
       const [moved] = rowsCopy.splice(fromIdx, 1)
       rowsCopy.splice(toIdx, 0, moved)
-      const sequenceField = visibleColumns.filter(isViewField).find((c) => c.name === 'sequence')?.name ?? 'sequence'
+      const sequenceField =
+        visibleColumns.filter(isViewField).find((c) => c.name === 'sequence')?.name ?? 'sequence'
       const ids = rowsCopy.map((r) => r.id as number)
       resequenceMutation.mutate({ ids, field: sequenceField })
       setDragRow(null)
@@ -468,7 +486,12 @@ export function OdooListRenderer({
         } else if (e.key === 'ArrowUp') {
           e.preventDefault()
           setFocusRow((prev) => Math.max(prev - 1, 0))
-        } else if (e.key === 'Enter' && focusRow >= 0 && focusRow < rows.length && !listView.noOpen) {
+        } else if (
+          e.key === 'Enter' &&
+          focusRow >= 0 &&
+          focusRow < rows.length &&
+          !listView.noOpen
+        ) {
           e.preventDefault()
           onRowClick?.(rows[focusRow].id as number)
         } else if (e.key === 'F2' && focusRow >= 0 && focusRow < rows.length && isEditable) {
@@ -514,7 +537,11 @@ export function OdooListRenderer({
             handleInlineSave()
             const nextRecord = rows[currentIdx + 1]
             setTimeout(() => {
-              setInlineEdit({ mode: 'editing', recordId: nextRecord.id as number, values: { ...nextRecord } })
+              setInlineEdit({
+                mode: 'editing',
+                recordId: nextRecord.id as number,
+                values: { ...nextRecord },
+              })
               setFocusCol(editableColIndices[0] ?? 0)
             }, 100)
           }
@@ -532,7 +559,11 @@ export function OdooListRenderer({
             handleInlineSave()
             const prevRecord = rows[currentIdx - 1]
             setTimeout(() => {
-              setInlineEdit({ mode: 'editing', recordId: prevRecord.id as number, values: { ...prevRecord } })
+              setInlineEdit({
+                mode: 'editing',
+                recordId: prevRecord.id as number,
+                values: { ...prevRecord },
+              })
               setFocusCol(editableColIndices[editableColIndices.length - 1] ?? 0)
             }, 100)
           }
@@ -551,6 +582,8 @@ export function OdooListRenderer({
       onRowClick,
       isEditable,
       groupByActive,
+      inlineEdit.recordId,
+      listView.noOpen,
     ],
   )
 
@@ -875,24 +908,28 @@ export function OdooListRenderer({
                       <span className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-text-muted">
                         {String(count)}
                       </span>
-                      {listView.groupDelete && meta?.type === 'many2one' && Array.isArray(val) && val[0] && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            confirmDialog({
-                              title: 'Delete Group',
-                              message: `Remove the group "${val[1]}"? This will not delete the underlying records.`,
-                              confirmLabel: 'Delete',
-                              variant: 'danger',
-                              onConfirm: () => callKw(model, 'unlink', [[val[0]]]).then(invalidateList),
-                            })
-                          }}
-                          className="ml-2 rounded px-1 py-0 text-[10px] text-text-muted hover:text-red-400"
-                        >
-                          ×
-                        </button>
-                      )}
+                      {listView.groupDelete &&
+                        meta?.type === 'many2one' &&
+                        Array.isArray(val) &&
+                        val[0] && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              confirmDialog({
+                                title: 'Delete Group',
+                                message: `Remove the group "${val[1]}"? This will not delete the underlying records.`,
+                                confirmLabel: 'Delete',
+                                variant: 'danger',
+                                onConfirm: () =>
+                                  callKw(model, 'unlink', [[val[0]]]).then(invalidateList),
+                              })
+                            }}
+                            className="ml-2 rounded px-1 py-0 text-[10px] text-text-muted hover:text-red-400"
+                          >
+                            ×
+                          </button>
+                        )}
                     </>
                   ) : (
                     <span className="text-text-muted">
@@ -991,10 +1028,7 @@ export function OdooListRenderer({
             })}
           {isExpanded && isLeaf && groupRecords && groupRecords.length >= groupLimit && (
             <tr>
-              <td
-                colSpan={visibleColumns.length + 1}
-                className="px-4 py-1 text-center"
-              >
+              <td colSpan={visibleColumns.length + 1} className="px-4 py-1 text-center">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -1042,6 +1076,8 @@ export function OdooListRenderer({
       toggleRow,
       model,
       invalidateList,
+      listView.noOpen,
+      groupLimit,
     ],
   )
 
@@ -1075,26 +1111,24 @@ export function OdooListRenderer({
                     <div className="mb-1 text-[10px] font-medium uppercase text-text-muted">
                       Columns
                     </div>
-                    {allVisibleColumns
-                      .filter(isViewField)
-                      .map((col) => {
-                        const meta = fields[col.name]
-                        const label = col.string || meta?.string || col.name
-                        return (
-                          <label
-                            key={col.name}
-                            className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs text-text-primary hover:bg-hover"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={!hiddenCols.has(col.name)}
-                              onChange={() => toggleColumn(col.name)}
-                              className="h-4 w-4 cursor-pointer rounded accent-accent"
-                            />
-                            {label}
-                          </label>
-                        )
-                      })}
+                    {allVisibleColumns.filter(isViewField).map((col) => {
+                      const meta = fields[col.name]
+                      const label = col.string || meta?.string || col.name
+                      return (
+                        <label
+                          key={col.name}
+                          className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs text-text-primary hover:bg-hover"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!hiddenCols.has(col.name)}
+                            onChange={() => toggleColumn(col.name)}
+                            className="h-4 w-4 cursor-pointer rounded accent-accent"
+                          />
+                          {label}
+                        </label>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -1214,13 +1248,13 @@ export function OdooListRenderer({
                 </button>
               )}
               {listView.exportXlsx !== false && (
-              <button
-                type="button"
-                onClick={handleExportClick}
-                className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
-              >
-                Export
-              </button>
+                <button
+                  type="button"
+                  onClick={handleExportClick}
+                  className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
+                >
+                  Export
+                </button>
               )}
               <button
                 type="button"
@@ -1237,39 +1271,34 @@ export function OdooListRenderer({
                 Edit {selectedIds.size} records
               </div>
               <div className="flex flex-wrap gap-3">
-                {visibleColumns
-                  .filter(isViewField)
-                  .map((col) => {
-                    const meta = fields[col.name]
-                    if (!meta || meta.readonly || col.readonly) return null
-                    return (
-                      <div key={col.name} className="flex items-center gap-1.5">
-                        <label className="text-[11px] text-text-secondary">
-                          {col.string || meta.string || col.name}
-                        </label>
-                        <input
-                          type={meta.type === 'boolean' ? 'checkbox' : 'text'}
-                          checked={
-                            meta.type === 'boolean' ? !!multiEditValues[col.name] : undefined
-                          }
-                          value={
-                            meta.type !== 'boolean'
-                              ? String(multiEditValues[col.name] ?? '')
-                              : undefined
-                          }
-                          onChange={(e) =>
-                            setMultiEditValues((prev) => ({
-                              ...prev,
-                              [col.name]:
-                                meta.type === 'boolean' ? e.target.checked : e.target.value,
-                            }))
-                          }
-                          className="rounded border border-border-default px-2 py-0.5 text-xs"
-                          placeholder={meta.type === 'integer' || meta.type === 'float' ? '0' : ''}
-                        />
-                      </div>
-                    )
-                  })}
+                {visibleColumns.filter(isViewField).map((col) => {
+                  const meta = fields[col.name]
+                  if (!meta || meta.readonly || col.readonly) return null
+                  return (
+                    <div key={col.name} className="flex items-center gap-1.5">
+                      <label className="text-[11px] text-text-secondary">
+                        {col.string || meta.string || col.name}
+                      </label>
+                      <input
+                        type={meta.type === 'boolean' ? 'checkbox' : 'text'}
+                        checked={meta.type === 'boolean' ? !!multiEditValues[col.name] : undefined}
+                        value={
+                          meta.type !== 'boolean'
+                            ? String(multiEditValues[col.name] ?? '')
+                            : undefined
+                        }
+                        onChange={(e) =>
+                          setMultiEditValues((prev) => ({
+                            ...prev,
+                            [col.name]: meta.type === 'boolean' ? e.target.checked : e.target.value,
+                          }))
+                        }
+                        className="rounded border border-border-default px-2 py-0.5 text-xs"
+                        placeholder={meta.type === 'integer' || meta.type === 'float' ? '0' : ''}
+                      />
+                    </div>
+                  )
+                })}
               </div>
               <div className="mt-2 flex gap-2">
                 <button
@@ -1290,7 +1319,8 @@ export function OdooListRenderer({
                       title: 'Confirm Changes',
                       message: `You are about to update ${selectedIds.size} records. Fields: ${changes}`,
                       confirmLabel: 'Apply',
-                      onConfirm: () => bulkWriteMutation.mutate({ ids: [...selectedIds], values: edited }),
+                      onConfirm: () =>
+                        bulkWriteMutation.mutate({ ids: [...selectedIds], values: edited }),
                     })
                   }}
                   disabled={bulkWriteMutation.isPending}
@@ -1311,7 +1341,10 @@ export function OdooListRenderer({
               </div>
             </div>
           )}
-          <div ref={tableContainerRef} className="overflow-x-auto rounded-lg border border-border-subtle">
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto rounded-lg border border-border-subtle"
+          >
             <table className="w-full" onKeyDown={handleTableKeyDown}>
               <thead>
                 <tr className="border-b border-border-subtle bg-surface/50">
@@ -1348,9 +1381,7 @@ export function OdooListRenderer({
                         style={width ? { width, minWidth: 60 } : undefined}
                       >
                         {label}
-                        {!groupByActive && (
-                        <span className="ml-1">{sortIcon(col.name)}</span>
-                        )}
+                        {!groupByActive && <span className="ml-1">{sortIcon(col.name)}</span>}
                         {!groupByActive && (
                           <div
                             className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-accent/30"
@@ -1377,250 +1408,267 @@ export function OdooListRenderer({
                     validationErrors={validationErrors}
                   />
                 )}
-                {groupByActive && groupData
-                  ? <>
+                {groupByActive && groupData ? (
+                  <>
                     {groupData.map((group, i) => renderGroupNode(String(i), group, 0))}
-                    {listView.groupCreate && groupBy.length === 1 && fields[groupBy[0]]?.type === 'many2one' && (
-                      <tr>
-                        <td className="w-10 px-2 py-2" />
-                        <td colSpan={visibleColumns.length} className="px-4 py-1">
-                          <form
-                            onSubmit={(e) => {
-                              e.preventDefault()
-                              if (newGroupName.trim()) createGroupMutation.mutate(newGroupName.trim())
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            <input
-                              type="text"
-                              value={newGroupName}
-                              onChange={(e) => setNewGroupName(e.target.value)}
-                              placeholder="Add a group..."
-                              className="w-40 rounded border border-border-default bg-transparent px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted"
-                            />
-                            <button
-                              type="submit"
-                              disabled={!newGroupName.trim() || createGroupMutation.isPending}
-                              className="rounded bg-accent px-2 py-0.5 text-[10px] text-white hover:bg-accent/90 disabled:opacity-50"
+                    {listView.groupCreate &&
+                      groupBy.length === 1 &&
+                      fields[groupBy[0]]?.type === 'many2one' && (
+                        <tr>
+                          <td className="w-10 px-2 py-2" />
+                          <td colSpan={visibleColumns.length} className="px-4 py-1">
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                if (newGroupName.trim())
+                                  createGroupMutation.mutate(newGroupName.trim())
+                              }}
+                              className="flex items-center gap-2"
                             >
-                              Add
-                            </button>
-                          </form>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                  : (data as Array<Record<string, unknown>>).map((record, i) => {
-                      const recordId = record.id as number
-                      const isEditing =
-                        inlineEdit.mode === 'editing' && inlineEdit.recordId === recordId
-                      const rowDeco = getDecorationClass(
-                        listView.decorations as unknown as Record<string, unknown>,
-                        record,
-                      )
-                      return (
-                        <tr
-                          key={recordId}
-                          draggable={hasHandle && !isEditing}
-                          onDragStart={
-                            hasHandle
-                              ? (e) => {
-                                  setDragRow(i)
-                                  e.dataTransfer.effectAllowed = 'move'
-                                }
-                              : undefined
-                          }
-                          onDragOver={
-                            hasHandle
-                              ? (e) => {
-                                  e.preventDefault()
-                                  setDragOverRow(i)
-                                }
-                              : undefined
-                          }
-                          onDragEnd={
-                            hasHandle
-                              ? () => {
-                                  setDragRow(null)
-                                  setDragOverRow(null)
-                                }
-                              : undefined
-                          }
-                          onDrop={
-                            hasHandle
-                              ? () => {
-                                  if (dragRow !== null && dragRow !== i) handleDrop(dragRow, i)
-                                }
-                              : undefined
-                          }
-                          onClick={() => !isEditing && handleRowClick(record)}
-                          className={[
-                            'border-b border-border-subtle transition-colors hover:bg-hover/50',
-                            isEditing ? 'bg-accent/5' : '',
-                            selectedIds.has(recordId) ? 'bg-accent/5' : '',
-                            !isEditable && onRowClick && !listView.noOpen ? 'cursor-pointer' : '',
-                            isEditable ? 'cursor-pointer' : '',
-                            dragOverRow === i && dragRow !== null
-                              ? 'border-t-2 border-t-accent'
-                              : '',
-                            i === data.length - 1 && inlineEdit.mode !== 'creating'
-                              ? 'border-b-0'
-                              : '',
-                            focusRow === i && inlineEdit.mode === 'idle'
-                              ? 'outline outline-2 outline-accent/30 outline-offset-[-2px]'
-                              : '',
-                            rowDeco,
-                            listView.rowClass ?? '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                        >
-                          <td className="w-10 px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(recordId)}
-                              onChange={() => toggleRow(recordId, false, i)}
-                              onClick={(e) => toggleRow(recordId, e.shiftKey, i)}
-                              className="h-4 w-4 cursor-pointer rounded accent-accent"
-                            />
+                              <input
+                                type="text"
+                                value={newGroupName}
+                                onChange={(e) => setNewGroupName(e.target.value)}
+                                placeholder="Add a group..."
+                                className="w-40 rounded border border-border-default bg-transparent px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted"
+                              />
+                              <button
+                                type="submit"
+                                disabled={!newGroupName.trim() || createGroupMutation.isPending}
+                                className="rounded bg-accent px-2 py-0.5 text-[10px] text-white hover:bg-accent/90 disabled:opacity-50"
+                              >
+                                Add
+                              </button>
+                            </form>
                           </td>
-                          {visibleColumns.map((col, ci) => {
-                            if (isNonField(col)) {
-                              return (
-                                <td
-                                  key={`d-${ci}`}
-                                  className="px-2 py-2"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {isButtonGroup(col)
-                                    ? col.buttons.map((btn) => (
-                                        <ListButtonCell
-                                          key={btn.name}
-                                          btn={btn}
-                                          record={record}
-                                          model={model}
-                                          onDone={invalidateList}
-                                        />
-                                      ))
-                                    : isListButton(col) && (
-                                        <ListButtonCell
-                                          btn={col}
-                                          record={record}
-                                          model={model}
-                                          onDone={invalidateList}
-                                        />
-                                      )}
-                                </td>
-                              )
-                            }
-                            const cellDeco = getDecorationClass(
-                              col as unknown as Record<string, unknown>,
-                              record,
+                        </tr>
+                      )}
+                  </>
+                ) : (
+                  (data as Array<Record<string, unknown>>).map((record, i) => {
+                    const recordId = record.id as number
+                    const isEditing =
+                      inlineEdit.mode === 'editing' && inlineEdit.recordId === recordId
+                    const rowDeco = getDecorationClass(
+                      listView.decorations as unknown as Record<string, unknown>,
+                      record,
+                    )
+                    return (
+                      <tr
+                        key={recordId}
+                        draggable={hasHandle && !isEditing}
+                        onDragStart={
+                          hasHandle
+                            ? (e) => {
+                                setDragRow(i)
+                                e.dataTransfer.effectAllowed = 'move'
+                              }
+                            : undefined
+                        }
+                        onDragOver={
+                          hasHandle
+                            ? (e) => {
+                                e.preventDefault()
+                                setDragOverRow(i)
+                              }
+                            : undefined
+                        }
+                        onDragEnd={
+                          hasHandle
+                            ? () => {
+                                setDragRow(null)
+                                setDragOverRow(null)
+                              }
+                            : undefined
+                        }
+                        onDrop={
+                          hasHandle
+                            ? () => {
+                                if (dragRow !== null && dragRow !== i) handleDrop(dragRow, i)
+                              }
+                            : undefined
+                        }
+                        onClick={() => !isEditing && handleRowClick(record)}
+                        className={[
+                          'border-b border-border-subtle transition-colors hover:bg-hover/50',
+                          isEditing ? 'bg-accent/5' : '',
+                          selectedIds.has(recordId) ? 'bg-accent/5' : '',
+                          !isEditable && onRowClick && !listView.noOpen ? 'cursor-pointer' : '',
+                          isEditable ? 'cursor-pointer' : '',
+                          dragOverRow === i && dragRow !== null ? 'border-t-2 border-t-accent' : '',
+                          i === data.length - 1 && inlineEdit.mode !== 'creating'
+                            ? 'border-b-0'
+                            : '',
+                          focusRow === i && inlineEdit.mode === 'idle'
+                            ? 'outline outline-2 outline-accent/30 outline-offset-[-2px]'
+                            : '',
+                          rowDeco,
+                          listView.rowClass ?? '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        <td className="w-10 px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(recordId)}
+                            onChange={() => toggleRow(recordId, false, i)}
+                            onClick={(e) => toggleRow(recordId, e.shiftKey, i)}
+                            className="h-4 w-4 cursor-pointer rounded accent-accent"
+                          />
+                        </td>
+                        {visibleColumns.map((col, ci) => {
+                          if (isNonField(col)) {
+                            return (
+                              <td
+                                key={`d-${ci}`}
+                                className="px-2 py-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {isButtonGroup(col)
+                                  ? col.buttons.map((btn) => (
+                                      <ListButtonCell
+                                        key={btn.name}
+                                        btn={btn}
+                                        record={record}
+                                        model={model}
+                                        onDone={invalidateList}
+                                      />
+                                    ))
+                                  : isListButton(col) && (
+                                      <ListButtonCell
+                                        btn={col}
+                                        record={record}
+                                        model={model}
+                                        onDone={invalidateList}
+                                      />
+                                    )}
+                              </td>
                             )
-                            const meta = fields[col.name]
-                            const isReadonly = meta?.readonly || col.readonly
+                          }
+                          const cellDeco = getDecorationClass(
+                            col as unknown as Record<string, unknown>,
+                            record,
+                          )
+                          const meta = fields[col.name]
+                          const isReadonly = meta?.readonly || col.readonly
 
-                            if (isEditing && !isReadonly) {
-                              const fe = editableFieldElements[ci] as FieldElement
-                              const Widget = getFieldWidget(fe, meta?.type ?? 'char')
-                              const hasError = !!validationErrors[col.name]
-                              return (
-                                <td
-                                  key={`d-${col.name}-${ci}`}
-                                  className={`whitespace-nowrap px-1 py-0.5${hasError ? ' ring-1 ring-red-400 ring-inset' : ''}`}
-                                  title={hasError ? validationErrors[col.name] : undefined}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {createElement(Widget, {
-                                    field: fe,
-                                    value: inlineEdit.values[col.name],
-                                    onChange: (v: unknown) => handleInlineChange(col.name, v),
-                                    readOnly: false,
-                                    meta,
-                                  })}
-                                </td>
-                              )
-                            }
-
+                          if (isEditing && !isReadonly) {
+                            const fe = editableFieldElements[ci] as FieldElement
+                            const Widget = getFieldWidget(fe, meta?.type ?? 'char')
+                            const hasError = !!validationErrors[col.name]
                             return (
                               <td
                                 key={`d-${col.name}-${ci}`}
-                                title={(() => {
-                                  const t = renderCell(record[col.name], fields[col.name], model, record.id as number)
-                                  if (typeof t !== 'string') return undefined
-                                  return t.length > 30 ? t : undefined
-                                })()}
-                                className={[
-                                  'whitespace-nowrap px-4 py-2 text-sm text-text-primary',
-                                  cellDeco,
-                                  col.class ?? '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                                onClick={() => {
-                                  if (isEditable && !isReadonly && meta?.type === 'boolean') {
-                                    toggleBooleanMutation.mutate({
-                                      recordId,
-                                      field: col.name,
-                                      value: !record[col.name],
-                                    })
-                                  }
-                                }}
-                                style={isEditable && !isReadonly && meta?.type === 'boolean' ? { cursor: 'pointer' } : undefined}
+                                className={`whitespace-nowrap px-1 py-0.5${hasError ? ' ring-1 ring-red-400 ring-inset' : ''}`}
+                                title={hasError ? validationErrors[col.name] : undefined}
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                {renderCell(record[col.name], fields[col.name], model, record.id as number)}
+                                {createElement(Widget, {
+                                  field: fe,
+                                  value: inlineEdit.values[col.name],
+                                  onChange: (v: unknown) => handleInlineChange(col.name, v),
+                                  readOnly: false,
+                                  meta,
+                                })}
                               </td>
                             )
-                          })}
-                          {isEditing && (
+                          }
+
+                          return (
                             <td
-                              className="flex items-center gap-1 px-2 py-1"
-                              onClick={(e) => e.stopPropagation()}
+                              key={`d-${col.name}-${ci}`}
+                              title={(() => {
+                                const t = renderCell(
+                                  record[col.name],
+                                  fields[col.name],
+                                  model,
+                                  record.id as number,
+                                )
+                                if (typeof t !== 'string') return undefined
+                                return t.length > 30 ? t : undefined
+                              })()}
+                              className={[
+                                'whitespace-nowrap px-4 py-2 text-sm text-text-primary',
+                                cellDeco,
+                                col.class ?? '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              onClick={() => {
+                                if (isEditable && !isReadonly && meta?.type === 'boolean') {
+                                  toggleBooleanMutation.mutate({
+                                    recordId,
+                                    field: col.name,
+                                    value: !record[col.name],
+                                  })
+                                }
+                              }}
+                              style={
+                                isEditable && !isReadonly && meta?.type === 'boolean'
+                                  ? { cursor: 'pointer' }
+                                  : undefined
+                              }
                             >
-                              <button
-                                type="button"
-                                onClick={handleInlineSave}
-                                disabled={saveMutation.isPending}
-                                className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-                              >
-                                {saveMutation.isPending ? '...' : 'Save'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleInlineCancel}
-                                className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
-                              >
-                                Cancel
-                              </button>
-                            </td>
-                          )}
-                          {isEditable && !isEditing && (
-                            <td
-                              className="px-2 py-1 text-center"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {listView.delete !== false && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    confirmDialog({
-                                      title: 'Delete Record',
-                                      message: 'Are you sure you want to delete this record?',
-                                      confirmLabel: 'Delete',
-                                      variant: 'danger',
-                                      onConfirm: () => deleteMutation.mutate(recordId),
-                                    })
-                                  }}
-                                  className="text-xs text-text-muted hover:text-red-500"
-                                >
-                                  ×
-                                </button>
+                              {renderCell(
+                                record[col.name],
+                                fields[col.name],
+                                model,
+                                record.id as number,
                               )}
                             </td>
-                          )}
-                        </tr>
-                      )
-                    })}
+                          )
+                        })}
+                        {isEditing && (
+                          <td
+                            className="flex items-center gap-1 px-2 py-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={handleInlineSave}
+                              disabled={saveMutation.isPending}
+                              className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                            >
+                              {saveMutation.isPending ? '...' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleInlineCancel}
+                              className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
+                            >
+                              Cancel
+                            </button>
+                          </td>
+                        )}
+                        {isEditable && !isEditing && (
+                          <td
+                            className="px-2 py-1 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {listView.delete !== false && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  confirmDialog({
+                                    title: 'Delete Record',
+                                    message: 'Are you sure you want to delete this record?',
+                                    confirmLabel: 'Delete',
+                                    variant: 'danger',
+                                    onConfirm: () => deleteMutation.mutate(recordId),
+                                  })
+                                }}
+                                className="text-xs text-text-muted hover:text-red-500"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })
+                )}
                 {inlineEdit.mode === 'creating' && listView.editable === 'bottom' && (
                   <InlineEditRow
                     columns={visibleColumns}
@@ -1652,7 +1700,10 @@ export function OdooListRenderer({
                           className="whitespace-nowrap px-4 py-2 text-sm text-text-primary"
                         >
                           {colAggs.map((a, i) => (
-                            <span key={i}>{i > 0 ? ' · ' : ''}{a.label}: {a.value}</span>
+                            <span key={i}>
+                              {i > 0 ? ' · ' : ''}
+                              {a.label}: {a.value}
+                            </span>
                           ))}
                         </td>
                       )
@@ -1670,7 +1721,8 @@ export function OdooListRenderer({
               total={totalCount}
               limit={limit}
               onPageChange={(newOffset) => {
-                if (tableContainerRef.current) savedScrollTop.current = tableContainerRef.current.scrollTop
+                if (tableContainerRef.current)
+                  savedScrollTop.current = tableContainerRef.current.scrollTop
                 setOffset(newOffset)
               }}
               onLimitChange={(newLimit) => {

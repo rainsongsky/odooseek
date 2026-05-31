@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import DOMPurify from 'dompurify'
 import { callKw, searchRead } from '@odooseek/odoo-client'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
+import { useState } from 'react'
 import { useAuth } from '../lib/auth'
 
 interface ChatterProps {
@@ -9,6 +9,8 @@ interface ChatterProps {
   recordId: number | undefined
 }
 
+// Hand-coded: mail.message has virtual fields (is_note, author_id, subtype_id)
+// that Odoo fields_get doesn't expose. Generated MailMessageRecord lacks these.
 interface OdooMessage {
   id: number
   body: string

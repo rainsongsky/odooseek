@@ -1,0 +1,22 @@
+{
+  "name": "@odooseek/odoo-codegen",
+  "version": "0.1.0",
+  "description": "Generate TypeScript type definitions from Odoo model metadata (fields_get)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "generate": "bun run src/index.ts",
+    "check": "bun run src/index.ts --check",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@odooseek/odoo-client": "file:../odoo-client"
+  },
+  "devDependencies": {
+    "typescript": "^5.0",
+    "vitest": "^4.0"
+  },
+  "keywords": ["odoo", "codegen", "typescript", "type-generation"],
+  "license": "MIT"
+}

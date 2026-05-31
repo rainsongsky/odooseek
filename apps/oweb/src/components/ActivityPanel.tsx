@@ -1,29 +1,11 @@
+import { callKw, searchRead } from '@odooseek/odoo-client'
+import type { MailActivityRecord, MailActivityTypeRecord } from '@odooseek/odoo-types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { callKw, searchRead } from '@odooseek/odoo-client'
-
-interface ActivityType {
-  id: number
-  name: string
-  category: string
-  default_user_id: [number, string] | false
-}
 
 interface ActivityPanelProps {
   model: string
   recordId: number | undefined
-}
-
-interface OdooActivity {
-  id: number
-  activity_type_id: [number, string] | false
-  summary: string
-  note: string
-  date_deadline: string
-  state: string
-  user_id: [number, string] | false
-  res_model: string
-  res_id: number
 }
 
 const ACTIVITY_FIELDS = [
@@ -36,10 +18,10 @@ const ACTIVITY_FIELDS = [
   'user_id',
 ]
 
-function groupByState(activities: OdooActivity[]) {
-  const overdue: OdooActivity[] = []
-  const today: OdooActivity[] = []
-  const planned: OdooActivity[] = []
+function groupByState(activities: MailActivityRecord[]) {
+  const overdue: MailActivityRecord[] = []
+  const today: MailActivityRecord[] = []
+  const planned: MailActivityRecord[] = []
   const todayStr = new Date().toISOString().slice(0, 10)
   for (const a of activities) {
     const dl = a.date_deadline
@@ -64,11 +46,11 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
   const { data: activities, isLoading } = useQuery({
     queryKey: ['odoo', 'activities', model, recordId],
     queryFn: () =>
-      searchRead<OdooActivity[]>(
+      searchRead<MailActivityRecord[]>(
         'mail.activity',
         [
+          ['res_id', '=', recordId],
           ['res_model', '=', model],
-          ['res_id', '=', recordId as number],
         ],
         ACTIVITY_FIELDS,
         0,
@@ -82,7 +64,7 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
   const { data: activityTypes } = useQuery({
     queryKey: ['odoo', 'activity-types'],
     queryFn: () =>
-      searchRead<ActivityType[]>(
+      searchRead<MailActivityTypeRecord[]>(
         'mail.activity.type',
         [['active', '=', true]],
         ['id', 'name', 'category', 'default_user_id'],

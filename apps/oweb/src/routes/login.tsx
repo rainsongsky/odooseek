@@ -27,9 +27,18 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (!db.trim()) { setError('Database name is required'); return }
-    if (!login.trim()) { setError('Username is required'); return }
-    if (!password) { setError('Password is required'); return }
+    if (!db.trim()) {
+      setError('Database name is required')
+      return
+    }
+    if (!login.trim()) {
+      setError('Username is required')
+      return
+    }
+    if (!password) {
+      setError('Password is required')
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch('/api/session/login', {
@@ -42,10 +51,11 @@ function LoginPage() {
 
       // Check JSON-RPC error from Odoo (BFF returns 200 for Odoo errors)
       if (data?.error) {
-        const errMsg = data.error?.data?.message
-          || data.error?.message
-          || data.error?.data?.arguments?.[0]
-          || 'Login failed'
+        const errMsg =
+          data.error?.data?.message ||
+          data.error?.message ||
+          data.error?.data?.arguments?.[0] ||
+          'Login failed'
         throw new Error(typeof errMsg === 'string' ? errMsg : 'Login failed')
       }
 
@@ -153,7 +163,7 @@ function LoginPage() {
           <button
             type="button"
             onClick={() => {
-              const oauthUrl = `/api/odoo-http/auth_oauth/signin?provider=google&redirect=${encodeURIComponent(window.location.origin + '/auth/oauth/callback')}`
+              const oauthUrl = `/api/odoo-http/auth_oauth/signin?provider=google&redirect=${encodeURIComponent(`${window.location.origin}/auth/oauth/callback`)}`
               window.location.href = oauthUrl
             }}
             className="w-full rounded-lg border border-border-default bg-surface px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-hover"

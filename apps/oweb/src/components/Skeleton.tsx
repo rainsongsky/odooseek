@@ -20,7 +20,10 @@ export function KanbanSkeleton() {
   return (
     <div className="flex gap-4 overflow-x-auto p-4">
       {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="flex w-64 shrink-0 animate-pulse flex-col rounded-lg border border-border-subtle bg-surface/30">
+        <div
+          key={i}
+          className="flex w-64 shrink-0 animate-pulse flex-col rounded-lg border border-border-subtle bg-surface/30"
+        >
           <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
             <div className="h-4 w-20 rounded bg-hover/50" />
             <div className="h-4 w-8 rounded bg-hover/30" />
@@ -39,7 +42,15 @@ export function KanbanSkeleton() {
   )
 }
 
-export function EmptyState({ icon, title, description }: { icon?: string; title: string; description?: string }) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+}: {
+  icon?: string
+  title: string
+  description?: string
+}) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
       {icon && <span className="mb-4 text-4xl opacity-30">{icon}</span>}

@@ -1,9 +1,8 @@
+import type { OdooFieldMeta, PivotField, ReadGroupResult } from '@odooseek/odoo-client'
+import { callKw, parsePivotXml } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
-import { callKw } from '@odooseek/odoo-client'
-import { ArrowUpDown, Download, FlipHorizontal } from '../lib/lucide-icons'
-import type { OdooFieldMeta, PivotField, PivotMeasure, ReadGroupResult } from '@odooseek/odoo-client'
-import { parsePivotXml } from '@odooseek/odoo-client'
+import { Download, FlipHorizontal } from '../lib/lucide-icons'
 
 interface PivotRendererProps {
   model: string
@@ -93,12 +92,15 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
       if (colKey) cols.add(colKey)
     }
 
-    let sortedCols = [...cols].sort()
-    let sortedRows = [...rows.keys()].sort()
+    const sortedCols = [...cols].sort()
+    const sortedRows = [...rows.keys()].sort()
 
     // Sort rows by measure value if sort active
     if (sort) {
-      const sortAgg = measureAgg(sort.field, pivotView.measures.find((m) => m.name === sort.field)?.operator)
+      const sortAgg = measureAgg(
+        sort.field,
+        pivotView.measures.find((m) => m.name === sort.field)?.operator,
+      )
       const firstCol = sortedCols[0] ?? ''
       const dir = sort.dir === 'asc' ? 1 : -1
       sortedRows.sort((a, b) => {
@@ -109,7 +111,7 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
     }
 
     return { rowKeys: sortedRows, colKeys: sortedCols, cellMap: cells }
-  }, [data, rowFields, colFields, sort, pivotView, measureFields])
+  }, [data, rowFields, colFields, sort, pivotView])
 
   const toggleMeasure = useCallback((name: string) => {
     setActiveMeasures((prev) =>
@@ -126,16 +128,13 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
     })
   }, [])
 
-  const toggleSort = useCallback(
-    (measureName: string) => {
-      setSort((prev) => {
-        if (!prev || prev.field !== measureName) return { field: measureName, dir: 'desc' }
-        if (prev.dir === 'desc') return { field: measureName, dir: 'asc' }
-        return null
-      })
-    },
-    [],
-  )
+  const _toggleSort = useCallback((measureName: string) => {
+    setSort((prev) => {
+      if (!prev || prev.field !== measureName) return { field: measureName, dir: 'desc' }
+      if (prev.dir === 'desc') return { field: measureName, dir: 'asc' }
+      return null
+    })
+  }, [])
 
   const handleExportCsv = useCallback(() => {
     if (!data?.length) return
@@ -181,7 +180,19 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
     a.download = `${pivotView.string || model}_pivot.csv`
     a.click()
     URL.revokeObjectURL(url)
-  }, [data, rowKeys, colKeys, cellMap, pivotView, activeMeasures, rowFields, colFields, fieldLabels, fields, model])
+  }, [
+    data,
+    rowKeys,
+    colKeys,
+    cellMap,
+    pivotView,
+    activeMeasures,
+    rowFields,
+    colFields,
+    fieldLabels,
+    fields,
+    model,
+  ])
 
   if (isLoading) {
     return (
@@ -354,7 +365,9 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
                           <td
                             key={`cd-${rowKey}-${colKey}-${m.name}`}
                             className={`whitespace-nowrap border-r border-border-subtle px-3 py-1.5 text-right text-xs ${
-                              sort?.field === m.name ? 'font-medium text-text-primary' : 'text-text-primary'
+                              sort?.field === m.name
+                                ? 'font-medium text-text-primary'
+                                : 'text-text-primary'
                             }`}
                           >
                             {formatMeasure(value, m.name)}

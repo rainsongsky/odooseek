@@ -1,8 +1,7 @@
+import type { FieldElement, O2mCommand, OdooFieldMeta, ViewField } from '@odooseek/odoo-client'
+import { callKw, evalCondition, fieldsGet, parseDomainString } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { callKw, fieldsGet } from '@odooseek/odoo-client'
-import { evalCondition, parseDomainString } from '@odooseek/odoo-client'
-import type { FieldElement, O2mCommand, OdooFieldMeta, ViewField } from '@odooseek/odoo-client'
 import type { FieldWidgetProps } from './index'
 import { getFieldWidget, NOOP } from './index'
 

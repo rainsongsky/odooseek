@@ -1,6 +1,6 @@
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { ExportDialog } from '../ExportDialog'
 
 const mockFields: Record<string, OdooFieldMeta> = {

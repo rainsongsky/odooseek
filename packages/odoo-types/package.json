@@ -1,0 +1,22 @@
+{
+  "name": "@odooseek/odoo-types",
+  "version": "0.1.0",
+  "description": "Auto-generated TypeScript type definitions for Odoo models — zero runtime dependency",
+  "type": "module",
+  "main": "./src/generated/index.ts",
+  "types": "./src/generated/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/generated/index.ts"
+    }
+  },
+  "files": ["src/generated/"],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0"
+  },
+  "keywords": ["odoo", "types", "generated"],
+  "license": "MIT"
+}

@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "models": [
+    "res.partner",
+    "res.users",
+    "crm.lead",
+    "sale.order",
+    "sale.order.line",
+    "stock.picking",
+    "stock.move",
+    "stock.move.line",
+    "account.move",
+    "account.move.line",
+    "calendar.event",
+    "mail.activity",
+    "mail.activity.type",
+    "mail.message",
+    "mail.followers",
+    "ir.filters"
+  ]
+}

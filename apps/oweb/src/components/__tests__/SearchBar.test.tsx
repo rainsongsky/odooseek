@@ -1,15 +1,15 @@
+import type { SearchFilter, SearchGroupBy } from '@odooseek/odoo-client'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
-import type { SearchFilter, SearchGroupBy } from '@odooseek/odoo-client'
 import { SearchBar } from '../SearchBar'
 
 vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
-    ...actual as Record<string, unknown>,
+    ...(actual as Record<string, unknown>),
     ...{
-  nameSearch: vi.fn(),
-}
+      nameSearch: vi.fn(),
+    },
   }
 })
 
@@ -151,16 +151,8 @@ describe('SearchBar', () => {
 
   test('shows filter menu when filters provided', () => {
     const onSearch = vi.fn()
-    const filters = [
-      { name: 'active', string: 'Active', domain: [['active', '=', true]] },
-    ]
-    render(
-      <SearchBar
-        onSearch={onSearch}
-        model="res.partner"
-        filters={filters}
-      />,
-    )
+    const filters = [{ name: 'active', string: 'Active', domain: [['active', '=', true]] }]
+    render(<SearchBar onSearch={onSearch} model="res.partner" filters={filters} />)
     // Filter button exists (shows count of available filters)
     const filterBtn = document.querySelector('button svg')
     expect(filterBtn).toBeTruthy()

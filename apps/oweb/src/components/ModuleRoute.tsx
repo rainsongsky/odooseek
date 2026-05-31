@@ -1,6 +1,6 @@
+import type { ViewType } from '@odooseek/odoo-client'
 import { useCallback, useRef, useState } from 'react'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
-import type { ViewType } from '@odooseek/odoo-client'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 
@@ -11,7 +11,12 @@ interface ModuleRouteProps {
   recordId?: number
 }
 
-export function ModuleRoute({ model, defaultView, domain, recordId: initialRecordId }: ModuleRouteProps) {
+export function ModuleRoute({
+  model,
+  defaultView,
+  domain,
+  recordId: initialRecordId,
+}: ModuleRouteProps) {
   const [viewType, setViewType] = useState<ViewType>(defaultView)
   const [recordId, setRecordId] = useState<number | undefined>(initialRecordId)
   const [isFormDirty, setIsFormDirty] = useState(false)

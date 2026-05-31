@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest'
 import { parseFormXml, parseListXml } from '@odooseek/odoo-client'
+import { describe, expect, test } from 'vitest'
 
 describe('parseListXml', () => {
   test('parses simple list view with fields', () => {

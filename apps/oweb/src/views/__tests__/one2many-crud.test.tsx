@@ -1,8 +1,8 @@
+import type { FieldElement } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { FieldElement } from '@odooseek/odoo-client'
 
 const mockCallKw = vi.fn()
 vi.mock('@odooseek/odoo-client', async (original) => {
@@ -73,9 +73,7 @@ describe('One2ManyWidget CRUD', () => {
 
   test('Add a row creates new record command with negative virtual ID', async () => {
     mockCallKw
-      .mockResolvedValueOnce([
-        { id: 10, product_id: [1, 'Pen'], quantity: 1 },
-      ]) // initial read
+      .mockResolvedValueOnce([{ id: 10, product_id: [1, 'Pen'], quantity: 1 }]) // initial read
       .mockResolvedValueOnce({ product_id: false, quantity: 1 }) // default_get
 
     const { One2ManyWidget } = await import('../widgets/relational')
@@ -111,9 +109,7 @@ describe('One2ManyWidget CRUD', () => {
   })
 
   test('delete existing record adds [2, id] command', async () => {
-    mockCallKw.mockResolvedValue([
-      { id: 5, product_id: [1, 'Table'], quantity: 3 },
-    ])
+    mockCallKw.mockResolvedValue([{ id: 5, product_id: [1, 'Table'], quantity: 3 }])
 
     const { One2ManyWidget } = await import('../widgets/relational')
     const onChange = vi.fn()

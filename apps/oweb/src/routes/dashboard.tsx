@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
-import { useNavigate } from '@tanstack/react-router'
-import { useMemo } from 'react'
-import { callKw, readGroup } from '@odooseek/odoo-client'
-import { useAuth, requireAuth } from '../lib/auth'
-import { CalendarDays, TrendingUp } from '../lib/lucide-icons'
 import type { ReadGroupResult } from '@odooseek/odoo-client'
+import { callKw, readGroup } from '@odooseek/odoo-client'
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useMemo } from 'react'
+import { requireAuth, useAuth } from '../lib/auth'
+import { CalendarDays, TrendingUp } from '../lib/lucide-icons'
 
 interface QuickAction {
   label: string
@@ -65,13 +64,28 @@ const QUICK_ACTIONS: QuickAction[] = [
 ]
 
 const STAGE_STATS = [
-  { model: 'crm.lead', domain: [['type', '=', 'opportunity']], groupField: 'stage_id', label: 'Pipeline by Stage' },
+  {
+    model: 'crm.lead',
+    domain: [['type', '=', 'opportunity']],
+    groupField: 'stage_id',
+    label: 'Pipeline by Stage',
+  },
   { model: 'sale.order', domain: [], groupField: 'state', label: 'Orders by State' },
 ]
 
 const RECENT_MODELS = [
-  { model: 'crm.lead', domain: [['type', '=', 'opportunity']], fields: ['name', 'partner_id', 'stage_id', 'create_date'], label: 'Recent Opportunities' },
-  { model: 'sale.order', domain: [], fields: ['name', 'partner_id', 'state', 'amount_total'], label: 'Recent Orders' },
+  {
+    model: 'crm.lead',
+    domain: [['type', '=', 'opportunity']],
+    fields: ['name', 'partner_id', 'stage_id', 'create_date'],
+    label: 'Recent Opportunities',
+  },
+  {
+    model: 'sale.order',
+    domain: [],
+    fields: ['name', 'partner_id', 'state', 'amount_total'],
+    label: 'Recent Orders',
+  },
 ]
 
 function StatCard({ model, domain, label }: { model: string; domain: unknown[]; label: string }) {
@@ -91,7 +105,12 @@ function StatCard({ model, domain, label }: { model: string; domain: unknown[]; 
   )
 }
 
-function StageBarChart({ model, domain, groupField, label }: {
+function StageBarChart({
+  model,
+  domain,
+  groupField,
+  label,
+}: {
   model: string
   domain: unknown[]
   groupField: string
@@ -119,7 +138,9 @@ function StageBarChart({ model, domain, groupField, label }: {
           const pct = (count / maxCount) * 100
           return (
             <div key={name} className="flex items-center gap-2">
-              <span className="w-24 shrink-0 truncate text-xs text-text-primary" title={name}>{name}</span>
+              <span className="w-24 shrink-0 truncate text-xs text-text-primary" title={name}>
+                {name}
+              </span>
               <div className="flex-1">
                 <div
                   className="h-5 rounded bg-accent/20 transition-all"
@@ -136,7 +157,12 @@ function StageBarChart({ model, domain, groupField, label }: {
   )
 }
 
-function RecentRecords({ model, domain, fields, label }: {
+function RecentRecords({
+  model,
+  domain,
+  fields,
+  label,
+}: {
   model: string
   domain: unknown[]
   fields: string[]
@@ -166,9 +192,13 @@ function RecentRecords({ model, domain, fields, label }: {
             className="flex items-center justify-between rounded px-2 py-1.5 text-xs transition-colors hover:bg-hover/50"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="truncate font-medium text-text-primary">{String(rec[fields[0]] ?? '')}</span>
+              <span className="truncate font-medium text-text-primary">
+                {String(rec[fields[0]] ?? '')}
+              </span>
               {fields[1] && rec[fields[1]] != null && (
-                <span className="shrink-0 text-text-muted">— {String(rec[fields[1]] as unknown)}</span>
+                <span className="shrink-0 text-text-muted">
+                  — {String(rec[fields[1]] as unknown)}
+                </span>
               )}
             </div>
             {fields[2] && rec[fields[2]] != null && (
@@ -238,7 +268,10 @@ function DashboardPage() {
             <h3 className="mb-3 text-sm font-semibold text-text-primary">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {QUICK_ACTIONS.map((action) => (
-                <QuickActionCard key={`${action.model}-${action.view}-${action.label}`} action={action} />
+                <QuickActionCard
+                  key={`${action.model}-${action.view}-${action.label}`}
+                  action={action}
+                />
               ))}
             </div>
           </div>
@@ -332,9 +365,7 @@ function QuickActionCard({ action }: { action: QuickAction }) {
       }
       className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-border-subtle bg-surface p-4 transition-colors hover:border-border-default hover:bg-surface/80"
     >
-      <div
-        className={`flex h-10 w-10 items-center justify-center rounded-lg ${action.color}`}
-      >
+      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${action.color}`}>
         <i className={`${action.icon} text-lg`} />
       </div>
       <span className="text-xs font-medium text-text-primary">{action.label}</span>

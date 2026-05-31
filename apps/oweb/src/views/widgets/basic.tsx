@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
-import DOMPurify from 'dompurify'
 import { formatFloatTime, formatPercentage, parseFloatTime } from '@odooseek/odoo-client'
+import DOMPurify from 'dompurify'
+import { useEffect, useRef } from 'react'
 import type { FieldWidgetProps } from './index'
 import { FIELD_INPUT_CLASS } from './index'
 
@@ -60,7 +60,41 @@ export function HtmlWidget({ field, value, onChange, readOnly }: FieldWidgetProp
   if (readOnly) {
     const html = (value as string) ?? ''
     if (!html) return <span className="text-sm text-text-muted">—</span>
-    const sanitized = DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'div', 'span', 'img', 'blockquote', 'pre', 'code', 'hr'], ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style', 'target', 'rel'], ALLOW_DATA_ATTR: false })
+    const sanitized = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'b',
+        'i',
+        'em',
+        'strong',
+        'a',
+        'p',
+        'br',
+        'ul',
+        'ol',
+        'li',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'td',
+        'th',
+        'div',
+        'span',
+        'img',
+        'blockquote',
+        'pre',
+        'code',
+        'hr',
+      ],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style', 'target', 'rel'],
+      ALLOW_DATA_ATTR: false,
+    })
     return (
       <div
         className="prose prose-sm max-w-none text-sm text-text-primary"

@@ -73,6 +73,8 @@ function parseButtonElement(el: Element): ButtonElement {
     invisible: el.getAttribute('invisible') ?? undefined,
     states: el.getAttribute('states') ?? undefined,
     confirm: el.getAttribute('confirm') ?? undefined,
+    special: (el.getAttribute('special') as 'cancel') ?? undefined,
+    context: el.getAttribute('context') ?? undefined,
   }
 }
 
@@ -323,6 +325,8 @@ export function parseFormXml(xml: string): ParsedFormView {
     type: 'form',
     string: root.getAttribute('string') ?? '',
     elements: parseFormElements(root),
+    jsClass: root.getAttribute('js_class') ?? undefined,
+    title: root.getAttribute('title') ?? undefined,
   }
 }
 
@@ -758,33 +762,57 @@ export function parseCalendarXml(xml: string): ParsedCalendarView {
   const doc = new DOMParser().parseFromString(xml, 'text/xml')
   const root = doc.documentElement
 
-  const fields = [
-    ...new Set(
-      Array.from(root.querySelectorAll('field')).map((el) => el.getAttribute('name') ?? ''),
-    ),
-  ]
+  const fieldEls = Array.from(root.querySelectorAll('field'))
+  const fields = [...new Set(fieldEls.map((el) => el.getAttribute('name') ?? ''))]
 
-  const avatarEl = Array.from(root.querySelectorAll('field')).find((el) =>
-    el.hasAttribute('avatar_field'),
-  )
+  const fieldAttrs: Record<string, { invisible?: string; avatarField?: string; options?: Record<string, unknown> }> = {}
+  for (const el of fieldEls) {
+    const name = el.getAttribute('name')
+    if (!name) continue
+    const invisible = el.getAttribute('invisible') ?? undefined
+    const avatarField = el.getAttribute('avatar_field') ?? undefined
+    let options: Record<string, unknown> | undefined
+    const optionsStr = el.getAttribute('options')
+    if (optionsStr) {
+      try {
+        options = JSON.parse(optionsStr) as Record<string, unknown>
+      } catch {
+        // ignore malformed JSON
+      }
+    }
+    fieldAttrs[name] = { invisible, avatarField, options }
+  }
+
+  const avatarEl = fieldEls.find((el) => el.hasAttribute('avatar_field'))
 
   const rawMode = root.getAttribute('mode') ?? 'month'
   const mode: 'day' | 'week' | 'month' = rawMode === 'day' || rawMode === 'week' ? rawMode : 'month'
+
+  const qcvId = root.getAttribute('quick_create_view_id')
+  const eventOpenPopup = root.getAttribute('event_open_popup')
 
   return {
     type: 'calendar',
     string: root.getAttribute('string') ?? '',
     dateStart: root.getAttribute('date_start') ?? '',
     dateStop: root.getAttribute('date_stop') ?? undefined,
+    dateDelay: root.getAttribute('date_delay') ?? undefined,
+    allDay: root.getAttribute('all_day') ?? undefined,
     colorField: root.getAttribute('color') ?? undefined,
     mode,
     fields,
+    fieldAttrs,
     avatarField: avatarEl?.getAttribute('avatar_field') ?? undefined,
     eventLimit: root.getAttribute('event_limit')
       ? Number(root.getAttribute('event_limit'))
       : undefined,
     quickCreate: root.getAttribute('quick_create') !== '0',
     hideTime: root.getAttribute('hide_time') === '1',
+    eventOpenPopup: eventOpenPopup
+      ? Number(eventOpenPopup) !== 0
+      : undefined,
+    quickCreateViewId: qcvId ? Number(qcvId) : undefined,
+    multiEdit: root.getAttribute('multi_create_view') === '1',
   }
 }
 

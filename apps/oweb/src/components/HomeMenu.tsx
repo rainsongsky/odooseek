@@ -1,18 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { GripVertical, Search, X } from '@/lib/lucide-icons'
-import { useHomeMenu } from '../hooks/useHomeMenu'
-import { callKw } from '@odooseek/odoo-client'
-import { useAuth } from '../lib/auth'
 import {
+  callKw,
   fetchMenus,
   getAppSections,
   getApps,
   type MenusData,
   type OdooMenuEntry,
 } from '@odooseek/odoo-client'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { GripVertical, Search, X } from '@/lib/lucide-icons'
+import { useHomeMenu } from '../hooks/useHomeMenu'
+import { useAuth } from '../lib/auth'
 import '../styles/odoo-icons.css'
 
 const ICON_FALLBACK: Record<string, string> = {

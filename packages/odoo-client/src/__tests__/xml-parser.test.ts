@@ -344,6 +344,20 @@ describe('parseFormXml', () => {
     }
     expect(group.elements[0].colspan).toBe(4)
   })
+
+  test('parses js_class attribute from form', () => {
+    const xml = `<form string="Meetings" js_class="calendar_form">
+      <sheet><field name="name"/></sheet>
+    </form>`
+    const result = parseFormXml(xml)
+    expect(result.jsClass).toBe('calendar_form')
+  })
+
+  test('js_class defaults to undefined when not present', () => {
+    const xml = `<form string="Test"><sheet><field name="name"/></sheet></form>`
+    const result = parseFormXml(xml)
+    expect(result.jsClass).toBeUndefined()
+  })
 })
 
 describe('parseSearchXml', () => {
@@ -648,5 +662,78 @@ describe('parseCalendarXml', () => {
     expect(result.eventLimit).toBe(3)
     expect(result.hideTime).toBe(true)
     expect(result.quickCreate).toBe(false)
+  })
+
+  test('parses all_day attribute', () => {
+    const xml = `<calendar date_start="start" all_day="allday">
+      <field name="name"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.allDay).toBe('allday')
+  })
+
+  test('parses date_delay attribute', () => {
+    const xml = `<calendar date_start="start" date_delay="duration">
+      <field name="name"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.dateDelay).toBe('duration')
+  })
+
+  test('parses event_open_popup attribute', () => {
+    const xml = `<calendar date_start="start" event_open_popup="1">
+      <field name="name"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.eventOpenPopup).toBe(true)
+  })
+
+  test('event_open_popup=0 is false', () => {
+    const xml = `<calendar date_start="start" event_open_popup="0">
+      <field name="name"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.eventOpenPopup).toBe(false)
+  })
+
+  test('parses quick_create_view_id attribute', () => {
+    const xml = `<calendar date_start="start" quick_create_view_id="42">
+      <field name="name"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.quickCreateViewId).toBe(42)
+  })
+
+  test('parses multi_create_view attribute', () => {
+    const xml = `<calendar date_start="start" multi_create_view="1">
+      <field name="name"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.multiEdit).toBe(true)
+  })
+
+  test('full Odoo calendar arch with all attributes', () => {
+    const xml = `<calendar date_start="start" date_stop="stop" date_delay="duration"
+      all_day="allday" color="partner_id" mode="week" event_limit="5"
+      quick_create="1" hide_time="0" event_open_popup="1"
+      quick_create_view_id="100" multi_create_view="1">
+      <field name="name"/>
+      <field name="partner_id" avatar_field="avatar_128"/>
+    </calendar>`
+    const result = parseCalendarXml(xml)
+    expect(result.dateStart).toBe('start')
+    expect(result.dateStop).toBe('stop')
+    expect(result.dateDelay).toBe('duration')
+    expect(result.allDay).toBe('allday')
+    expect(result.colorField).toBe('partner_id')
+    expect(result.mode).toBe('week')
+    expect(result.eventLimit).toBe(5)
+    expect(result.quickCreate).toBe(true)
+    expect(result.hideTime).toBe(false)
+    expect(result.eventOpenPopup).toBe(true)
+    expect(result.quickCreateViewId).toBe(100)
+    expect(result.multiEdit).toBe(true)
+    expect(result.avatarField).toBe('avatar_128')
+    expect(result.fields).toEqual(expect.arrayContaining(['name', 'partner_id']))
   })
 })

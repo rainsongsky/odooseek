@@ -1,8 +1,8 @@
+import { fetchMenus, flattenMenuItems, type MenusData } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
-import { fetchMenus, flattenMenuItems, type MenusData } from '@odooseek/odoo-client'
 
 /** Fuzzy match: returns a score (higher = better) or -1 if no match. */
 export function fuzzyMatch(text: string, query: string): number {
@@ -85,7 +85,7 @@ export function CommandPalette() {
   // Reset highlight when commands change
   useEffect(() => {
     setHighlightIndex(0)
-  }, [commands])
+  }, [])
 
   // Keyboard navigation: Escape, Enter, ArrowUp, ArrowDown
   useEffect(() => {
@@ -145,8 +145,16 @@ export function CommandPalette() {
                     idx === highlightIndex ? 'bg-accent/10 text-accent' : 'hover:bg-hover'
                   }`}
                 >
-                  <span className={`text-sm font-medium ${idx === highlightIndex ? 'text-accent' : 'text-text-primary'}`}>{cmd.label}</span>
-                  <span className={`text-xs ${idx === highlightIndex ? 'text-accent/70' : 'text-text-muted'}`}>{cmd.path}</span>
+                  <span
+                    className={`text-sm font-medium ${idx === highlightIndex ? 'text-accent' : 'text-text-primary'}`}
+                  >
+                    {cmd.label}
+                  </span>
+                  <span
+                    className={`text-xs ${idx === highlightIndex ? 'text-accent/70' : 'text-text-muted'}`}
+                  >
+                    {cmd.path}
+                  </span>
                 </button>
               </li>
             ))}

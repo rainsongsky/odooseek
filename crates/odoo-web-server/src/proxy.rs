@@ -39,10 +39,7 @@ pub async fn proxy_odoo(
             .post(&odoo_url)
             .header("Content-Type", "application/json")
             .body(body);
-
-        if let Some(c) = get_cookie_header(&headers) {
-            request = request.header("cookie", c);
-        }
+        request = with_cookie(request, &headers);
 
         let response = request.send().await.map_err(|e| {
             tracing::warn!("Odoo unreachable at {odoo_url}: {e}");
@@ -84,15 +81,19 @@ pub async fn proxy_odoo(
     // Not cacheable — proxy normally
     tracing::debug!("Proxying JSON-RPC POST to: {odoo_url}");
 
+    let method = extract_method(&body);
+    if let Some(ref m) = method
+        && (m == "button_immediate_install" || m == "button_immediate_upgrade")
+    {
+        state.cache.invalidate("session:menus").await;
+    }
+
     let mut request = state
         .http_client
         .post(&odoo_url)
         .header("Content-Type", "application/json")
         .body(body);
-
-    if let Some(c) = get_cookie_header(&headers) {
-        request = request.header("cookie", c);
-    }
+    request = with_cookie(request, &headers);
 
     proxy_send(&state, request).await
 }
@@ -130,10 +131,7 @@ pub async fn proxy_odoo_http(
         }
         request = request.body(body);
     }
-
-    if let Some(c) = get_cookie_header(&headers) {
-        request = request.header("cookie", c);
-    }
+    request = with_cookie(request, &headers);
 
     proxy_send(&state, request).await
 }
@@ -149,9 +147,7 @@ pub async fn proxy_image(
     tracing::debug!("Proxying image request to: {odoo_url}");
 
     let mut request = state.http_client.get(&odoo_url);
-    if let Some(c) = get_cookie_header(&headers) {
-        request = request.header("cookie", c);
-    }
+    request = with_cookie(request, &headers);
     proxy_send(&state, request).await
 }
 
@@ -173,6 +169,15 @@ fn get_cookie_header(headers: &HeaderMap) -> Option<String> {
         .get("cookie")
         .and_then(|v| v.to_str().ok())
         .map(String::from)
+}
+
+/// Attach Cookie header from client request to proxy request
+fn with_cookie(request: reqwest::RequestBuilder, headers: &HeaderMap) -> reqwest::RequestBuilder {
+    if let Some(c) = get_cookie_header(headers) {
+        request.header("cookie", c)
+    } else {
+        request
+    }
 }
 
 async fn proxy_send(
@@ -269,6 +274,14 @@ fn try_build_cache_key(body: &axum::body::Bytes) -> Result<String, ()> {
     }
     let args = params.get("args").ok_or(())?;
     Ok(cache::cache_key(model, method, args))
+}
+
+fn extract_method(body: &axum::body::Bytes) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_slice(body).ok()?;
+    json.get("params")?
+        .get("method")?
+        .as_str()
+        .map(String::from)
 }
 
 /// Methods that must never be cached (mutations).

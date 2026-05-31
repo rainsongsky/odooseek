@@ -2,6 +2,7 @@ import type { FieldElement } from '@odooseek/odoo-client'
 
 /** Stable no-op callback — avoids creating new function references on every render. */
 export const NOOP = () => {}
+
 import {
   BooleanToggleWidget,
   BooleanWidget,
@@ -44,15 +45,15 @@ import {
   EmailWidget,
   HandleWidget,
   ImageUrlWidget,
+  KanbanActivityWidget,
   Many2ManyTagsWidget,
   PercentPieWidget,
   PhoneWidget,
   ProgressbarWidget,
   RemainingDaysWidget,
+  RottingWidget,
   UrlWidget,
   WebRibbonWidget,
-  KanbanActivityWidget,
-  RottingWidget,
 } from './utility'
 
 export interface FieldWidgetProps {

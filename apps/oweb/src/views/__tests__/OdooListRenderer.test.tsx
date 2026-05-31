@@ -1,9 +1,9 @@
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { DialogProvider } from '../../hooks/useDialog'
-import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooListRenderer } from '../OdooListRenderer'
 
 const mockCallKw = vi.fn()
@@ -342,14 +342,7 @@ describe('OdooListRenderer — inline editing', () => {
     mockCallKw.mockResolvedValue([])
     mockReadGroup.mockResolvedValue([])
 
-    render(
-      <OdooListRenderer
-        model="res.partner"
-        arch={listArch}
-        fields={fields}
-      />,
-      { wrapper },
-    )
+    render(<OdooListRenderer model="res.partner" arch={listArch} fields={fields} />, { wrapper })
 
     await waitFor(() => {
       expect(screen.queryByText('A')).not.toBeInTheDocument()
@@ -357,20 +350,11 @@ describe('OdooListRenderer — inline editing', () => {
   })
 
   test('renders grouped view with group headers', async () => {
-    mockCallKw.mockResolvedValue([
-      { id: 1, name: 'A', email: 'a@test.com' },
-    ])
-    mockReadGroup.mockResolvedValue([
-      { name: [1, 'A'], _count: 1, __domain: '' },
-    ])
+    mockCallKw.mockResolvedValue([{ id: 1, name: 'A', email: 'a@test.com' }])
+    mockReadGroup.mockResolvedValue([{ name: [1, 'A'], _count: 1, __domain: '' }])
 
     render(
-      <OdooListRenderer
-        model="res.partner"
-        arch={listArch}
-        fields={fields}
-        groupBy={['name']}
-      />,
+      <OdooListRenderer model="res.partner" arch={listArch} fields={fields} groupBy={['name']} />,
       { wrapper },
     )
 
@@ -381,18 +365,11 @@ describe('OdooListRenderer — inline editing', () => {
   })
 
   test('renders editable list with inputs', async () => {
-    mockCallKw.mockResolvedValue([
-      { id: 1, name: 'A', email: 'a@test.com' },
-    ])
+    mockCallKw.mockResolvedValue([{ id: 1, name: 'A', email: 'a@test.com' }])
 
-    render(
-      <OdooListRenderer
-        model="res.partner"
-        arch={editableArch}
-        fields={fields}
-      />,
-      { wrapper },
-    )
+    render(<OdooListRenderer model="res.partner" arch={editableArch} fields={fields} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       const inputs = document.querySelectorAll('input')
