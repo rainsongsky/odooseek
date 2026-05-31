@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import React, { useCallback, useMemo, useState } from 'react'
 import { useConfirmDialog } from '../components/ConfirmDialog'
-import { callKw, readGroup } from '../lib/api'
-import { evalCondition, getValue } from '../lib/expression-evaluator'
+import { callKw, readGroup } from '@odooseek/odoo-client'
+import { evalCondition, getValue } from '@odooseek/odoo-client'
 import type {
   KanbanProgressbar,
   KanbanTemplateNode,
   OdooFieldMeta,
   ViewField,
-} from '../lib/odoo-types'
-import { parseKanbanFields, parseKanbanXml } from '../lib/xml-parser'
+} from '@odooseek/odoo-client'
+import { parseKanbanFields, parseKanbanXml } from '@odooseek/odoo-client'
 import { getFieldWidget, NOOP } from './widgets'
 
 interface KanbanRendererProps {

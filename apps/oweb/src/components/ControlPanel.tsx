@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown } from '@/lib/lucide-icons'
-import type { ViewToolbar, ViewType } from '../lib/odoo-types'
+import type { ViewToolbar, ViewType } from '@odooseek/odoo-client'
 import { OdooViewSwitcher } from '../views/OdooViewSwitcher'
 import { Breadcrumbs } from './Breadcrumbs'
 import { Pagination } from './Pagination'

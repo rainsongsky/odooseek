@@ -3,13 +3,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '../../lib/odoo-types'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooPivotRenderer } from '../OdooPivotRenderer'
 
 const mockCallKw = vi.fn()
-vi.mock('../../lib/api', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   callKw: (...args: unknown[]) => mockCallKw(...args),
-}))
+}
+  }
+})
 
 let queryClient: QueryClient
 let wrapper: ({ children }: { children: React.ReactNode }) => React.ReactElement

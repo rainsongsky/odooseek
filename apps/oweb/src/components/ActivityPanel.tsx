@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { callKw, searchRead } from '../lib/api'
+import { callKw, searchRead } from '@odooseek/odoo-client'
 
 interface ActivityType {
   id: number

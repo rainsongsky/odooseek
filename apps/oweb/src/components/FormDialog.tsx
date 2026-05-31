@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import React, { Suspense, useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import type { OdooAction } from '../lib/api'
-import { callKw } from '../lib/api'
-import type { OdooFieldMeta } from '../lib/odoo-types'
+import type { OdooAction } from '@odooseek/odoo-client'
+import { callKw } from '@odooseek/odoo-client'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 
 interface FormDialogItem {

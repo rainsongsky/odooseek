@@ -59,10 +59,16 @@ vi.mock('../../lib/auth', () => ({
   useAuth: () => ({ isAuthenticated: true }),
 }))
 
-vi.mock('../../lib/menu-service', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   fetchMenus: vi.fn(),
   flattenMenuItems: vi.fn(),
-}))
+}
+  }
+})
 
 describe('CommandPalette', () => {
   test('renders nothing by default (closed)', () => {

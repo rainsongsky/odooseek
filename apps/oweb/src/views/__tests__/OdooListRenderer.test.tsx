@@ -3,19 +3,20 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { DialogProvider } from '../../hooks/useDialog'
-import type { OdooFieldMeta } from '../../lib/odoo-types'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooListRenderer } from '../OdooListRenderer'
 
 const mockCallKw = vi.fn()
 const mockReadGroup = vi.fn()
-vi.mock('../../lib/api', () => ({
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-  readGroup: (...args: unknown[]) => mockReadGroup(...args),
-}))
-
-vi.mock('../../lib/expression-evaluator', () => ({
-  getDecorationClass: () => '',
-}))
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...(actual as Record<string, unknown>),
+    callKw: (...args: unknown[]) => mockCallKw(...args),
+    readGroup: (...args: unknown[]) => mockReadGroup(...args),
+    getDecorationClass: () => '',
+  }
+})
 
 vi.mock('use-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {

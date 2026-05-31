@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Search } from '@/lib/lucide-icons'
-import { fetchMenus, getApps, type MenusData, type OdooMenuEntry } from '../lib/menu-service'
+import { fetchMenus, getApps, type MenusData, type OdooMenuEntry } from '@odooseek/odoo-client'
 
 function MenuPage() {
   const navigate = useNavigate()

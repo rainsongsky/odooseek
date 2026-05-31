@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import { callKw, readGroup } from '../lib/api'
+import { callKw, readGroup } from '@odooseek/odoo-client'
 import { useAuth, requireAuth } from '../lib/auth'
 import { CalendarDays, TrendingUp } from '../lib/lucide-icons'
-import type { ReadGroupResult } from '../lib/odoo-types'
+import type { ReadGroupResult } from '@odooseek/odoo-client'
 
 interface QuickAction {
   label: string

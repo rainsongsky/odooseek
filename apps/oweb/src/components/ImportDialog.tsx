@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
-import { callKw } from '../lib/api'
+import { callKw } from '@odooseek/odoo-client'
 
 interface ImportPreviewRow {
   id: number

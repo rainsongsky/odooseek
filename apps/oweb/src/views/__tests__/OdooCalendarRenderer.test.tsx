@@ -2,14 +2,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import type React from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '../../lib/odoo-types'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooCalendarRenderer } from '../OdooCalendarRenderer'
 
 const mockSearchRead = vi.fn()
-vi.mock('../../lib/api', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   searchRead: (...args: unknown[]) => mockSearchRead(...args),
   callKw: vi.fn(),
-}))
+}
+  }
+})
 
 vi.mock('../../hooks/useToast', () => ({
   useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }),

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GripVertical, Search, X } from '@/lib/lucide-icons'
 import { useHomeMenu } from '../hooks/useHomeMenu'
-import { callKw } from '../lib/api'
+import { callKw } from '@odooseek/odoo-client'
 import { useAuth } from '../lib/auth'
 import {
   fetchMenus,
@@ -12,7 +12,7 @@ import {
   getApps,
   type MenusData,
   type OdooMenuEntry,
-} from '../lib/menu-service'
+} from '@odooseek/odoo-client'
 import '../styles/odoo-icons.css'
 
 const ICON_FALLBACK: Record<string, string> = {

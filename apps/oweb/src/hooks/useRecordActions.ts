@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { callKw } from '../lib/api'
+import { callKw } from '@odooseek/odoo-client'
 
 export function useRecordActions(model: string) {
   const queryClient = useQueryClient()

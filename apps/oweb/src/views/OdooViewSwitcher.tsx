@@ -6,7 +6,7 @@ import {
   Table,
   TrendingUp,
 } from '@/lib/lucide-icons'
-import type { ViewType } from '../lib/odoo-types'
+import type { ViewType } from '@odooseek/odoo-client'
 import { prefetchView } from './OdooViewLoader'
 
 interface ViewSwitcherProps {

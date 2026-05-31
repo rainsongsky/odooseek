@@ -7,9 +7,9 @@ import { ExportDialog } from '../components/ExportDialog'
 import { Pagination } from '../components/Pagination'
 import { useDialog } from '../hooks/useDialog'
 import { useRecordActions } from '../hooks/useRecordActions'
-import { callKw, readGroup } from '../lib/api'
-import { evalCondition, getDecorationClass } from '../lib/expression-evaluator'
-import { DEFAULT_COL_WIDTH, FIELD_TYPE_WIDTHS, renderCell } from '../lib/list-formatters'
+import { callKw, readGroup } from '@odooseek/odoo-client'
+import { evalCondition, getDecorationClass } from '@odooseek/odoo-client'
+import { DEFAULT_COL_WIDTH, FIELD_TYPE_WIDTHS, renderCell } from '@odooseek/odoo-client'
 import type {
   FieldElement,
   ListButtonElement,
@@ -18,9 +18,9 @@ import type {
   OdooFieldMeta,
   ReadGroupResult,
   ViewField,
-} from '../lib/odoo-types'
-import { getColumnPrefs, setColumnPrefs } from '../lib/view-cache'
-import { parseListXml } from '../lib/xml-parser'
+} from '@odooseek/odoo-client'
+import { getColumnPrefs, setColumnPrefs } from '@odooseek/odoo-client'
+import { parseListXml } from '@odooseek/odoo-client'
 import { getFieldWidget } from './widgets'
 
 interface ListRendererProps {

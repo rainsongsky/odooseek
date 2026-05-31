@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
-import type { ViewType } from '../lib/odoo-types'
+import type { ViewType } from '@odooseek/odoo-client'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 

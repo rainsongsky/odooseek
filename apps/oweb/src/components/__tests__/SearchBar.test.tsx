@@ -1,17 +1,23 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
-import type { SearchFilter, SearchGroupBy } from '../../lib/odoo-types'
+import type { SearchFilter, SearchGroupBy } from '@odooseek/odoo-client'
 import { SearchBar } from '../SearchBar'
 
-vi.mock('../../lib/api', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   nameSearch: vi.fn(),
-}))
+}
+  }
+})
 
 vi.mock('../FavoriteFilters', () => ({
   FavoriteFilters: () => null,
 }))
 
-import { nameSearch } from '../../lib/api'
+import { nameSearch } from '@odooseek/odoo-client'
 
 const mockedNameSearch = vi.mocked(nameSearch)
 

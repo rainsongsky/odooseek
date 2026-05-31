@@ -11,7 +11,7 @@ import {
   getApps,
   type MenusData,
   type MenuTreeNode,
-} from '../lib/menu-service'
+} from '@odooseek/odoo-client'
 
 export function Navbar() {
   const t = useTranslations()

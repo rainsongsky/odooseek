@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { DialogProvider } from '../../hooks/useDialog'
-import type { OdooFieldMeta } from '../../lib/odoo-types'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooFormRenderer } from '../OdooFormRenderer'
 
 const mockCallKw = vi.fn()
 const mockCallButton = vi.fn()
 const mockLoadAction = vi.fn()
-vi.mock('../../lib/api', async (original) => {
+vi.mock('@odooseek/odoo-client', async (original) => {
   const actual = await original()
   return {
     ...(actual as Record<string, unknown>),

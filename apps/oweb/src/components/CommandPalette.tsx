@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
-import { fetchMenus, flattenMenuItems, type MenusData } from '../lib/menu-service'
+import { fetchMenus, flattenMenuItems, type MenusData } from '@odooseek/odoo-client'
 
 /** Fuzzy match: returns a score (higher = better) or -1 if no match. */
 export function fuzzyMatch(text: string, query: string): number {

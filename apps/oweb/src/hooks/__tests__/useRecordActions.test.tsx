@@ -4,11 +4,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 // Mock callKw before importing the hook
-vi.mock('../../lib/api', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   callKw: vi.fn(),
-}))
+}
+  }
+})
 
-import { callKw } from '../../lib/api'
+import { callKw } from '@odooseek/odoo-client'
 import { useRecordActions } from '../useRecordActions'
 
 const mockCallKw = vi.mocked(callKw)

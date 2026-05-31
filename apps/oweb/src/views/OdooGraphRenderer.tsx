@@ -19,10 +19,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { readGroup } from '../lib/api'
+import { readGroup } from '@odooseek/odoo-client'
 import { ChevronDown } from '../lib/lucide-icons'
-import type { OdooFieldMeta, ReadGroupResult } from '../lib/odoo-types'
-import { parseGraphXml } from '../lib/xml-parser'
+import type { OdooFieldMeta, ReadGroupResult } from '@odooseek/odoo-client'
+import { parseGraphXml } from '@odooseek/odoo-client'
 
 const COLORS = [
   '#6366f1',

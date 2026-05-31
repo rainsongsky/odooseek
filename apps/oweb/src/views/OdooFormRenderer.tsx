@@ -12,8 +12,8 @@ import { createPortal } from 'react-dom'
 import { ActivityPanel } from '../components/ActivityPanel'
 import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
-import { callButton, callKw, type OdooAction } from '../lib/api'
-import { evalModifier, getDecorationClass as getDecoClass } from '../lib/expression-evaluator'
+import { callButton, callKw, type OdooAction } from '@odooseek/odoo-client'
+import { evalModifier, getDecorationClass as getDecoClass } from '@odooseek/odoo-client'
 import type {
   ButtonBoxElement,
   ButtonElement,
@@ -21,8 +21,8 @@ import type {
   HeaderElement,
   OdooFieldMeta,
   StatButtonElement,
-} from '../lib/odoo-types'
-import { parseFormXml } from '../lib/xml-parser'
+} from '@odooseek/odoo-client'
+import { parseFormXml } from '@odooseek/odoo-client'
 import { getFieldWidget } from './widgets'
 
 export interface OdooFormRendererRef {
@@ -289,7 +289,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
               onAction?.(result)
             }
           } else if (btn.buttonType === 'action') {
-            const { loadAction } = await import('../lib/api')
+            const { loadAction } = await import('@odooseek/odoo-client')
             const action = await loadAction(btn.name, context)
             if (action) onAction?.(action)
           }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { nameSearch } from '../lib/api'
-import type { SearchFilter, SearchGroupBy, ViewField } from '../lib/odoo-types'
+import { nameSearch } from '@odooseek/odoo-client'
+import type { SearchFilter, SearchGroupBy, ViewField } from '@odooseek/odoo-client'
 import { FavoriteFilters } from './FavoriteFilters'
 
 function buildDateDomains(fieldName: string): { key: string; label: string; domain: unknown[] }[] {

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
-import { callKw } from '../../lib/api'
-import { evalCondition } from '../../lib/expression-evaluator'
-import { formatRemainingDays } from '../../lib/field-formatters'
+import { callKw } from '@odooseek/odoo-client'
+import { evalCondition } from '@odooseek/odoo-client'
+import { formatRemainingDays } from '@odooseek/odoo-client'
 import { CharWidget } from './basic'
 import type { FieldWidgetProps } from './index'
 

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
-import { callKw, searchRead } from '../lib/api'
-import type { ParsedSearchPanel, SearchPanelCategory } from '../lib/odoo-types'
+import { callKw, searchRead } from '@odooseek/odoo-client'
+import type { ParsedSearchPanel, SearchPanelCategory } from '@odooseek/odoo-client'
 
 interface SearchPanelProps {
   model: string

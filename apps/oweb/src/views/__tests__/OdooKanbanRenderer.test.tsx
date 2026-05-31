@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { OdooFieldMeta } from '../../lib/odoo-types'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { OdooKanbanRenderer } from '../OdooKanbanRenderer'
 
 const { mockCallKw, mockReadGroup } = vi.hoisted(() => ({
@@ -9,10 +9,16 @@ const { mockCallKw, mockReadGroup } = vi.hoisted(() => ({
   mockReadGroup: vi.fn(),
 }))
 
-vi.mock('../../lib/api', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   callKw: mockCallKw,
   readGroup: mockReadGroup,
-}))
+}
+  }
+})
 vi.mock('../../components/ConfirmDialog', () => ({
   useConfirmDialog: () => vi.fn(),
 }))

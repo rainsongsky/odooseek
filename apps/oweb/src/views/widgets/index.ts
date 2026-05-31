@@ -1,4 +1,4 @@
-import type { FieldElement } from '../../lib/odoo-types'
+import type { FieldElement } from '@odooseek/odoo-client'
 
 /** Stable no-op callback — avoids creating new function references on every render. */
 export const NOOP = () => {}

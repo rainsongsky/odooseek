@@ -12,56 +12,57 @@ vi.mock('../../lib/auth', () => ({
   useAuth: () => ({ session: { uid: 1 } }),
 }))
 
-vi.mock('../../lib/api', () => ({
-  callKw: vi.fn().mockResolvedValue([]),
-}))
-
-vi.mock('../../lib/menu-service', () => ({
-  fetchMenus: vi.fn().mockResolvedValue({
-    root: {
-      id: 'root',
-      name: 'root',
-      children: [1, 2],
-      appID: false,
-      xmlid: '',
-      actionID: false,
-      actionModel: false,
-      actionPath: false,
-      webIcon: null,
-      webIconData: null,
-    },
-    '1': {
-      id: 1,
-      name: 'CRM',
-      children: [],
-      appID: 1,
-      xmlid: 'crm',
-      actionID: 100,
-      actionModel: 'ir.actions.act_window',
-      actionPath: false,
-      webIcon: null,
-      webIconData: null,
-    },
-    '2': {
-      id: 2,
-      name: 'Sales',
-      children: [],
-      appID: 2,
-      xmlid: 'sale',
-      actionID: 200,
-      actionModel: 'ir.actions.act_window',
-      actionPath: false,
-      webIcon: null,
-      webIconData: null,
-    },
-  }),
-  getApps: vi.fn((menus: Record<string, unknown>) => {
-    const root = menus.root as { children: number[] }
-    const ids = [...new Set(root.children)]
-    return ids.map((id: number) => menus[String(id)]).filter(Boolean)
-  }),
-  getAppSections: vi.fn(() => []),
-}))
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...(actual as Record<string, unknown>),
+    callKw: vi.fn().mockResolvedValue([]),
+    fetchMenus: vi.fn().mockResolvedValue({
+      root: {
+        id: 'root',
+        name: 'root',
+        children: [1, 2],
+        appID: false,
+        xmlid: '',
+        actionID: false,
+        actionModel: false,
+        actionPath: false,
+        webIcon: null,
+        webIconData: null,
+      },
+      '1': {
+        id: 1,
+        name: 'CRM',
+        children: [],
+        appID: 1,
+        xmlid: 'crm',
+        actionID: 100,
+        actionModel: 'ir.actions.act_window',
+        actionPath: false,
+        webIcon: null,
+        webIconData: null,
+      },
+      '2': {
+        id: 2,
+        name: 'Sales',
+        children: [],
+        appID: 2,
+        xmlid: 'sale',
+        actionID: 200,
+        actionModel: 'ir.actions.act_window',
+        actionPath: false,
+        webIcon: null,
+        webIconData: null,
+      },
+    }),
+    getApps: vi.fn((menus: Record<string, unknown>) => {
+      const root = menus.root as { children: number[] }
+      const ids = [...new Set(root.children)]
+      return ids.map((id: number) => menus[String(id)]).filter(Boolean)
+    }),
+    getAppSections: vi.fn(() => []),
+  }
+})
 
 function TestWrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })

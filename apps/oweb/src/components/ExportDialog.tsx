@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { OdooFieldMeta } from '../lib/odoo-types'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
 
 interface ExportDialogProps {
   model: string

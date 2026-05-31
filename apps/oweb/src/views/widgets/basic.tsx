@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import DOMPurify from 'dompurify'
-import { formatFloatTime, formatPercentage, parseFloatTime } from '../../lib/field-formatters'
+import { formatFloatTime, formatPercentage, parseFloatTime } from '@odooseek/odoo-client'
 import type { FieldWidgetProps } from './index'
 import { FIELD_INPUT_CLASS } from './index'
 

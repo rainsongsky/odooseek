@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import DOMPurify from 'dompurify'
-import { callKw, searchRead } from '../lib/api'
+import { callKw, searchRead } from '@odooseek/odoo-client'
 import { useAuth } from '../lib/auth'
 
 interface ChatterProps {

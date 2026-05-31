@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { callKw } from '../lib/api'
-import type { IrFilterRecord } from '../lib/odoo-types'
+import { callKw } from '@odooseek/odoo-client'
+import type { IrFilterRecord } from '@odooseek/odoo-client'
 
 export interface SaveFilterParams {
   name: string

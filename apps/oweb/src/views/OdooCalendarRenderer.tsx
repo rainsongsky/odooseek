@@ -3,10 +3,10 @@ import { addMonths, endOfMonth, format, getDay, parse, startOfMonth, startOfWeek
 import { enUS } from 'date-fns/locale/en-US'
 import { useCallback, useMemo, useState } from 'react'
 import { dateFnsLocalizer, Calendar as RBC_Calendar } from 'react-big-calendar'
-import { callKw, searchRead } from '../lib/api'
+import { callKw, searchRead } from '@odooseek/odoo-client'
 import { useToast } from '../hooks/useToast'
-import type { OdooFieldMeta } from '../lib/odoo-types'
-import { parseCalendarXml } from '../lib/xml-parser'
+import type { OdooFieldMeta } from '@odooseek/odoo-client'
+import { parseCalendarXml } from '@odooseek/odoo-client'
 
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 

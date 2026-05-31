@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { IrFilterRecord } from '../../lib/odoo-types'
+import type { IrFilterRecord } from '@odooseek/odoo-client'
 import { FavoriteFilters } from '../FavoriteFilters'
 
 const mockFilters: IrFilterRecord[] = [

@@ -2,13 +2,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { FieldElement } from '../../lib/odoo-types'
+import type { FieldElement } from '@odooseek/odoo-client'
 
 const mockCallKw = vi.fn()
-vi.mock('../../lib/api', () => ({
-  callKw: (...args: unknown[]) => mockCallKw(...args),
-  fieldsGet: vi.fn().mockResolvedValue({}),
-}))
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...(actual as Record<string, unknown>),
+    callKw: (...args: unknown[]) => mockCallKw(...args),
+    fieldsGet: vi.fn().mockResolvedValue({}),
+  }
+})
 
 let queryClient: QueryClient
 

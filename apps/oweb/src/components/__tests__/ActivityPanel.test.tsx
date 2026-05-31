@@ -6,10 +6,16 @@ import { ActivityPanel } from '../ActivityPanel'
 
 const mockSearchRead = vi.fn()
 const mockCallKw = vi.fn()
-vi.mock('../../lib/api', () => ({
+vi.mock('@odooseek/odoo-client', async (original) => {
+  const actual = await original()
+  return {
+    ...actual as Record<string, unknown>,
+    ...{
   searchRead: (...args: unknown[]) => mockSearchRead(...args),
   callKw: (...args: unknown[]) => mockCallKw(...args),
-}))
+}
+  }
+})
 
 let queryClient: QueryClient
 let wrapper: ({ children }: { children: React.ReactNode }) => React.ReactElement

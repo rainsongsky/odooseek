@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
-import { callKw } from '../lib/api'
+import { callKw } from '@odooseek/odoo-client'
 import { ArrowUpDown, Download, FlipHorizontal } from '../lib/lucide-icons'
-import type { OdooFieldMeta, PivotField, PivotMeasure, ReadGroupResult } from '../lib/odoo-types'
-import { parsePivotXml } from '../lib/xml-parser'
+import type { OdooFieldMeta, PivotField, PivotMeasure, ReadGroupResult } from '@odooseek/odoo-client'
+import { parsePivotXml } from '@odooseek/odoo-client'
 
 interface PivotRendererProps {
   model: string
