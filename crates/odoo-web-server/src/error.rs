@@ -5,6 +5,7 @@ use axum::response::{IntoResponse, Response};
 use odoo_core::error::OdooError;
 
 /// Wrapper error type for axum handlers
+#[derive(Debug)]
 pub struct AppError(pub OdooError);
 
 impl From<OdooError> for AppError {

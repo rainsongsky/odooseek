@@ -1,4 +1,4 @@
-//! Odoo Web Server — BFF gateway between oweb SPA and Odoo backend.
+//! Odoo Web Server — BFF gateway binary entry point.
 //!
 //! ## Architecture
 //! ```text
@@ -19,30 +19,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tracing::info;
 
-mod cache;
-mod error;
-mod helpers;
-mod menu;
-mod proxy;
-mod report;
-mod session;
-mod ws;
-
-use cache::ResponseCache;
-use error::AppError;
-
-/// Application shared state
-#[derive(Clone)]
-struct AppState {
-    /// reqwest HTTP client — cookies are forwarded manually per-request
-    http_client: reqwest::Client,
-    /// Odoo base URL (guaranteed no trailing slash)
-    odoo_url: String,
-    /// WebSocket event broadcast sender
-    event_tx: broadcast::Sender<serde_json::Value>,
-    /// Response cache for frequently-called endpoints
-    cache: ResponseCache,
-}
+use odoo_web_server::AppState;
+use odoo_web_server::error::AppError;
+use odoo_web_server::{menu, proxy, report, session, ws};
 
 #[derive(Parser, Debug)]
 #[command(name = "odoo-web-server")]
@@ -99,12 +78,11 @@ async fn main() -> anyhow::Result<()> {
     let (event_tx, _) = broadcast::channel::<serde_json::Value>(256);
 
     let odoo_url_clean = config.odoo_url.trim_end_matches('/').to_string();
-    let state = AppState {
-        http_client: http_client.clone(),
-        odoo_url: odoo_url_clean.clone(),
-        event_tx: event_tx.clone(),
-        cache: ResponseCache::new(),
-    };
+    let state = AppState::new(
+        http_client.clone(),
+        odoo_url_clean.clone(),
+        event_tx.clone(),
+    );
 
     // Spawn Odoo Bus polling task
     tokio::spawn(ws::poll_odoo_bus(http_client, odoo_url_clean, event_tx));
