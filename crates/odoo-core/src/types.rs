@@ -25,6 +25,7 @@ pub struct SessionInfo {
     pub active_ids_limit: Option<i64>,
     pub max_file_upload_size: Option<i64>,
     pub groups: Option<serde_json::Value>,
+    pub menus: Option<serde_json::Value>,
     #[serde(flatten)]
     pub extra: serde_json::Value,
 }
@@ -33,6 +34,7 @@ impl SessionInfo {
     pub fn anonymous() -> Self {
         Self {
             authenticated: false,
+            menus: None,
             ..Default::default()
         }
     }

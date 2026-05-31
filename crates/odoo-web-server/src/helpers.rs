@@ -43,6 +43,7 @@ pub fn session_info_from_json(result: &serde_json::Value) -> SessionInfo {
         active_ids_limit: result.get("active_ids_limit").and_then(|v| v.as_i64()),
         max_file_upload_size: result.get("max_file_upload_size").and_then(|v| v.as_i64()),
         groups: result.get("groups").cloned(),
+        menus: None,
         extra: serde_json::Value::default(),
     }
 }

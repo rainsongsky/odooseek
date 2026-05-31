@@ -6,9 +6,7 @@ use axum::response::{IntoResponse, Response};
 
 use crate::AppState;
 use crate::error::AppError;
-use crate::helpers::{
-    json_response_with_cookies, json_response_with_cookies_bytes, session_info_from_json,
-};
+use crate::helpers::{json_response_with_cookies, session_info_from_json};
 use odoo_core::error::OdooError;
 use odoo_core::types::{LoginRequest, SessionInfo};
 
@@ -37,9 +35,9 @@ pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Res
         .map_err(|e| OdooError::Unreachable(format!("Odoo get_session_info failed: {e}")))?;
 
     let resp_headers = response.headers().clone();
-    let mut json_body: serde_json::Value = response.json().await?;
+    let json_body: serde_json::Value = response.json().await?;
 
-    let info = match json_body.get("result") {
+    let mut info = match json_body.get("result") {
         Some(result) => session_info_from_json(result),
         None => SessionInfo::anonymous(),
     };
@@ -47,16 +45,11 @@ pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Res
     // Enrich with cached menus and apps if authenticated
     if info.authenticated
         && let Ok(enriched) = enrich_with_menus(&state).await
-        && let Some(result) = json_body.get_mut("result")
-        && let Some(obj) = result.as_object_mut()
     {
-        obj.insert("menus".into(), enriched);
+        info.menus = Some(enriched);
     }
 
-    Ok(json_response_with_cookies_bytes(
-        &serde_json::to_vec(&json_body).unwrap_or_default(),
-        &resp_headers,
-    ))
+    Ok(json_response_with_cookies(&info, &resp_headers))
 }
 
 /// Fetch menus once, cache in state for session enrichment
