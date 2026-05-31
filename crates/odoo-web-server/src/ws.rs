@@ -6,6 +6,7 @@
 use axum::extract::ws::{Message, WebSocket};
 use futures::{SinkExt, StreamExt};
 use tokio::sync::broadcast;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{debug, info, warn};
 
 /// Spawn background tasks for Odoo Bus event relay.
@@ -103,11 +104,15 @@ async fn connect_odoo_ws(
     let ws_url = format!("{}/websocket", ws_url);
     info!("Connecting to Odoo WebSocket at {ws_url}");
 
-    let request = http::Request::builder()
-        .uri(&ws_url)
-        .header("Origin", base)
-        .body(())
+    // Build WebSocket request with proper upgrade headers, then add Origin
+    let mut request = ws_url
+        .into_client_request()
         .map_err(|e| format!("Failed to build WS request: {e}"))?;
+    request.headers_mut().insert(
+        http::header::ORIGIN,
+        base.parse()
+            .map_err(|e| format!("Invalid Origin header: {e}"))?,
+    );
 
     let (ws_stream, _) = tokio_tungstenite::connect_async(request)
         .await
