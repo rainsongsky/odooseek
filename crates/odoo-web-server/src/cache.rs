@@ -83,3 +83,61 @@ fn ttl_for_endpoint(method: &str) -> Duration {
         _ => Duration::from_secs(60),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn cache_key_deterministic() {
+        let args1 = json!([[], ["name"]]);
+        let args2 = json!([[], ["name"]]);
+        let k1 = cache_key("model", "search_read", &args1);
+        let k2 = cache_key("model", "search_read", &args2);
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn cache_key_different_models() {
+        let args = json!([[], ["name"]]);
+        let k1 = cache_key("res.partner", "search_read", &args);
+        let k2 = cache_key("res.users", "search_read", &args);
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn cache_key_different_methods() {
+        let args = json!([[], ["name"]]);
+        let k1 = cache_key("model", "search_read", &args);
+        let k2 = cache_key("model", "fields_get", &args);
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn ttl_fields_get_is_24h() {
+        assert_eq!(ttl_for_endpoint("fields_get"), Duration::from_secs(86_400));
+    }
+
+    #[test]
+    fn ttl_search_panel_prefix_match() {
+        assert_eq!(
+            ttl_for_endpoint("search_panel_select_range"),
+            Duration::from_secs(30)
+        );
+        assert_eq!(
+            ttl_for_endpoint("search_panel_select_multi_range"),
+            Duration::from_secs(30)
+        );
+    }
+
+    #[test]
+    fn ttl_unknown_falls_to_60s() {
+        assert_eq!(ttl_for_endpoint("unknown"), Duration::from_secs(60));
+    }
+
+    #[test]
+    fn ttl_default_get_is_1h() {
+        assert_eq!(ttl_for_endpoint("default_get"), Duration::from_secs(3_600));
+    }
+}
