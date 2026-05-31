@@ -95,11 +95,14 @@ export function OdooListRenderer({
 
   const listView = useMemo(() => parseListXml(arch), [arch])
 
-  // Apply default_order and limit on mount
+  // Apply default_order and limit on first render only
+  const didMount = useRef(false)
   useEffect(() => {
+    if (didMount.current) return
+    didMount.current = true
     if (listView.defaultOrder) setOrder(listView.defaultOrder)
     if (listView.limit) setLimit(listView.limit)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [listView.defaultOrder, listView.limit])
 
   const groupLimit = listView.groupsLimit ?? 80
   const allVisibleColumns = listView.columns.filter((c) => {

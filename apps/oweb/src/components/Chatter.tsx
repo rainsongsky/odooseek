@@ -236,7 +236,6 @@ export function Chatter({ model, recordId }: ChatterProps) {
           {msg.body && (
             <div
               className="prose prose-xs mt-1 max-w-none text-xs text-text-primary"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: Odoo chatter body is HTML
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.body) }}
             />
           )}

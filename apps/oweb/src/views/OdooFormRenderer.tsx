@@ -233,8 +233,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     }
   }, [isDirty, editMode, formValues, draftKey])
 
+  const draftLoaded = useRef(false)
   useEffect(() => {
-    if (!editMode) return
+    if (!editMode || draftLoaded.current) return
+    draftLoaded.current = true
     try {
       const draft = localStorage.getItem(draftKey)
       if (draft) {
@@ -244,8 +246,6 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     } catch {
       // invalid draft
     }
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, draftKey])
 
   // Autofocus first editable field on new record
