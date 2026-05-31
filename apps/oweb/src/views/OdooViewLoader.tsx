@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { lazy, useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
+import { DataExportDialog } from '../components/DataExportDialog'
 import { FormDialogOverlay, type FormDialogItem } from '../components/FormDialog'
 import { ImportDialog } from '../components/ImportDialog'
 import { SearchPanel } from '../components/SearchPanel'
@@ -104,6 +105,7 @@ export function OdooViewLoader({
   const [formDialogs, setFormDialogs] = useState<FormDialogItem[]>([])
   const formDialogIdRef = useRef(0)
   const [showImport, setShowImport] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const [searchPanelDomain, setSearchPanelDomain] = useState<unknown[]>([])
   useEffect(() => { setRecordId(_recordId) }, [_recordId])
 
@@ -350,6 +352,7 @@ export function OdooViewLoader({
         onCreateClick={onCreateClick ?? handleCreate}
         showCreate={viewType !== 'form'}
         onImport={viewType !== 'form' ? () => setShowImport(true) : undefined}
+        onExport={viewType !== 'form' ? () => setShowExport(true) : undefined}
         onPrintAction={handlePrintAction}
         model={model}
         selectedIds={recordId ? [recordId] : []}
@@ -435,6 +438,7 @@ export function OdooViewLoader({
         renderContent()
       )}
       {showImport && <ImportDialog model={model} onClose={() => setShowImport(false)} />}
+      {showExport && <DataExportDialog model={model} onClose={() => setShowExport(false)} />}
       <FormDialogOverlay dialogs={formDialogs} onClose={closeFormDialog} parentModel={model} />
     </>
   )

@@ -44,6 +44,7 @@ export interface ControlPanelProps {
   onPrintAction?: (actionId: number) => void
   onActionExecuted?: (actionId: number) => void
   onImport?: () => void
+  onExport?: () => void
 }
 
 export function ControlPanel({
@@ -64,6 +65,7 @@ export function ControlPanel({
   onPrintAction,
   onActionExecuted,
   onImport,
+  onExport,
   selectedIds,
 }: ControlPanelProps) {
   const [openMenu, setOpenMenu] = useState<'print' | 'action' | null>(null)
@@ -226,6 +228,15 @@ export function ControlPanel({
               className="rounded-lg border border-border-default px-3 py-1 text-xs font-medium text-text-secondary hover:bg-hover"
             >
               Import
+            </button>
+          )}
+          {onExport && currentView !== 'form' && (
+            <button
+              type="button"
+              onClick={onExport}
+              className="rounded-lg border border-border-default px-3 py-1 text-xs font-medium text-text-secondary hover:bg-hover"
+            >
+              Export
             </button>
           )}
           {showViewSwitcher && (
