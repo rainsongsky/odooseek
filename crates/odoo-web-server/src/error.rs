@@ -27,20 +27,51 @@ impl From<serde_json::Error> for AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = match &self.0 {
-            OdooError::Http(_) => (StatusCode::BAD_GATEWAY, self.0.to_string()),
-            OdooError::Unreachable(_) => (StatusCode::BAD_GATEWAY, self.0.to_string()),
-            OdooError::NotAuthenticated => (StatusCode::UNAUTHORIZED, self.0.to_string()),
-            OdooError::Api { .. } => (StatusCode::OK, self.0.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, self.0.to_string()),
-        };
-
-        let body = serde_json::json!({
-            "error": true,
-            "message": message,
-        });
-
-        (status, axum::Json(body)).into_response()
+        match &self.0 {
+            OdooError::Api {
+                code,
+                message,
+                data,
+            } => {
+                // Session expired → 401 so frontend redirects to login
+                let status = if *code == 100 {
+                    StatusCode::UNAUTHORIZED
+                } else {
+                    StatusCode::OK
+                };
+                let body = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": code,
+                        "message": message,
+                        "data": data,
+                    },
+                    "id": serde_json::Value::Null,
+                });
+                (status, axum::Json(body)).into_response()
+            }
+            OdooError::Http(_) | OdooError::Unreachable(_) => {
+                let body = serde_json::json!({
+                    "error": true,
+                    "message": self.0.to_string(),
+                });
+                (StatusCode::BAD_GATEWAY, axum::Json(body)).into_response()
+            }
+            OdooError::NotAuthenticated => {
+                let body = serde_json::json!({
+                    "error": true,
+                    "message": self.0.to_string(),
+                });
+                (StatusCode::UNAUTHORIZED, axum::Json(body)).into_response()
+            }
+            _ => {
+                let body = serde_json::json!({
+                    "error": true,
+                    "message": self.0.to_string(),
+                });
+                (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(body)).into_response()
+            }
+        }
     }
 }
 
@@ -68,12 +99,23 @@ mod tests {
     #[test]
     fn app_error_api_is_200() {
         let response = AppError::from(OdooError::Api {
-            code: 100,
+            code: 1,
             message: "test".into(),
             data: None,
         })
         .into_response();
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn app_error_session_expired_is_401() {
+        let response = AppError::from(OdooError::Api {
+            code: 100,
+            message: "Session expired".into(),
+            data: None,
+        })
+        .into_response();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[test]

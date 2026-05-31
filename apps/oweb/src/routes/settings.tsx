@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { ThemeToggle } from '../components/ThemeToggle'
-import { callKw } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 function SettingsPage() {
@@ -9,13 +8,9 @@ function SettingsPage() {
   const { data: modules } = useQuery({
     queryKey: ['odoo', 'installed-modules'],
     queryFn: async () => {
-      const res = await callKw<Array<{ name: string; shortdesc: string; latest_version: string }>>(
-        'ir.module.module',
-        'search_read',
-        [[['state', '=', 'installed']]],
-        { fields: ['name', 'shortdesc', 'latest_version'], limit: 200, order: 'name' },
-      )
-      return res ?? []
+      const res = await fetch('/api/session/modules', { credentials: 'include' })
+      if (!res.ok) return []
+      return (await res.json()) as string[]
     },
     staleTime: 60_000,
   })
@@ -23,11 +18,9 @@ function SettingsPage() {
   const { data: langList } = useQuery({
     queryKey: ['odoo', 'languages'],
     queryFn: async () => {
-      const res = await callKw<Array<Record<string, unknown>>>('res.lang', 'search_read', [
-        [['active', '=', true]],
-        { fields: ['code', 'name'], limit: 50 },
-      ])
-      return (res ?? []).map((r) => [String(r.code), String(r.name)] as [string, string])
+      const res = await fetch('/api/session/languages')
+      if (!res.ok) return []
+      return (await res.json()) as [string, string][]
     },
     staleTime: 60_000,
   })
@@ -105,26 +98,16 @@ function SettingsPage() {
           {modules && modules.length > 0 && (
             <Section title={`Installed Modules (${modules.length})`}>
               <div className="max-h-60 overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border-subtle">
-                      <th className="py-1 text-left font-medium text-text-secondary">Module</th>
-                      <th className="py-1 text-left font-medium text-text-secondary">
-                        Description
-                      </th>
-                      <th className="py-1 text-right font-medium text-text-secondary">Version</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modules.map((m) => (
-                      <tr key={m.name} className="border-b border-border-subtle/50">
-                        <td className="py-1 font-mono text-text-primary">{m.name}</td>
-                        <td className="py-1 text-text-secondary">{m.shortdesc}</td>
-                        <td className="py-1 text-right text-text-muted">{m.latest_version}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="flex flex-wrap gap-1">
+                  {modules.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded border border-border-subtle bg-surface px-2 py-0.5 font-mono text-[11px] text-text-secondary"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
               </div>
             </Section>
           )}

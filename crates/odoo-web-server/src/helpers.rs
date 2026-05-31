@@ -83,3 +83,17 @@ pub fn json_response_with_cookies<T: serde::Serialize>(
                 .unwrap()
         })
 }
+
+/// Build a JSON response with Set-Cookie forwarding (raw bytes version).
+pub fn json_response_with_cookies_bytes(data: &[u8], resp_headers: &HeaderMap) -> Response {
+    let builder = forward_set_cookie_headers(Response::builder().status(200), resp_headers);
+    builder
+        .header("Content-Type", "application/json")
+        .body(axum::body::Body::from(data.to_vec()))
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(500)
+                .body(axum::body::Body::from("Internal error"))
+                .unwrap()
+        })
+}

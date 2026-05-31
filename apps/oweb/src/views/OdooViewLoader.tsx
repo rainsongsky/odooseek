@@ -85,7 +85,19 @@ export function OdooViewLoader({
   const ck = useMemo(() => cacheKey(model, viewsToLoad), [model, viewsToLoad])
   const [domain, setDomain] = useState<unknown[]>(initialDomain)
   const [groupBy, setGroupBy] = useState<string[]>([])
+  const [internalViewType, setInternalViewType] = useState(viewType)
+  const [internalRecordId, setInternalRecordId] = useState<number | undefined>(_recordId)
   const toast = useToast()
+
+  // Sync external props when they change
+  useEffect(() => { setInternalViewType(viewType) }, [viewType])
+  useEffect(() => { setInternalRecordId(_recordId) }, [_recordId])
+
+  // Default create handler: switch to form view with no record
+  const handleCreate = useCallback(() => {
+    setInternalViewType('form')
+    setInternalRecordId(undefined)
+  }, [])
   const [recordId, setRecordId] = useState<number | undefined>(_recordId)
   const [formDialogs, setFormDialogs] = useState<FormDialogItem[]>([])
   const formDialogIdRef = useRef(0)
@@ -241,7 +253,7 @@ export function OdooViewLoader({
     setGroupBy(groupBys)
   }, [])
 
-  const activeView = viewData?.views?.[viewType]
+  const activeView = viewData?.views?.[internalViewType]
   const searchView = viewData?.views?.search
   const modelData = viewData?.models?.[model]
   const fields: Record<string, OdooFieldMeta> = modelData?.fields ?? {}
@@ -308,16 +320,16 @@ export function OdooViewLoader({
   const searchPanel = searchData?.searchPanel
 
   const showSearch =
-    viewType === 'list' ||
-    viewType === 'kanban' ||
-    viewType === 'pivot' ||
-    viewType === 'graph' ||
-    viewType === 'calendar'
+    internalViewType === 'list' ||
+    internalViewType === 'kanban' ||
+    internalViewType === 'pivot' ||
+    internalViewType === 'graph' ||
+    internalViewType === 'calendar'
 
   const renderContent = () => (
     <div className="flex flex-1 flex-col overflow-auto">
       <ControlPanel
-        breadcrumbs={{ model, viewType, viewTitle, recordName, onBackToList }}
+        breadcrumbs={{ model, viewType: internalViewType, viewTitle, recordName, onBackToList }}
         searchProps={
           showSearch
             ? {
@@ -333,11 +345,11 @@ export function OdooViewLoader({
             : { visible: false, onSearch: () => {} }
         }
         toolbar={toolbar}
-        currentView={viewType}
+        currentView={internalViewType}
         availableViews={availableViews}
         onSwitchView={onSwitchView}
-        onCreateClick={onCreateClick}
-        showCreate={!!onCreateClick}
+        onCreateClick={onCreateClick ?? handleCreate}
+        showCreate={viewType !== 'form'}
         onPrintAction={handlePrintAction}
         model={model}
         selectedIds={recordId ? [recordId] : []}

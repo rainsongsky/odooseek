@@ -1,13 +1,13 @@
-import { createFileRoute, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { requireAuth } from '../../lib/auth'
-import { OdooViewLoader } from '../../views/OdooViewLoader'
+import { ModuleRoute } from '../../components/ModuleRoute'
 
-function AccountingMoveDetail() {
-  const { id } = useParams({ from: '/accounting/move/$id' })
-  return <OdooViewLoader model="account.move" viewType="form" recordId={Number(id)} />
+function AccountingMoveForm() {
+  const { id } = Route.useParams()
+  return <ModuleRoute model="account.move" defaultView="form" recordId={Number(id)} />
 }
 
 export const Route = createFileRoute('/accounting/move/$id')({
-  component: AccountingMoveDetail,
+  component: AccountingMoveForm,
   beforeLoad: requireAuth,
 })

@@ -20,12 +20,7 @@ pub async fn get_menus(
 ) -> Result<Response, AppError> {
     let url = format!("{}/web/webclient/load_menus?unique=1", state.odoo_url);
 
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .unwrap_or_else(|_| state.http_client.clone());
-
-    let mut req = client.get(&url);
+    let mut req = state.http_client.get(&url);
     if let Some(cookie) = headers.get("cookie").and_then(|c| c.to_str().ok()) {
         req = req.header("cookie", cookie);
     }

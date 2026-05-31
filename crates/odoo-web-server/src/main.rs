@@ -7,6 +7,7 @@
 
 use axum::extract::{Path, State, WebSocketUpgrade};
 use axum::http::HeaderMap;
+use axum::http::Method;
 use axum::response::IntoResponse;
 use axum::{Json, Router, routing::get, routing::post};
 use clap::Parser;
@@ -18,6 +19,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tracing::info;
 
+mod cache;
 mod error;
 mod helpers;
 mod menu;
@@ -26,6 +28,7 @@ mod report;
 mod session;
 mod ws;
 
+use cache::ResponseCache;
 use error::AppError;
 
 /// Application shared state
@@ -37,6 +40,8 @@ struct AppState {
     odoo_url: String,
     /// WebSocket event broadcast sender
     event_tx: broadcast::Sender<serde_json::Value>,
+    /// Response cache for frequently-called endpoints
+    cache: ResponseCache,
 }
 
 #[derive(Parser, Debug)]
@@ -98,6 +103,7 @@ async fn main() -> anyhow::Result<()> {
         http_client: http_client.clone(),
         odoo_url: odoo_url_clean.clone(),
         event_tx: event_tx.clone(),
+        cache: ResponseCache::new(),
     };
 
     // Spawn Odoo Bus polling task
@@ -112,10 +118,22 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/session", get(get_session_info))
         .route("/api/session/login", post(session_login))
         .route("/api/session/logout", post(session_logout))
+        .route("/api/session/languages", get(get_languages))
+        .route("/api/session/modules", get(get_modules))
+        .route("/api/session/check", get(session_check))
         .route("/api/odoo/{*path}", post(proxy_odoo))
+        .route(
+            "/api/odoo-http/{*path}",
+            axum::routing::any(proxy_odoo_http),
+        )
         .route("/api/web/image/{*path}", get(proxy_image))
+        .route("/api/logo", get(proxy_logo))
+        .route("/api/translations", get(proxy_translations))
+        .route("/api/web/content/{*path}", get(proxy_content))
         .route("/api/report/download", get(download_report))
+        .route("/api/report/barcode/{*path}", get(proxy_barcode))
         .route("/ws/events", get(ws_events_handler))
+        .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024)) // 10 MB
         .fallback_service(ServeDir::new(&frontend_dir).append_index_html_on_directories(true))
         .layer(CompressionLayer::new())
         .layer(
@@ -181,6 +199,17 @@ async fn session_logout(
     session::logout(state, headers).await
 }
 
+async fn get_languages(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    session::get_languages(state).await
+}
+
+async fn get_modules(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
+    session::get_modules(state, headers).await
+}
+
 // ── JSON-RPC proxy ─────────────────────────────────────────────────
 
 async fn proxy_odoo(
@@ -190,6 +219,34 @@ async fn proxy_odoo(
     body: axum::body::Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     proxy::proxy_odoo(state, &path, headers, body).await
+}
+
+// ── General HTTP proxy (multipart, GET, form data, etc.) ──────────
+
+async fn proxy_odoo_http(
+    State(state): State<AppState>,
+    method: Method,
+    Path(path): Path<String>,
+    headers: HeaderMap,
+    query: axum::extract::Query<Vec<(String, String)>>,
+    body: axum::body::Bytes,
+) -> Result<impl IntoResponse, AppError> {
+    let query_str = url::form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(query.iter().map(|(k, v)| (k, v)))
+        .finish();
+    proxy::proxy_odoo_http(
+        state,
+        method,
+        &path,
+        headers,
+        if query_str.is_empty() {
+            None
+        } else {
+            Some(query_str)
+        },
+        body,
+    )
+    .await
 }
 
 // ── Image proxy ────────────────────────────────────────────────────
@@ -202,6 +259,79 @@ async fn proxy_image(
     proxy::proxy_image(state, path, headers).await
 }
 
+async fn proxy_logo(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
+    proxy::proxy_odoo_http(
+        state,
+        Method::GET,
+        "logo",
+        headers,
+        None,
+        axum::body::Bytes::new(),
+    )
+    .await
+}
+
+async fn proxy_translations(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    query: axum::extract::Query<Vec<(String, String)>>,
+) -> Result<impl IntoResponse, AppError> {
+    let query_str = query
+        .iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<_>>()
+        .join("&");
+    proxy::proxy_odoo_http(
+        state,
+        Method::GET,
+        "web/webclient/translations",
+        headers,
+        if query_str.is_empty() {
+            None
+        } else {
+            Some(query_str)
+        },
+        axum::body::Bytes::new(),
+    )
+    .await
+}
+
+async fn proxy_content(
+    State(state): State<AppState>,
+    path: axum::extract::Path<String>,
+    headers: HeaderMap,
+    query: axum::extract::Query<Vec<(String, String)>>,
+) -> Result<impl IntoResponse, AppError> {
+    let query_str = query
+        .iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<_>>()
+        .join("&");
+    proxy::proxy_odoo_http(
+        state,
+        Method::GET,
+        &format!("web/content/{}", path.0),
+        headers,
+        if query_str.is_empty() {
+            None
+        } else {
+            Some(query_str)
+        },
+        axum::body::Bytes::new(),
+    )
+    .await
+}
+
+async fn session_check(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
+    session::check(state, headers).await
+}
+
 // ── Report download proxy ──────────────────────────────────────────
 
 async fn download_report(
@@ -210,6 +340,14 @@ async fn download_report(
     query: axum::extract::Query<report::ReportParams>,
 ) -> Result<impl IntoResponse, AppError> {
     report::download_report(state, headers, query).await
+}
+
+async fn proxy_barcode(
+    state: State<AppState>,
+    path: axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
+    report::proxy_barcode(state, path, headers).await
 }
 
 // ── WebSocket events ───────────────────────────────────────────────

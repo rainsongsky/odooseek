@@ -133,14 +133,12 @@ pub async fn download_report(
 
     for (key, value) in odoo_headers.iter() {
         let name = key.as_str();
-        #[allow(clippy::collapsible_if)]
         if matches!(
             name,
-            "content-type" | "content-disposition" | "content-length"
-        ) {
-            if let Ok(v) = value.to_str() {
-                builder = builder.header(name, v);
-            }
+            "content-type" | "content-disposition" | "content-length" | "cache-control" | "etag"
+        ) && let Ok(v) = value.to_str()
+        {
+            builder = builder.header(name, v);
         }
     }
 
@@ -149,6 +147,62 @@ pub async fn download_report(
         .map_err(|e| {
             AppError(OdooError::InvalidResponse(format!(
                 "Failed to build response: {e}"
+            )))
+        })
+}
+
+/// GET /api/report/barcode/{barcode_type}/{value}
+///
+/// Proxies barcode generation requests to Odoo's barcode controller.
+/// Returns image/png or image/svg+xml depending on the barcode type.
+pub async fn proxy_barcode(
+    state: State<AppState>,
+    path: axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    let barcode_path = path.0;
+    if barcode_path.contains("..") || barcode_path.contains('\0') {
+        return Err(AppError(OdooError::Api {
+            code: 400,
+            message: "Invalid barcode path".into(),
+            data: None,
+        }));
+    }
+    let url = format!("{}/report/barcode/{}", state.odoo_url, barcode_path);
+    tracing::debug!("Proxying barcode request to: {url}");
+
+    let mut request = state.http_client.get(&url);
+    if let Some(c) = headers.get("cookie").and_then(|v| v.to_str().ok()) {
+        request = request.header("cookie", c);
+    }
+
+    let response = request
+        .send()
+        .await
+        .map_err(|e| OdooError::Unreachable(format!("Odoo barcode unreachable at {url}: {e}")))?;
+
+    let status = response.status();
+    let odoo_headers = response.headers().clone();
+    let body_bytes = response
+        .bytes()
+        .await
+        .map_err(|e| OdooError::Http(e.without_url()))?;
+
+    let mut builder = Response::builder().status(status);
+    for (key, value) in odoo_headers.iter() {
+        let name = key.as_str();
+        if matches!(name, "content-type" | "content-length" | "cache-control")
+            && let Ok(v) = value.to_str()
+        {
+            builder = builder.header(name, v);
+        }
+    }
+
+    builder
+        .body(axum::body::Body::from(body_bytes))
+        .map_err(|e| {
+            AppError(OdooError::InvalidResponse(format!(
+                "Failed to build barcode response: {e}"
             )))
         })
 }

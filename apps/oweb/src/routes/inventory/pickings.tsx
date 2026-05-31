@@ -1,12 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireAuth } from '../../lib/auth'
-import { OdooViewLoader } from '../../views/OdooViewLoader'
-
+import { ModuleRoute } from '../../components/ModuleRoute'
 function InventoryPickings() {
-  return <OdooViewLoader model="stock.picking" viewType="list" />
+  return <ModuleRoute model="stock.picking" defaultView="list" />
 }
-
-export const Route = createFileRoute('/inventory/pickings')({
-  component: InventoryPickings,
-  beforeLoad: requireAuth,
-})
+export const Route = createFileRoute("/inventory/pickings")({component: InventoryPickings, beforeLoad: requireAuth})

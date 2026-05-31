@@ -1,31 +1,84 @@
-//! JSON-RPC proxy — transparently forwards requests from browser to Odoo.
+//! JSON-RPC and HTTP proxy — transparently forwards requests from browser to Odoo.
 
 use crate::AppState;
+use crate::cache;
 use crate::error::AppError;
+use axum::Json;
 use axum::http::HeaderMap;
-use axum::response::Response;
+use axum::http::Method;
+use axum::response::{IntoResponse, Response};
 use odoo_core::error::OdooError;
 
 /// POST /api/odoo/{*path}
 ///
 /// Transparently forwards the JSON-RPC request to Odoo, passing
 /// Cookie headers through manually (no shared cookie store).
+/// Responses for cacheable methods (fields_get, get_views, name_search) are cached.
 pub async fn proxy_odoo(
     state: AppState,
     path: &str,
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Result<Response, AppError> {
-    // Reject path traversal attempts
-    if path.contains("..") || path.contains('\0') {
-        return Err(AppError(OdooError::Api {
-            code: 400,
-            message: "Invalid path".into(),
-            data: None,
-        }));
+    let odoo_url = build_odoo_url(&state.odoo_url, path)?;
+
+    // Try cache for read-only cacheable methods
+    if let Ok(cache_key) = try_build_cache_key(&body) {
+        if let Some(cached) = state.cache.get(&cache_key).await {
+            tracing::debug!("Cache hit → returning cached response");
+            return Ok(Json(cached).into_response());
+        }
+        tracing::debug!("Proxying (cacheable) JSON-RPC to: {odoo_url}");
+
+        let mut request = state
+            .http_client
+            .post(&odoo_url)
+            .header("Content-Type", "application/json")
+            .body(body);
+
+        if let Some(c) = get_cookie_header(&headers) {
+            request = request.header("cookie", c);
+        }
+
+        let response = request.send().await.map_err(|e| {
+            tracing::warn!("Odoo unreachable at {odoo_url}: {e}");
+            OdooError::Unreachable(format!("Odoo not reachable: {e}"))
+        })?;
+
+        let status = response.status();
+        let odoo_headers = response.headers().clone();
+        let body_bytes = response
+            .bytes()
+            .await
+            .map_err(|e| OdooError::Http(e.without_url()))?;
+
+        // Cache successful responses
+        if status.is_success()
+            && let Ok(value) = serde_json::from_slice::<serde_json::Value>(&body_bytes)
+        {
+            state.cache.set(&cache_key, value, &cache_key).await;
+        }
+
+        let mut builder = Response::builder().status(status);
+        for (key, value) in odoo_headers.iter() {
+            let name = key.as_str();
+            if matches_proxy_header(name)
+                && let Ok(v) = value.to_str()
+            {
+                builder = builder.header(name, v);
+            }
+        }
+        return builder
+            .body(axum::body::Body::from(body_bytes))
+            .map_err(|e| {
+                AppError(OdooError::InvalidResponse(format!(
+                    "Failed to build response: {e}"
+                )))
+            });
     }
-    let odoo_url = format!("{}/{}", state.odoo_url, path);
-    tracing::debug!("Proxying JSON-RPC to: {odoo_url}");
+
+    // Not cacheable — proxy normally
+    tracing::debug!("Proxying JSON-RPC POST to: {odoo_url}");
 
     let mut request = state
         .http_client
@@ -33,15 +86,104 @@ pub async fn proxy_odoo(
         .header("Content-Type", "application/json")
         .body(body);
 
-    // Forward browser Cookie to Odoo (reqwest cookie_store handles Set-Cookie return)
-    if let Some(cookie) = headers.get("cookie")
-        && let Ok(cookie_str) = cookie.to_str()
-    {
-        request = request.header("cookie", cookie_str);
+    if let Some(c) = get_cookie_header(&headers) {
+        request = request.header("cookie", c);
     }
 
-    let response = request.send().await.map_err(|e| {
-        tracing::warn!("Odoo unreachable at {odoo_url}: {e}");
+    proxy_send(&state, request).await
+}
+
+/// ANY /api/odoo-http/{*path}
+pub async fn proxy_odoo_http(
+    state: AppState,
+    method: Method,
+    path: &str,
+    headers: HeaderMap,
+    query: Option<String>,
+    body: axum::body::Bytes,
+) -> Result<Response, AppError> {
+    let mut url = build_odoo_url(&state.odoo_url, path)?;
+    if let Some(ref q) = query
+        && !q.is_empty()
+    {
+        url.push('?');
+        url.push_str(q);
+    }
+    tracing::debug!("Proxying HTTP {method} to: {url}");
+
+    let mut request = match method {
+        Method::GET | Method::HEAD => state.http_client.get(&url),
+        Method::POST => state.http_client.post(&url),
+        Method::PUT => state.http_client.put(&url),
+        Method::DELETE => state.http_client.delete(&url),
+        Method::PATCH => state.http_client.patch(&url),
+        _ => state.http_client.get(&url),
+    };
+
+    if !body.is_empty() {
+        if let Some(ct) = headers.get("content-type").and_then(|v| v.to_str().ok()) {
+            request = request.header("Content-Type", ct);
+        }
+        request = request.body(body);
+    }
+
+    if let Some(c) = get_cookie_header(&headers) {
+        request = request.header("cookie", c);
+    }
+
+    proxy_send(&state, request).await
+}
+
+/// GET /api/web/image/{*path}
+pub async fn proxy_image(
+    state: AppState,
+    path: axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    let image_path = path.0;
+    let odoo_url = build_odoo_url(&state.odoo_url, &format!("web/image/{}", image_path))?;
+    tracing::debug!("Proxying image request to: {odoo_url}");
+
+    let mut request = state.http_client.get(&odoo_url);
+    if let Some(c) = get_cookie_header(&headers) {
+        request = request.header("cookie", c);
+    }
+    proxy_send(&state, request).await
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+
+fn build_odoo_url(odoo_base: &str, path: &str) -> Result<String, AppError> {
+    if path.contains("..") || path.contains('\0') {
+        return Err(AppError(OdooError::Api {
+            code: 400,
+            message: "Invalid path".into(),
+            data: None,
+        }));
+    }
+    Ok(format!("{}/{}", odoo_base, path))
+}
+
+fn get_cookie_header(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get("cookie")
+        .and_then(|v| v.to_str().ok())
+        .map(String::from)
+}
+
+async fn proxy_send(
+    _state: &AppState,
+    request: reqwest::RequestBuilder,
+) -> Result<Response, AppError> {
+    let request = request.build().map_err(|e| {
+        AppError(OdooError::InvalidResponse(format!(
+            "Failed to build request: {e}"
+        )))
+    })?;
+    let url = request.url().to_string();
+
+    let response = _state.http_client.execute(request).await.map_err(|e| {
+        tracing::warn!("Odoo unreachable at {url}: {e}");
         OdooError::Unreachable(format!("Odoo not reachable: {e}"))
     })?;
 
@@ -52,13 +194,15 @@ pub async fn proxy_odoo(
         .await
         .map_err(|e| OdooError::Http(e.without_url()))?;
 
-    // Build axum response, forwarding Set-Cookie and other headers
     let mut builder = Response::builder().status(status);
 
-    // Forward relevant response headers from Odoo
+    // Forward standard response headers (exclude Content-Encoding to prevent double-compression)
     for (key, value) in odoo_headers.iter() {
         let name = key.as_str();
-        if (name.eq_ignore_ascii_case("set-cookie") || name.eq_ignore_ascii_case("content-type"))
+        if name.eq_ignore_ascii_case("content-encoding") {
+            continue; // BFF applies its own compression
+        }
+        if matches_proxy_header(name)
             && let Ok(v) = value.to_str()
         {
             builder = builder.header(name, v);
@@ -74,67 +218,29 @@ pub async fn proxy_odoo(
         })
 }
 
-/// GET /api/web/image/{*path}
-///
-/// Proxies Odoo's image serving endpoint.
-/// Forwards requests like /api/web/image/res.partner/1/image_128 to Odoo's /web/image/res.partner/1/image_128
-pub async fn proxy_image(
-    state: AppState,
-    path: axum::extract::Path<String>,
-    headers: HeaderMap,
-) -> Result<Response, AppError> {
-    let image_path = path.0;
-    // Reject path traversal attempts
-    if image_path.contains("..") || image_path.contains('\0') {
-        return Err(AppError(OdooError::Api {
-            code: 400,
-            message: "Invalid image path".into(),
-            data: None,
-        }));
-    }
-    let odoo_url = format!("{}/web/image/{}", state.odoo_url, image_path);
-    tracing::debug!("Proxying image request to: {odoo_url}");
+fn matches_proxy_header(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    matches!(
+        lower.as_str(),
+        "set-cookie"
+            | "content-type"
+            | "content-length"
+            | "content-disposition"
+            | "cache-control"
+            | "etag"
+            | "last-modified"
+            | "x-content-type-options"
+            | "x-frame-options"
+            | "content-security-policy"
+            | "strict-transport-security"
+    )
+}
 
-    let mut request = state.http_client.get(&odoo_url);
-
-    // Forward browser Cookie to Odoo for authentication
-    if let Some(cookie) = headers.get("cookie")
-        && let Ok(cookie_str) = cookie.to_str()
-    {
-        request = request.header("cookie", cookie_str);
-    }
-
-    let response = request.send().await.map_err(|e| {
-        tracing::warn!("Odoo image unreachable at {odoo_url}: {e}");
-        OdooError::Unreachable(format!("Odoo image not reachable: {e}"))
-    })?;
-
-    let status = response.status();
-    let odoo_headers = response.headers().clone();
-    let body_bytes = response
-        .bytes()
-        .await
-        .map_err(|e| OdooError::Http(e.without_url()))?;
-
-    let mut builder = Response::builder().status(status);
-
-    // Forward content-type, cache-control, and content-length
-    for (key, value) in odoo_headers.iter() {
-        let name = key.as_str();
-        if (name.eq_ignore_ascii_case("content-type")
-            || name.eq_ignore_ascii_case("cache-control")
-            || name.eq_ignore_ascii_case("content-length"))
-            && let Ok(v) = value.to_str()
-        {
-            builder = builder.header(name, v);
-        }
-    }
-
-    builder
-        .body(axum::body::Body::from(body_bytes))
-        .map_err(|e| {
-            AppError(OdooError::InvalidResponse(format!(
-                "Failed to build image response: {e}"
-            )))
-        })
+fn try_build_cache_key(body: &axum::body::Bytes) -> Result<String, ()> {
+    let json: serde_json::Value = serde_json::from_slice(body).map_err(|_| ())?;
+    let params = json.get("params").ok_or(())?;
+    let model = params.get("model").and_then(|v| v.as_str()).ok_or(())?;
+    let method = params.get("method").and_then(|v| v.as_str()).ok_or(())?;
+    let args = params.get("args").ok_or(())?;
+    Ok(cache::cache_key(model, method, args))
 }

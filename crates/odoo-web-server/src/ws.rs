@@ -1,20 +1,35 @@
-//! WebSocket event bridge — polls Odoo Bus and broadcasts to browsers.
+//! WebSocket event bridge — connects to Odoo Bus and broadcasts to browsers.
+//!
+//! Strategy: Try real WebSocket connection to Odoo first. If it fails (e.g. Odoo
+//! behind a proxy that doesn't support WebSocket), fall back to HTTP polling.
 
 use axum::extract::ws::{Message, WebSocket};
 use futures::StreamExt;
 use tokio::sync::broadcast;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
-/// Spawn a background task that polls Odoo Bus and broadcasts events
+/// Spawn background tasks for Odoo Bus event relay.
+/// Tries WebSocket connection first, falls back to HTTP polling.
 pub async fn poll_odoo_bus(
     client: reqwest::Client,
     odoo_url: String,
     event_tx: broadcast::Sender<serde_json::Value>,
 ) {
-    let bus_url = format!(
-        "{}/websocket/peek_notifications",
-        odoo_url.trim_end_matches('/')
-    );
+    let base = odoo_url.trim_end_matches('/');
+
+    // Try real WebSocket first
+    match connect_odoo_ws(base, event_tx.clone()).await {
+        Ok(()) => {
+            info!("Connected to Odoo Bus via WebSocket");
+            return;
+        }
+        Err(e) => {
+            warn!("Odoo WebSocket failed ({e}), falling back to HTTP polling");
+        }
+    }
+
+    // Fallback: HTTP polling
+    let bus_url = format!("{}/websocket/peek_notifications", base);
     let mut last: i64 = 0;
 
     loop {
@@ -47,7 +62,6 @@ pub async fn poll_odoo_bus(
             }
         };
 
-        // Odoo 19 CE returns { result: { channels, notifications: [{id, message}] } }
         if let Some(notifications) = body
             .get("result")
             .and_then(|r| r.get("notifications"))
@@ -68,6 +82,54 @@ pub async fn poll_odoo_bus(
             }
         }
     }
+}
+
+/// Attempt to connect to Odoo's `/websocket` endpoint using tokio-tungstenite.
+/// On success, reads frames and broadcasts them via the event_tx channel.
+async fn connect_odoo_ws(
+    base: &str,
+    event_tx: broadcast::Sender<serde_json::Value>,
+) -> Result<(), String> {
+    // Build WS URL: ws://host:8069/websocket or wss://host/websocket
+    let ws_url = if base.starts_with("https://") {
+        base.replace("https://", "wss://")
+    } else if base.starts_with("http://") {
+        base.replace("http://", "ws://")
+    } else {
+        format!("ws://{}", base)
+    };
+    let ws_url = format!("{}/websocket", ws_url);
+    info!("Connecting to Odoo WebSocket at {ws_url}");
+
+    let (ws_stream, _) = tokio_tungstenite::connect_async(&ws_url)
+        .await
+        .map_err(|e| format!("WS connection failed: {e}"))?;
+
+    info!("Odoo WebSocket connected");
+    let (_, mut read) = ws_stream.split();
+
+    while let Some(msg) = read.next().await {
+        match msg {
+            Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
+                if let Ok(event) = serde_json::from_str::<serde_json::Value>(&text) {
+                    let _ = event_tx.send(event);
+                }
+            }
+            Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => {
+                warn!("Odoo WebSocket closed, will reconnect");
+                break;
+            }
+            Err(e) => {
+                warn!("Odoo WebSocket error: {e}, reconnecting...");
+                break;
+            }
+            _ => {} // ignore ping/pong/binary
+        }
+    }
+
+    // Reconnect after a delay
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    Err("Disconnected - will retry".into())
 }
 
 /// WebSocket handler — subscribes to event broadcast and pushes to browser

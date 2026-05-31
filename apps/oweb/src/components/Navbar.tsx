@@ -51,9 +51,32 @@ export function Navbar() {
   const currentApp = currentAppId ? menus?.[String(currentAppId)] : null
   const sections = currentApp && menus && currentAppId ? getAppSections(menus, currentAppId) : []
 
-  // Detect current app from URL, reset on non-/web pages
+  // Detect current app from URL
   useEffect(() => {
     if (!menus) return
+    // Route-based detection for hardcoded module paths
+	const routeAppMap: Record<string, string> = {
+		crm: 'crm',
+		sale: 'sale',
+		inventory: 'stock',
+		accounting: 'account',
+	}
+    const topSegment = currentPath.split('/')[1]
+    const knownModule = routeAppMap[topSegment]
+    if (knownModule) {
+      // Find the app whose actionPath or xmlid contains the module name
+      const app = apps.find(
+        (a) =>
+          a.xmlid?.startsWith(`${knownModule}.`) ||
+          (a.actionPath && a.actionPath === topSegment),
+      )
+      if (app) {
+        setCurrentAppId(app.id as number)
+        return
+      }
+    }
+
+    // Action-based detection for /web?action=N URLs
     if (currentPath === '/web') {
       const actionId = currentSearch?.action as number | undefined
       if (actionId) {
