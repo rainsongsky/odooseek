@@ -272,7 +272,17 @@ body,
   .o_inner_group {
     grid-template-columns: 1fr;
   }
+  .o_group_col_2,
+  .o_group_col_3,
+  .o_group_col_4 {
+    grid-template-columns: 1fr;
+  }
 }
+
+/* ── Kanban Scrollbar ─────────────────────────────────────────── */
+
+.kanban-scroll::-webkit-scrollbar { height: 6px; }
+.kanban-scroll::-webkit-scrollbar-thumb { background: var(--color-border-default); border-radius: 3px; }
 
 /* ── Page Transition ────────────────────────────────────────── */
 
