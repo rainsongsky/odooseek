@@ -735,7 +735,8 @@ Phase 43（版本化）→ Phase 45（wizard）→ Phase 47（设置+数据）
 | 文档 | 用途 |
 |:-----|:-----|
 | `docs/plans/DEVELOPMENT_PLAN.md` | 全局路线图，Phase 41+ 追加到此文档 |
-| `docs/plans/CODEGEN_TECHNICAL_DESIGN.md` | codegen 工具参考 |
+| `docs/ODOO_CODEGEN_AND_TYPES.md` | codegen / odoo-types 使用指南 |
+| `docs/plans/CODEGEN_TECHNICAL_DESIGN.md` | codegen 技术设计（计划稿） |
 | `docs/plans/WIDGET_SYSTEM_DESIGN.md` | widget 注册机制参考 |
 | `docs/plans/PHASE1_TECHNICAL_DESIGN.md` | 泛型视图引擎架构参考 |
 
