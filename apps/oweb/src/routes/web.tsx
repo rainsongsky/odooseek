@@ -92,7 +92,7 @@ function WebPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <OdooViewLoader
         model={model}
         viewType={effectiveViewType}
@@ -137,7 +137,7 @@ function WebPage() {
                   await formRef.current?.save()
                   blocker.proceed?.()
                 }}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:brightness-110"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:brightness-110"
               >
                 {t('common.saveLeave')}
               </button>

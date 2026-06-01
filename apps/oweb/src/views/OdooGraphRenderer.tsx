@@ -21,18 +21,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { getChartColors } from '../lib/chart-colors'
 import { ChevronDown } from '../lib/lucide-icons'
-
-const COLORS = [
-  '#6366f1',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#06b6d4',
-  '#f97316',
-  '#ec4899',
-]
+import {
+  rechartsLabelStyle,
+  rechartsLegendStyle,
+  rechartsTick,
+  rechartsTooltipStyle,
+} from '../lib/recharts-theme'
+import { useTheme } from '../themes/ThemeContext'
 
 type ChartType = 'bar' | 'line' | 'pie' | 'area'
 type SortOrder = 'none' | 'asc' | 'desc'
@@ -45,7 +42,9 @@ interface GraphRendererProps {
 }
 
 export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRendererProps) {
+  const { config } = useTheme()
   const graphView = useMemo(() => parseGraphXml(arch), [arch])
+  const chartColors = useMemo(() => getChartColors(), [config.presetId, config.accentId])
 
   const [chartType, setChartType] = useState<ChartType>(graphView.graphType)
   const [activeMeasure, setActiveMeasure] = useState(graphView.measures[0]?.name ?? '__count')
@@ -83,7 +82,7 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
+      <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
         {error instanceof Error ? error.message : 'Failed to load graph data'}
       </div>
     )
@@ -116,7 +115,7 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
   const activeMeasureLabel = activeMeasureMeta?.string || activeMeasure
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2">
         <h3 className="mr-auto text-sm font-semibold text-text-primary">
@@ -169,8 +168,8 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
       </div>
 
       {/* Chart */}
-      <div className="p-4">
-        <ResponsiveContainer width="100%" height={340}>
+      <div className="min-h-0 flex-1 p-4" style={{ minHeight: 340 }}>
+        <ResponsiveContainer width="100%" height="100%">
           {chartType === 'pie' ? (
             <PieChart>
               <Pie
@@ -187,33 +186,33 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
                 }}
               >
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  <Cell key={i} fill={chartColors[i % chartColors.length]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend />
+              <Tooltip contentStyle={rechartsTooltipStyle} />
+              <Legend wrapperStyle={rechartsLegendStyle} />
             </PieChart>
           ) : chartType === 'line' ? (
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" />
+              <XAxis dataKey="name" tick={rechartsTick} />
+              <YAxis tick={rechartsTick}>
                 <Label
                   value={activeMeasureLabel}
                   angle={-90}
                   position="insideLeft"
-                  style={{ fontSize: 11 }}
+                  style={rechartsLabelStyle}
                 />
               </YAxis>
-              <Tooltip />
-              <Legend />
+              <Tooltip contentStyle={rechartsTooltipStyle} />
+              <Legend wrapperStyle={rechartsLegendStyle} />
               {allMeasureKeys.map((key, i) => (
                 <Line
                   key={key}
                   type="monotone"
                   dataKey={key}
                   name={graphView.measures[i]?.string || key}
-                  stroke={COLORS[i % COLORS.length]}
+                  stroke={chartColors[i % chartColors.length]}
                   strokeWidth={2}
                   dot={{ r: 3 }}
                 />
@@ -221,26 +220,26 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
             </LineChart>
           ) : chartType === 'area' ? (
             <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" />
+              <XAxis dataKey="name" tick={rechartsTick} />
+              <YAxis tick={rechartsTick}>
                 <Label
                   value={activeMeasureLabel}
                   angle={-90}
                   position="insideLeft"
-                  style={{ fontSize: 11 }}
+                  style={rechartsLabelStyle}
                 />
               </YAxis>
-              <Tooltip />
-              <Legend />
+              <Tooltip contentStyle={rechartsTooltipStyle} />
+              <Legend wrapperStyle={rechartsLegendStyle} />
               {allMeasureKeys.map((key, i) => (
                 <Area
                   key={key}
                   type="monotone"
                   dataKey={key}
                   name={graphView.measures[i]?.string || key}
-                  stroke={COLORS[i % COLORS.length]}
-                  fill={COLORS[i % COLORS.length]}
+                  stroke={chartColors[i % chartColors.length]}
+                  fill={chartColors[i % chartColors.length]}
                   fillOpacity={0.3}
                   stackId={graphView.stacked ? 'stack' : undefined}
                 />
@@ -248,25 +247,25 @@ export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRen
             </AreaChart>
           ) : (
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default, #e5e7eb)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" />
+              <XAxis dataKey="name" tick={rechartsTick} />
+              <YAxis tick={rechartsTick}>
                 <Label
                   value={activeMeasureLabel}
                   angle={-90}
                   position="insideLeft"
-                  style={{ fontSize: 11 }}
+                  style={rechartsLabelStyle}
                 />
               </YAxis>
-              <Tooltip />
-              <Legend />
+              <Tooltip contentStyle={rechartsTooltipStyle} />
+              <Legend wrapperStyle={rechartsLegendStyle} />
               {allMeasureKeys.map((key, i) => (
                 <Bar
                   key={key}
                   dataKey={key}
                   name={graphView.measures[i]?.string || key}
                   stackId={graphView.stacked ? 'stack' : undefined}
-                  fill={COLORS[i % COLORS.length]}
+                  fill={chartColors[i % chartColors.length]}
                   label={{ position: 'top', fontSize: 10, fill: 'var(--color-text-secondary)' }}
                 />
               ))}

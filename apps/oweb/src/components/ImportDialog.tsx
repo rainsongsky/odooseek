@@ -115,7 +115,7 @@ export function ImportDialog({ model, onClose }: { model: string; onClose: () =>
 
         <div className="p-4">
           {error && (
-            <div className="mb-3 rounded border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs text-red-400">
+            <div className="mb-3 rounded border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
               {error}
             </div>
           )}
@@ -180,7 +180,7 @@ export function ImportDialog({ model, onClose }: { model: string; onClose: () =>
                   type="button"
                   onClick={handleExecute}
                   disabled={executeMutation.isPending}
-                  className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                  className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
                 >
                   {executeMutation.isPending ? 'Importing...' : 'Import'}
                 </button>

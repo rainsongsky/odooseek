@@ -1,4 +1,4 @@
-/* Calendar theme — consumes app theme engine variables */
+/* Calendar theme — consumes app theme engine variables (RBC base CSS is scoped via vite/scope-rbc-css) */
 .odooseek-calendar {
   --cal-grid: var(--color-border-subtle);
   --cal-hover: var(
@@ -318,6 +318,10 @@
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+.odooseek-calendar .o-cal-event-content img {
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 12%, transparent);
 }
 
 .odooseek-calendar .rbc-event.o-cal-event--highlighted {

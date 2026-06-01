@@ -259,9 +259,8 @@ describe('OdooFormRenderer', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Edit')).toBeInTheDocument()
+      expect(screen.getByText('General')).toBeInTheDocument()
     })
-    expect(screen.getByText('General')).toBeInTheDocument()
     expect(screen.getByText('Sales')).toBeInTheDocument()
   })
 
@@ -709,7 +708,7 @@ describe('OdooFormRenderer', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Edit')).toBeInTheDocument()
+      expect(screen.getAllByText('?').length).toBeGreaterThan(0)
     })
 
     // HelpPopover renders a button with "?" text

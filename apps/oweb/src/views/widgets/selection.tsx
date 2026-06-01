@@ -42,7 +42,7 @@ export function PriorityWidget({ value, readOnly, onChange, meta }: FieldWidgetP
     return (
       <span className="inline-flex gap-0.5 text-sm">
         {Array.from({ length: max }, (_, i) => (
-          <span key={i} className={i < stars ? 'text-amber-500' : 'text-border-default'}>
+          <span key={i} className={i < stars ? 'text-warning' : 'text-border-default'}>
             ★
           </span>
         ))}
@@ -57,7 +57,7 @@ export function PriorityWidget({ value, readOnly, onChange, meta }: FieldWidgetP
           type="button"
           onClick={() => onChange(i + 1)}
           title={selection[i]?.[1] ?? `Level ${i + 1}`}
-          className={`text-sm ${i < stars ? 'text-amber-500' : 'text-border-default hover:text-amber-400'}`}
+          className={`text-sm ${i < stars ? 'text-warning' : 'text-border-default hover:text-warning/80'}`}
         >
           {i < stars ? '★' : '☆'}
         </button>
@@ -78,15 +78,15 @@ export function StateBadgeWidget({ value, meta }: FieldWidgetProps) {
   const pair = selection.find(([k]) => k === val)
   const label = pair?.[1] ?? val
   const colors: Record<string, string> = {
-    draft: 'bg-border-default text-text-secondary',
-    done: 'bg-emerald-500/10 text-emerald-500',
-    cancel: 'bg-red-500/10 text-red-500',
-    posted: 'bg-blue-500/10 text-blue-500',
-    confirmed: 'bg-blue-500/10 text-blue-500',
-    new: 'bg-border-default text-text-secondary',
-    assigned: 'bg-amber-500/10 text-amber-500',
-    won: 'bg-emerald-500/10 text-emerald-500',
-    lost: 'bg-red-500/10 text-red-500',
+    draft: 'bg-elevated text-text-secondary',
+    done: 'bg-success/10 text-success',
+    cancel: 'bg-danger/10 text-danger',
+    posted: 'bg-info/10 text-info',
+    confirmed: 'bg-info/10 text-info',
+    new: 'bg-elevated text-text-secondary',
+    assigned: 'bg-warning/10 text-warning',
+    won: 'bg-success/10 text-success',
+    lost: 'bg-danger/10 text-danger',
   }
   const color =
     colors[val.toLowerCase()] ?? 'bg-surface text-text-primary border border-border-default'
@@ -117,10 +117,10 @@ export function StatusbarWidget({ value, onChange, readOnly, meta }: FieldWidget
             onClick={() => onChange(key)}
             className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${
               isCurrent
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-on-accent'
                 : isPast
-                  ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
-                  : 'bg-gray-100 text-text-muted hover:bg-gray-200'
+                  ? 'bg-success/15 text-success hover:bg-success/25'
+                  : 'bg-elevated text-text-muted hover:bg-hover'
             }`}
           >
             {label}
@@ -184,8 +184,8 @@ export function BadgeSelectionWidget({ value, onChange, readOnly, meta }: FieldW
             onClick={() => onChange(key)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               isSelected
-                ? 'bg-accent text-white'
-                : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                ? 'bg-accent text-on-accent'
+                : 'bg-elevated text-text-secondary hover:bg-hover'
             } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
           >
             {label}
@@ -205,12 +205,12 @@ export function LabelSelectionWidget({ value, meta }: FieldWidgetProps) {
   const label = pair?.[1] ?? val
 
   const classes: Record<string, string> = {
-    draft: 'bg-gray-200 text-gray-700',
-    confirmed: 'bg-blue-100 text-blue-700',
-    done: 'bg-green-100 text-green-700',
-    cancel: 'bg-red-100 text-red-700',
+    draft: 'bg-elevated text-text-secondary',
+    confirmed: 'bg-info/15 text-info',
+    done: 'bg-success/15 text-success',
+    cancel: 'bg-danger/15 text-danger',
   }
-  const cls = classes[val] ?? 'bg-gray-100 text-text-secondary'
+  const cls = classes[val] ?? 'bg-hover text-text-secondary'
 
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>
@@ -224,12 +224,12 @@ export function StateSelectionWidget({ value, onChange, readOnly, meta }: FieldW
   const currentVal = String(value ?? '')
   const colors: Record<string, string> = {
     normal: 'text-text-secondary',
-    done: 'text-green-500',
-    blocked: 'text-red-500',
+    done: 'text-success',
+    blocked: 'text-danger',
   }
 
   if (readOnly) {
-    const color = colors[currentVal] ?? 'text-amber-500'
+    const color = colors[currentVal] ?? 'text-warning'
     return <span className={`text-lg ${color}`}>★</span>
   }
 

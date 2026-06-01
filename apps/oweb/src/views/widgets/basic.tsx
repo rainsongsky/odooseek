@@ -197,7 +197,7 @@ export function BooleanToggleWidget({ value, onChange, readOnly }: FieldWidgetPr
     return (
       <span
         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-          checked ? 'bg-emerald-500/10 text-emerald-500' : 'bg-border-default/30 text-text-muted'
+          checked ? 'bg-success/10 text-success' : 'bg-border-default/30 text-text-muted'
         }`}
       >
         {checked ? 'Yes' : 'No'}

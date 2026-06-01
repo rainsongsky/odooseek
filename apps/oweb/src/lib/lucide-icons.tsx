@@ -8,6 +8,7 @@ export {
   ChevronUp,
   Columns3,
   Download,
+  Filter,
   FlipHorizontal,
   GripVertical,
   Home,

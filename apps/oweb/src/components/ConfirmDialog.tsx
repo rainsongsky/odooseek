@@ -35,11 +35,11 @@ export function useConfirmDialog() {
                 await options.onConfirm()
                 closeDialog(id)
               }}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white ${
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium text-on-accent ${
                 options.variant === 'danger'
-                  ? 'bg-red-500 hover:bg-red-600'
+                  ? 'bg-danger hover:opacity-90'
                   : options.variant === 'warning'
-                    ? 'bg-amber-500 hover:bg-amber-600'
+                    ? 'bg-warning hover:opacity-90'
                     : 'bg-accent hover:brightness-110'
               }`}
             >

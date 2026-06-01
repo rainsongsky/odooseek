@@ -5,13 +5,18 @@ import { addMonths, endOfMonth, format, getDay, parse, startOfMonth, startOfWeek
 import { enUS } from 'date-fns/locale/en-US'
 import { useCallback, useMemo, useState } from 'react'
 import { dateFnsLocalizer, Calendar as RBC_Calendar } from 'react-big-calendar'
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import { useToast } from '../hooks/useToast'
 import { getOdooIndexedColor } from '../lib/odoo-colors'
 import { CalendarPopover } from './CalendarPopover'
 import { CalendarQuickCreate } from './CalendarQuickCreate'
+import { getEventAvatarUrl } from './calendar-event-avatar'
 
 import 'react-big-calendar/lib/css/react-big-calendar.css'
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
 import './calendar-theme.css'
+
+const DnDCalendar = withDragAndDrop(RBC_Calendar)
 
 const localizer = dateFnsLocalizer({
   format: format as unknown as Record<string, unknown>,
@@ -172,6 +177,29 @@ export function OdooCalendarRenderer({
     return { className: classNames.join(' '), style }
   }, [])
 
+  const EventContent = useCallback(
+    ({ event, title }: { event: CalendarEvent; title?: string }) => {
+      const avatarUrl = getEventAvatarUrl(event, calView, fields)
+      const label = title ?? event.title
+      return (
+        <span className="o-cal-event-content flex min-w-0 items-center gap-1">
+          {avatarUrl && (
+            <img
+              src={avatarUrl}
+              alt=""
+              className="h-3.5 w-3.5 shrink-0 rounded-full object-cover"
+              loading="lazy"
+            />
+          )}
+          <span className="truncate">{label}</span>
+        </span>
+      )
+    },
+    [calView, fields],
+  )
+
+  const calendarComponents = useMemo(() => ({ event: EventContent }), [EventContent])
+
   // Hide time from event display when hide_time=1
   const hideTimeFormats = useMemo(
     () =>
@@ -319,7 +347,7 @@ export function OdooCalendarRenderer({
 
   if (isLoading) {
     return (
-      <div className="mx-3 mt-2 flex min-h-[28rem] flex-1 items-center justify-center py-12">
+      <div className="flex min-h-[28rem] flex-1 items-center justify-center p-4">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
       </div>
     )
@@ -327,13 +355,13 @@ export function OdooCalendarRenderer({
 
   return (
     <div
-      className={`odooseek-calendar mx-3 mt-2 flex flex-col ${
+      className={`odooseek-calendar flex flex-col p-4 ${
         view === 'month'
           ? 'odooseek-calendar--month'
           : 'odooseek-calendar--time min-h-0 flex-1 overflow-hidden'
       }`}
     >
-      <RBC_Calendar
+      <DnDCalendar
         localizer={localizer}
         events={events}
         startAccessor="start"
@@ -348,11 +376,13 @@ export function OdooCalendarRenderer({
         dayMaxEventRows={calView.eventLimit ?? 5}
         formats={hideTimeFormats}
         selectable
+        resizable={!!calView.dateStop}
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
         onEventDrop={handleEventDrop}
         onEventResize={handleEventResize}
         eventPropGetter={eventPropGetter}
+        components={calendarComponents}
         popup
         style={{
           height: view === 'month' ? 'auto' : '100%',

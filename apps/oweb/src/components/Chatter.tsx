@@ -189,7 +189,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                 })
               }
               disabled={sendMutation.isPending || !composeBody.trim()}
-              className="rounded bg-accent px-3 py-1 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
             >
               {sendMutation.isPending ? 'Sending...' : 'Send'}
             </button>

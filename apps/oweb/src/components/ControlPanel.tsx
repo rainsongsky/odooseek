@@ -1,6 +1,6 @@
 import type { ViewToolbar, ViewType } from '@odooseek/odoo-client'
 import { useState } from 'react'
-import { ChevronDown } from '@/lib/lucide-icons'
+import { ChevronDown, Filter } from '@/lib/lucide-icons'
 import { OdooViewSwitcher } from '../views/OdooViewSwitcher'
 import { Breadcrumbs } from './Breadcrumbs'
 import { Pagination } from './Pagination'
@@ -45,6 +45,8 @@ export interface ControlPanelProps {
   onActionExecuted?: (actionId: number) => void
   onImport?: () => void
   onExport?: () => void
+  /** Mobile drawer toggle for left SearchPanel (visible only below md). */
+  searchPanelToggle?: { visible: boolean; open: boolean; onToggle: () => void }
 }
 
 export function ControlPanel({
@@ -67,6 +69,7 @@ export function ControlPanel({
   onImport,
   onExport,
   selectedIds,
+  searchPanelToggle,
 }: ControlPanelProps) {
   const [openMenu, setOpenMenu] = useState<'print' | 'action' | null>(null)
 
@@ -93,9 +96,9 @@ export function ControlPanel({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex shrink-0 flex-col">
       {/* Row 1: Breadcrumbs (left) + View Switcher + Menus + Create (right) */}
-      <div className="flex items-center justify-between border-b border-border-subtle bg-surface/30 px-4 py-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-surface/30 px-4 py-0">
         {breadcrumbs && (
           <Breadcrumbs
             model={breadcrumbs.model}
@@ -105,7 +108,7 @@ export function ControlPanel({
             onBackToList={breadcrumbs.onBackToList}
           />
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {showMenus && (
             <div className="flex items-center gap-1">
               {hasPrint && (
@@ -205,7 +208,7 @@ export function ControlPanel({
                             onDelete()
                             setOpenMenu(null)
                           }}
-                          className="flex w-full items-center px-3 py-2 text-left text-xs text-red-400 hover:bg-red-400/10"
+                          className="flex w-full items-center px-3 py-2 text-left text-xs text-danger hover:bg-danger/10"
                         >
                           Delete
                         </button>
@@ -220,7 +223,7 @@ export function ControlPanel({
             <button
               type="button"
               onClick={onCreateClick}
-              className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90"
+              className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-on-accent hover:bg-accent/90"
             >
               Create
             </button>
@@ -255,16 +258,34 @@ export function ControlPanel({
 
       {/* Row 2: Search bar (full width, only when visible) */}
       {showSearch && (
-        <div className="border-b border-border-subtle p-4">
-          <SearchBar
-            onSearch={searchProps.onSearch}
-            onGroupByChange={searchProps.onGroupByChange}
-            placeholder={searchProps.placeholder}
-            searchFields={searchProps.searchFields}
-            filters={searchProps.filters}
-            groupByFilters={searchProps.groupByFilters}
-            model={searchProps.model}
-          />
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border-subtle p-4">
+          {searchPanelToggle?.visible && (
+            <button
+              type="button"
+              onClick={searchPanelToggle.onToggle}
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium md:hidden ${
+                searchPanelToggle.open
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border-default text-text-secondary hover:bg-hover'
+              }`}
+              aria-expanded={searchPanelToggle.open}
+              aria-label="Toggle category filters"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Filters
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
+            <SearchBar
+              onSearch={searchProps.onSearch}
+              onGroupByChange={searchProps.onGroupByChange}
+              placeholder={searchProps.placeholder}
+              searchFields={searchProps.searchFields}
+              filters={searchProps.filters}
+              groupByFilters={searchProps.groupByFilters}
+              model={searchProps.model}
+            />
+          </div>
         </div>
       )}
 

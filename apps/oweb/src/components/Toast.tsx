@@ -1,9 +1,9 @@
 import { useToast } from '../hooks/useToast'
 
 const TYPE_STYLES: Record<string, string> = {
-  success: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-400',
-  error: 'border-red-400/30 bg-red-400/10 text-red-400',
-  warning: 'border-amber-400/30 bg-amber-400/10 text-amber-400',
+  success: 'border-success/30 bg-success/10 text-success',
+  error: 'border-danger/30 bg-danger/10 text-danger',
+  warning: 'border-warning/30 bg-warning/10 text-warning',
   info: 'border-accent/30 bg-accent/10 text-accent-bright',
 }
 

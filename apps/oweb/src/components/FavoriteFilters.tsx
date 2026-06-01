@@ -108,7 +108,7 @@ export function FavoriteFilters({
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-border-subtle bg-surface p-3 shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 w-[min(16rem,calc(100vw-2rem))] rounded-lg border border-border-subtle bg-surface p-3 shadow-lg">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-text-muted">
             <svg
               width="12"
@@ -181,7 +181,7 @@ export function FavoriteFilters({
                   <button
                     type="submit"
                     disabled={isSaving || !saveName.trim()}
-                    className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium text-white transition-colors hover:brightness-110 disabled:opacity-50"
+                    className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium text-on-accent transition-colors hover:brightness-110 disabled:opacity-50"
                   >
                     {isSaving ? 'Saving...' : 'Save'}
                   </button>

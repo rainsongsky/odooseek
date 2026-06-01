@@ -216,7 +216,7 @@ export function ExportDialog({ model, fields, data, selectedIds, onClose }: Expo
                   <button
                     type="button"
                     onClick={() => removeField(name)}
-                    className="ml-2 text-text-muted hover:text-red-500"
+                    className="ml-2 text-text-muted hover:text-danger"
                   >
                     &times;
                   </button>
@@ -240,7 +240,7 @@ export function ExportDialog({ model, fields, data, selectedIds, onClose }: Expo
           type="button"
           onClick={handleExport}
           disabled={selectedFields.length === 0}
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
         >
           Export{selectedFields.length > 0 ? ` (${selectedFields.length} fields)` : ''}
         </button>

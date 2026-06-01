@@ -28,6 +28,7 @@ import { createPortal } from 'react-dom'
 import { ActivityPanel } from '../components/ActivityPanel'
 import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
+import { FormSheetSkeleton } from '../components/Skeleton'
 import { getFieldWidget } from './widgets'
 
 export interface OdooFormRendererRef {
@@ -374,9 +375,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     return <div className="p-6 text-sm text-text-muted">Failed to parse form XML</div>
 
   const currentRecord = editMode ? formValues : record?.[0]
+  const awaitingRecord = !!recordId && !record?.[0]
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <HeaderBar
         headerElement={headerElement}
         stateField={fields.state}
@@ -397,37 +399,46 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       />
 
       {saveError && (
-        <div className="mx-auto mt-1 max-w-[860px] w-full rounded border border-red-400/30 bg-red-400/10 px-4 py-2 text-xs text-red-400">
+        <div className="o_form_sheet_bg mt-1 w-full rounded border border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger">
           {saveError}
         </div>
       )}
       {warning && (
-        <div className="mx-auto mt-1 max-w-[860px] w-full rounded border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs text-yellow-400">
+        <div className="o_form_sheet_bg mt-1 w-full rounded border border-warning/30 bg-warning/10 px-4 py-2 text-xs text-warning">
           <span className="font-medium">{warning.title}</span>: {warning.message}
         </div>
       )}
 
-      <div ref={formRef} className="o_form_body flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
-        <div className="o_form_sheet_bg mx-auto">
-          <div className="o_form_sheet">
-            <FormLayoutNode
-              elements={nonHeaderElements}
-              record={currentRecord}
-              fields={fields}
-              model={model}
-              recordId={recordId}
-              editMode={editMode}
-              onChange={handleChange}
-              onAction={onAction}
-              onButtonAction={handleActionButton}
-            />
-            {recordId && <FormTimestamps record={record?.[0]} />}
+      <div
+        ref={formRef}
+        className="o_form_body min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-2"
+      >
+        <div className="o_form_sheet_bg">
+          {awaitingRecord ? (
+            <FormSheetSkeleton />
+          ) : (
+            <div className="o_form_sheet">
+              <FormLayoutNode
+                elements={nonHeaderElements}
+                record={currentRecord}
+                fields={fields}
+                model={model}
+                recordId={recordId}
+                editMode={editMode}
+                onChange={handleChange}
+                onAction={onAction}
+                onButtonAction={handleActionButton}
+              />
+              {recordId && <FormTimestamps record={record?.[0]} />}
+            </div>
+          )}
+        </div>
+        {!awaitingRecord && (
+          <div className="o_form_sheet_bg mt-4">
+            <ActivityPanel model={model} recordId={recordId} />
+            <Chatter model={model} recordId={recordId} />
           </div>
-        </div>
-        <div className="mx-auto max-w-[860px]">
-          <ActivityPanel model={model} recordId={recordId} />
-          <Chatter model={model} recordId={recordId} />
-        </div>
+        )}
       </div>
     </div>
   )
@@ -449,7 +460,7 @@ function HeaderButtonGroup({
   const btnClass = (btn: ButtonElement) =>
     `px-3 py-1 text-xs font-medium transition-colors ${
       btn.class?.includes('btn-primary')
-        ? 'bg-accent text-white hover:bg-accent/90 rounded'
+        ? 'bg-accent text-on-accent hover:bg-accent/90 rounded'
         : 'text-text-secondary hover:bg-hover rounded'
     }`
 
@@ -589,10 +600,10 @@ function HeaderBar({
                 const baseClass = 'px-3 py-1 text-[11px] font-medium transition-colors'
                 const roundedClass = isFirst ? 'rounded-l' : isLast ? 'rounded-r' : ''
                 const colorClass = isCurrent
-                  ? 'bg-accent text-white'
+                  ? 'bg-accent text-on-accent'
                   : isPast
-                    ? 'bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50'
-                    : 'bg-gray-700/50 text-text-muted hover:bg-gray-600/50'
+                    ? 'bg-success/20 text-success hover:bg-success/30'
+                    : 'bg-elevated text-text-muted hover:bg-hover'
                 const cursorClass = isCurrent || editMode ? 'cursor-default' : 'cursor-pointer'
                 return (
                   <button
@@ -649,20 +660,20 @@ function ActionButtons({
   return (
     <div className="flex items-center gap-2 shrink-0">
       {saveError && (
-        <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400 transition-all duration-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+        <span className="flex items-center gap-1.5 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger transition-all duration-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-danger" />
           Invalid
         </span>
       )}
       {isDirty && (
-        <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500 transition-all duration-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <span className="flex items-center gap-1.5 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning transition-all duration-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
           Unsaved
         </span>
       )}
       {justSaved && !isDirty && (
-        <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500 transition-all duration-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success transition-all duration-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" />
           Saved
         </span>
       )}
@@ -679,7 +690,7 @@ function ActionButtons({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="rounded bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-semibold text-on-accent hover:bg-accent/90 disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save'}
           </button>
@@ -688,7 +699,7 @@ function ActionButtons({
         <button
           type="button"
           onClick={onEdit}
-          className="rounded bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90"
+          className="rounded bg-accent px-3 py-1 text-xs font-semibold text-on-accent hover:bg-accent/90"
         >
           Edit
         </button>
@@ -780,10 +791,10 @@ function StatButton({
       onClick={handleClick}
       disabled={loading}
       title={error ?? undefined}
-      className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${error ? 'text-red-400 bg-red-400/10 hover:bg-red-400/20' : 'text-text-secondary hover:bg-hover'}`}
+      className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${error ? 'text-danger bg-danger/10 hover:bg-danger/20' : 'text-text-secondary hover:bg-hover'}`}
     >
       {button.icon && (
-        <i className={`fa ${button.icon} text-sm ${error ? 'text-red-400' : 'text-text-muted'}`} />
+        <i className={`fa ${button.icon} text-sm ${error ? 'text-danger' : 'text-text-muted'}`} />
       )}
       {value !== '' && <span className="font-semibold text-text-primary">{value}</span>}
       <span>{error ?? text}</span>
@@ -869,7 +880,7 @@ function NotebookRenderer({
           >
             {page.string}
             {pageHasMissing[pi] && (
-              <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
+              <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-danger" />
             )}
           </button>
         ))}
@@ -904,7 +915,7 @@ function HelpPopover({ text }: { text: string }) {
         type="button"
         onClick={() => setOpen(!open)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="inline-flex items-center text-[10px] text-blue-400 cursor-help hover:text-blue-500"
+        className="inline-flex items-center text-[10px] text-info cursor-help hover:opacity-80"
       >
         ?
       </button>
@@ -913,7 +924,7 @@ function HelpPopover({ text }: { text: string }) {
         createPortal(
           <div className="fixed inset-0 z-[9999]" onMouseDown={() => setOpen(false)}>
             <div
-              className="absolute z-[10000] mt-1 w-72 rounded-lg border border-border-subtle bg-surface p-3 text-xs leading-relaxed text-text-secondary shadow-lg"
+              className="absolute z-[10000] mt-1 w-[min(18rem,calc(100vw-2rem))] rounded-lg border border-border-subtle bg-surface p-3 text-xs leading-relaxed text-text-secondary shadow-lg"
               style={{
                 top: btnRef.current?.getBoundingClientRect().bottom + 4,
                 left: Math.min(
@@ -1075,7 +1086,7 @@ function FormLayoutNode({
                   onClick={() => onButtonAction?.(btn)}
                   className={`px-3 py-1 text-xs font-medium transition-colors ${
                     btn.class?.includes('btn-primary')
-                      ? 'bg-accent text-white hover:bg-accent/90 rounded'
+                      ? 'bg-accent text-on-accent hover:bg-accent/90 rounded'
                       : 'text-text-secondary hover:bg-hover rounded border border-border-default'
                   }`}
                 >
@@ -1193,7 +1204,7 @@ function FormLayoutNode({
                   />
                   <label className="o_form_label">
                     {el.string || meta.string || el.name}
-                    {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
+                    {editMode && fieldRequired && <span className="ml-0.5 text-danger">*</span>}
                     {meta.help && <HelpPopover text={meta.help} />}
                   </label>
                 </div>
@@ -1207,7 +1218,7 @@ function FormLayoutNode({
               >
                 <label className="o_form_label truncate py-1 text-right">
                   {el.string || meta.string || el.name}
-                  {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
+                  {editMode && fieldRequired && <span className="ml-0.5 text-danger">*</span>}
                   {meta.help && <HelpPopover text={meta.help} />}
                 </label>
                 <Widget

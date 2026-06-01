@@ -37,7 +37,7 @@ export function DataExportDialog({ model, onClose }: DataExportProps) {
                 onClick={() => setFormat(f)}
                 className={`flex-1 rounded px-3 py-1.5 text-xs font-medium ${
                   format === f
-                    ? 'bg-accent text-white'
+                    ? 'bg-accent text-on-accent'
                     : 'border border-border-default text-text-secondary hover:bg-hover'
                 }`}
               >
@@ -56,7 +56,7 @@ export function DataExportDialog({ model, onClose }: DataExportProps) {
             <button
               type="button"
               onClick={handleExport}
-              className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+              className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-on-accent hover:bg-accent/90"
             >
               Export
             </button>

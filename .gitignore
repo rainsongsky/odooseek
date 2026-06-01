@@ -52,3 +52,5 @@ docs/
 # Test artifacts
 docker/headers.txt
 docker/response.json
+
+apps/oweb/.tanstack/
