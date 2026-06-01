@@ -5,6 +5,7 @@ import {
   parseCalendarXml,
   parseFormXml,
   parseGraphXml,
+  parseActivityXml,
   parseKanbanXml,
   parseListXml,
   parsePivotXml,
@@ -603,6 +604,26 @@ describe('parseKanbanXml', () => {
 
     const result = parseKanbanXml(xml)
     expect(result.progressbar).toBeUndefined()
+  })
+})
+
+describe('parseActivityXml', () => {
+  test('parses HR employee activity view', () => {
+    const xml = `<activity string="Employees">
+      <field name="id"/>
+      <templates>
+        <div t-name="activity-box">
+          <field name="name" class="o_text_block"/>
+          <field name="job_id" class="o_text_block"/>
+        </div>
+      </templates>
+    </activity>`
+
+    const result = parseActivityXml(xml)
+    expect(result.type).toBe('activity')
+    expect(result.string).toBe('Employees')
+    expect(result.fields).toEqual(['id'])
+    expect(result.boxFields.map((f) => f.name)).toEqual(['name', 'job_id'])
   })
 })
 

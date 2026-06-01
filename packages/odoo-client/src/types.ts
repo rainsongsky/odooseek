@@ -1,6 +1,6 @@
 // Odoo 19 CE view type definitions
 
-export type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar'
+export type ViewType = 'list' | 'form' | 'kanban' | 'pivot' | 'graph' | 'calendar' | 'activity'
 
 export interface OdooFieldMeta {
   name: string
@@ -270,6 +270,41 @@ export interface ParsedKanbanView {
   defaultGroupBy?: string
   highlightColor?: string // e.g. "color"
   progressbar?: KanbanProgressbar
+}
+
+/** Odoo `<activity>` view — matrix of records × mail.activity.type */
+export interface ParsedActivityView {
+  type: 'activity'
+  string: string
+  fields: string[]
+  boxFields: ViewField[]
+}
+
+/** Response shape of `mail.activity.get_activity_data` */
+export interface OdooActivityTypeInfo {
+  id: number
+  name: string
+  template_ids: { id: number; name: string }[]
+}
+
+export interface OdooActivityGroupCell {
+  count_by_state: Record<string, number>
+  ids: number[]
+  reporting_date: string | false | null
+  state: string
+  user_assigned_ids: number[]
+  summaries?: string[]
+  attachments_info?: {
+    count: number
+    most_recent_id: number
+    most_recent_name: string
+  }
+}
+
+export interface OdooActivityData {
+  activity_types: OdooActivityTypeInfo[]
+  activity_res_ids: number[]
+  grouped_activities: Record<number | string, Record<number | string, OdooActivityGroupCell>>
 }
 
 // ── Phase 4: QWeb template AST ───────────────────────────────

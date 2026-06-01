@@ -14,6 +14,7 @@ import type {
   ParsedCalendarView,
   ParsedFormView,
   ParsedGraphView,
+  ParsedActivityView,
   ParsedKanbanView,
   ParsedListView,
   ParsedPivotView,
@@ -898,4 +899,38 @@ export function parseSearchPanel(el: Element): ParsedSearchPanel {
     })
   }
   return { fields, class: el.getAttribute('class') ?? undefined }
+}
+
+function parseActivityBoxFields(root: Element): ViewField[] {
+  const templates = root.querySelector('templates')
+  if (!templates) return []
+  const box =
+    templates.querySelector('[t-name="activity-box"]') ??
+    templates.querySelector('div[t-name="activity-box"]')
+  if (!box) return []
+  return Array.from(box.querySelectorAll('field')).map((el) => ({
+    name: el.getAttribute('name') ?? '',
+    string: el.getAttribute('string') ?? undefined,
+    widget: el.getAttribute('widget') ?? undefined,
+    class: el.getAttribute('class') ?? undefined,
+  }))
+}
+
+/** Parse Odoo `<activity>` XML */
+export function parseActivityXml(xml: string): ParsedActivityView {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml')
+  const root = doc.documentElement
+  const fields = [
+    ...new Set(
+      Array.from(root.querySelectorAll(':scope > field'))
+        .map((el) => el.getAttribute('name') ?? '')
+        .filter(Boolean),
+    ),
+  ]
+  return {
+    type: 'activity',
+    string: root.getAttribute('string') ?? '',
+    fields,
+    boxFields: parseActivityBoxFields(root),
+  }
 }
