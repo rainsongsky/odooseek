@@ -2,6 +2,7 @@ import { read, searchRead } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { HR_DEPARTMENT_MODEL, HR_EMPLOYEE_MODEL, hrEmployeeRecordPath } from '../../lib/hr'
+import { resolveOdooImageSrc } from '../../lib/odoo-image'
 import type { FieldWidgetProps } from './index'
 
 export interface OrgNode {
@@ -44,6 +45,18 @@ export function findOrgRootId(nodes: OrgNode[], startId: number): number {
     current = byId.get(pid)
   }
   return startId
+}
+
+/** Pick org chart root on department form: manager chain, else first member. */
+export function resolveDepartmentOrgRootId(
+  members: OrgNode[],
+  departmentId: number,
+  managerId: number | false,
+): number {
+  if (managerId && members.some((n) => n.id === managerId)) {
+    return findOrgRootId(members, managerId)
+  }
+  return members[0]?.id ?? departmentId
 }
 
 export function buildTree(
@@ -96,7 +109,10 @@ async function fetchEmployeeOrgNodes(
   return searchRead<OrgNode[]>(HR_EMPLOYEE_MODEL, domain, [...ORG_FIELDS], 0, 200)
 }
 
-async function fetchDepartmentOrgNodes(departmentId: number): Promise<OrgNode[]> {
+async function fetchDepartmentOrgNodes(departmentId: number): Promise<{
+  nodes: OrgNode[]
+  managerId: number | false
+}> {
   const [dept] = await read<Array<{ manager_id: [number, string] | false }>>(
     HR_DEPARTMENT_MODEL,
     [departmentId],
@@ -104,7 +120,7 @@ async function fetchDepartmentOrgNodes(departmentId: number): Promise<OrgNode[]>
   )
   const managerId = Array.isArray(dept?.manager_id) ? dept.manager_id[0] : false
   if (!managerId) {
-    return searchRead<OrgNode[]>(
+    const nodes = await searchRead<OrgNode[]>(
       HR_EMPLOYEE_MODEL,
       [
         ['department_id', '=', departmentId],
@@ -114,17 +130,10 @@ async function fetchDepartmentOrgNodes(departmentId: number): Promise<OrgNode[]>
       0,
       200,
     )
+    return { nodes, managerId: false }
   }
-  return fetchEmployeeOrgNodes(managerId, departmentId)
-}
-
-function avatarUrl(node: OrgNode, model: string, recordId: number): string | undefined {
-  const img = node.image_128
-  if (typeof img === 'string' && img.length > 0) {
-    if (img.startsWith('data:') || img.startsWith('http') || img.startsWith('/')) return img
-    return `data:image/png;base64,${img}`
-  }
-  return `/api/web/image/${model}/${recordId}/image_128`
+  const nodes = await fetchEmployeeOrgNodes(managerId, departmentId)
+  return { nodes, managerId }
 }
 
 function TreeNode({
@@ -136,7 +145,11 @@ function TreeNode({
   model: string
   onNodeClick: (id: number) => void
 }) {
-  const src = avatarUrl(node, HR_EMPLOYEE_MODEL, node.id)
+  const src = resolveOdooImageSrc({
+    raw: node.image_128,
+    model: HR_EMPLOYEE_MODEL,
+    recordId: node.id,
+  })
   return (
     <li>
       <button
@@ -184,8 +197,8 @@ export function OrgChartWidget(props: FieldWidgetProps) {
     queryKey: ['odoo', 'orgchart', parentModel, employeeId, departmentId],
     queryFn: async () => {
       if (isDepartmentForm && recordId) {
-        const members = await fetchDepartmentOrgNodes(recordId)
-        const rootId = findOrgRootId(members, members[0]?.id ?? recordId)
+        const { nodes: members, managerId } = await fetchDepartmentOrgNodes(recordId)
+        const rootId = resolveDepartmentOrgRootId(members, recordId, managerId)
         return { members, rootId }
       }
       if (!employeeId) return null

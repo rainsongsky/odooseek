@@ -1,19 +1,7 @@
 import { createElement, useCallback, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
+import { resolveOdooImageFromRecord } from '../../lib/odoo-image'
 import type { FieldWidgetProps } from './index'
-
-function resolveBadgeImageSrc(
-  record: Record<string, unknown> | undefined,
-  model: string | undefined,
-  recordId: number | undefined,
-): string | undefined {
-  const raw = (record?.image_128 as string) || (record?.avatar_128 as string) || ''
-  if (!raw) return undefined
-  if (raw.startsWith('data:') || raw.startsWith('http') || raw.startsWith('/')) return raw
-  if (/^[A-Za-z0-9+/=]+$/.test(raw)) return `data:image/png;base64,${raw}`
-  if (model && recordId) return `/api/web/image/${model}/${recordId}/image_128`
-  return undefined
-}
 
 function BadgePreview({
   name,
@@ -49,7 +37,7 @@ export function BadgeWidget({ record, readOnly, model, recordId }: FieldWidgetPr
   const barcode = record?.barcode as string | undefined
   const name = (record?.display_name as string) || (record?.name as string) || ''
   const jobTitle = (record?.job_title as string) || (record?.job_id as [number, string])?.[1] || ''
-  const imageSrc = resolveBadgeImageSrc(record, model, recordId)
+  const imageSrc = resolveOdooImageFromRecord(record, model, recordId)
 
   const handlePrint = useCallback(() => {
     const host = printHostRef.current

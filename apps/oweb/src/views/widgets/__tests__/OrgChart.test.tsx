@@ -1,5 +1,11 @@
 import { describe, expect, test, vi } from 'vitest'
-import { buildTree, findOrgRootId, type OrgNode, parentIdOf } from '../OrgChart'
+import {
+  buildTree,
+  findOrgRootId,
+  type OrgNode,
+  parentIdOf,
+  resolveDepartmentOrgRootId,
+} from '../OrgChart'
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn().mockReturnValue({ data: null, isLoading: false }),
@@ -24,6 +30,14 @@ describe('OrgChart helpers', () => {
     const tree = buildTree(nodes, 1)
     expect(tree?.children[0]?.id).toBe(2)
     expect(tree?.children[0]?.children[0]?.id).toBe(3)
+  })
+
+  test('resolveDepartmentOrgRootId uses manager when present', () => {
+    expect(resolveDepartmentOrgRootId(nodes, 99, 3)).toBe(1)
+  })
+
+  test('resolveDepartmentOrgRootId falls back without manager', () => {
+    expect(resolveDepartmentOrgRootId(nodes, 99, false)).toBe(1)
   })
 })
 

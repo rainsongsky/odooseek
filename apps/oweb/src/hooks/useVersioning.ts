@@ -47,8 +47,12 @@ const VERSION_FIELDS = [
   'additional_note',
 ]
 
-export function useVersioning(employeeId: number | undefined): UseVersioningResult {
+export function useVersioning(
+  employeeId: number | undefined,
+  options?: { enabled?: boolean },
+): UseVersioningResult {
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null)
+  const queryEnabled = (options?.enabled ?? true) && !!employeeId
 
   const { data: versions = [], isLoading } = useQuery({
     queryKey: ['odoo', 'hr', 'versions', employeeId],
@@ -80,7 +84,7 @@ export function useVersioning(employeeId: number | undefined): UseVersioningResu
         additionalNote: rec.additional_note as string | undefined,
       }))
     },
-    enabled: !!employeeId,
+    enabled: queryEnabled,
     staleTime: 5 * 60_000,
   })
 

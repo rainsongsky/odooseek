@@ -1,8 +1,4 @@
 import type { FieldElement } from '@odooseek/odoo-client'
-
-/** Stable no-op callback — avoids creating new function references on every render. */
-export const NOOP = () => {}
-
 import { BadgeWidget } from './BadgeWidget'
 import {
   BooleanToggleWidget,
@@ -59,6 +55,9 @@ import {
   WebRibbonWidget,
 } from './utility'
 import { VersionTimeline } from './VersionTimeline'
+
+/** Stable no-op callback — avoids creating new function references on every render. */
+export const NOOP = () => {}
 
 export interface FieldWidgetProps {
   field: FieldElement
@@ -216,10 +215,6 @@ export function getFieldWidget(
 ): React.ComponentType<FieldWidgetProps> {
   const override = resolveWidgetOverride(field.widget)
   if (override) return override
-  // widget attribute from XML arch overrides type-based selection
-  if (field.widget && WIDGET_OVERRIDES[field.widget]) {
-    return WIDGET_OVERRIDES[field.widget]
-  }
   if (field.widget && TYPE_WIDGETS[field.widget]) {
     return TYPE_WIDGETS[field.widget]
   }

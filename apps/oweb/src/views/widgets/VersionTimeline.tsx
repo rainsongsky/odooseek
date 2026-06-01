@@ -23,7 +23,7 @@ function getStatus(v: { isCurrent: boolean; isFuture: boolean }): string {
 export function VersionTimeline({ record, recordId }: FieldWidgetProps) {
   const employeeId = recordId ?? (record?.id as number | undefined)
   const hrCtx = useHrVersion()
-  const local = useVersioning(employeeId)
+  const local = useVersioning(employeeId, { enabled: hrCtx == null })
 
   const versions = hrCtx?.versions ?? local.versions
   const currentVersionId = hrCtx?.currentVersionId ?? local.currentVersionId
