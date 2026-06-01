@@ -115,6 +115,12 @@ export type FormElement =
   | SeparatorElement
   | NewlineElement
   | LabelElement
+  | TitleBlockElement
+
+export interface TitleBlockElement {
+  type: 'title_block'
+  elements: FormElement[]
+}
 
 export interface HeaderElement {
   type: 'header'
@@ -185,6 +191,7 @@ export interface FieldElement {
   readonly?: string | boolean
   nolabel?: boolean
   colspan?: number
+  class?: string
   placeholder?: string
   mode?: string
   subViews?: {

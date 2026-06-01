@@ -1,6 +1,7 @@
 import type {
   ButtonBoxElement,
   ButtonElement,
+  FieldElement,
   FormElement,
   HeaderElement,
   OdooFieldMeta,
@@ -818,6 +819,9 @@ interface NodeProps {
   onAction?: (action: OdooAction) => void
   onButtonAction?: (btn: ButtonElement) => void
   level?: number
+  groupCol?: number
+  /** Span within parent `.o_group` grid (from field colspan). */
+  fieldGridSpan?: number
 }
 
 function NotebookRenderer({
@@ -950,18 +954,27 @@ function ButtonBoxRenderer({
   record,
   model,
   recordId,
+  inline = false,
 }: {
   buttons: StatButtonElement[]
   record?: Record<string, unknown>
   model: string
   recordId?: number
+  /** When true, render in sheet header (no bottom border). */
+  inline?: boolean
 }) {
   const [overflowOpen, setOverflowOpen] = useState(false)
   const primary = buttons.slice(0, MAX_BUTTON_BOX)
   const overflow = buttons.slice(MAX_BUTTON_BOX)
 
   return (
-    <div className="flex flex-wrap gap-1 border-b border-border-subtle pb-3 mb-3">
+    <div
+      className={
+        inline
+          ? 'o_form_button_box'
+          : 'flex flex-wrap gap-1 border-b border-border-subtle pb-3 mb-3'
+      }
+    >
       {primary.map((btn, bi) => (
         <StatButton key={bi} button={btn} record={record} model={model} recordId={recordId} />
       ))}
@@ -990,37 +1003,98 @@ function ButtonBoxRenderer({
   )
 }
 
+const TITLE_FIELD_NAMES = new Set(['name', 'display_name'])
+
+function isTitleField(el: FormElement): el is FieldElement {
+  if (el.type !== 'field') return false
+  if (!TITLE_FIELD_NAMES.has(el.name)) return false
+  const cls = el.class ?? ''
+  return !!(el.nolabel || cls.includes('oe_inline') || cls.includes('text-break'))
+}
+
+function partitionSheetElements(elements: FormElement[]) {
+  const buttonBoxes: ButtonBoxElement[] = []
+  const titleElements: FormElement[] = []
+  const body: FormElement[] = []
+  let titlePhase = true
+
+  for (const el of elements) {
+    if (el.type === 'button_box') {
+      buttonBoxes.push(el)
+      continue
+    }
+    if (el.type === 'title_block') {
+      titleElements.push(...el.elements)
+      continue
+    }
+    if (titlePhase && isTitleField(el)) {
+      titleElements.push(el)
+      continue
+    }
+    if (titlePhase && el.type === 'group') {
+      const inner = el.elements.filter((c) => c.type !== 'newline')
+      if (inner.length === 1 && isTitleField(inner[0])) {
+        titleElements.push(inner[0])
+        continue
+      }
+    }
+    titlePhase = false
+    body.push(el)
+  }
+
+  return { buttonBoxes, titleElements, body }
+}
+
 function renderGroupItems(
   elements: FormElement[],
-  ctx: Omit<NodeProps, 'elements'>,
+  ctx: Omit<NodeProps, 'elements'> & { groupCol?: number },
 ): React.ReactNode[] {
   const result: React.ReactNode[] = []
   let colIndex = 0
-  const maxCols = 2
+  const maxCols = Math.max(1, Math.min(ctx.groupCol ?? 2, 6))
 
   for (let i = 0; i < elements.length; i++) {
     const el = elements[i]
 
-    // newline: force column break (move to next row)
+    // newline: next field starts on a new row
     if (el.type === 'newline') {
       colIndex = 0
-      result.push(<div key={`nl-${i}`} className="col-span-full" />)
+      result.push(<div key={`nl-${i}`} style={{ gridColumn: '1 / -1' }} aria-hidden />)
       continue
     }
 
     const colspan = el.type === 'field' ? (el.colspan ?? 1) : 1
     if (colIndex + colspan > maxCols) {
       colIndex = 0
-      result.push(<div key={`wrap-${i}`} className="col-span-full" />)
+      result.push(<div key={`wrap-${i}`} style={{ gridColumn: '1 / -1' }} aria-hidden />)
     }
 
-    const itemKey = `${el.type === 'field' ? 'fld' : 'other'}-${i}`
+    const itemKey = `${el.type === 'field' ? 'fld' : el.type}-${i}`
+    const isField = el.type === 'field'
+
+    if (!isField) {
+      result.push(
+        <div key={itemKey} style={{ gridColumn: '1 / -1' }}>
+          <FormLayoutNode
+            elements={[el]}
+            record={ctx.record}
+            fields={ctx.fields}
+            model={ctx.model}
+            recordId={ctx.recordId}
+            editMode={ctx.editMode}
+            onChange={ctx.onChange}
+            onAction={ctx.onAction}
+            onButtonAction={ctx.onButtonAction}
+            level={ctx.level}
+            groupCol={ctx.groupCol}
+          />
+        </div>,
+      )
+      continue
+    }
+
     result.push(
-      <div
-        key={itemKey}
-        className="min-w-0"
-        style={el.type === 'field' && colspan > 1 ? { gridColumn: `span ${colspan}` } : undefined}
-      >
+      <div key={itemKey} className="o_group_item" style={{ display: 'contents' }}>
         <FormLayoutNode
           elements={[el]}
           record={ctx.record}
@@ -1032,6 +1106,8 @@ function renderGroupItems(
           onAction={ctx.onAction}
           onButtonAction={ctx.onButtonAction}
           level={ctx.level}
+          groupCol={ctx.groupCol}
+          fieldGridSpan={colspan > 1 ? colspan : undefined}
         />
       </div>,
     )
@@ -1052,6 +1128,8 @@ function FormLayoutNode({
   onAction,
   onButtonAction,
   level = 0,
+  groupCol,
+  fieldGridSpan,
 }: NodeProps) {
   return (
     <>
@@ -1059,21 +1137,75 @@ function FormLayoutNode({
         switch (el.type) {
           case 'header':
             return null
-          case 'sheet':
+          case 'sheet': {
+            const { buttonBoxes, titleElements, body } = partitionSheetElements(el.elements)
             return (
-              <FormLayoutNode
-                key={`sheet-${i}`}
-                elements={el.elements}
-                record={record}
-                fields={fields}
-                model={model}
-                recordId={recordId}
-                editMode={editMode}
-                onChange={onChange}
-                onAction={onAction}
-                onButtonAction={onButtonAction}
-                level={level + 1}
-              />
+              <div key={`sheet-${i}`}>
+                {(buttonBoxes.length > 0 || titleElements.length > 0) && (
+                  <div className="o_form_sheet_top">
+                    {titleElements.length > 0 && (
+                      <div className="o_form_title">
+                        <FormLayoutNode
+                          elements={titleElements}
+                          record={record}
+                          fields={fields}
+                          model={model}
+                          recordId={recordId}
+                          editMode={editMode}
+                          onChange={onChange}
+                          onAction={onAction}
+                          onButtonAction={onButtonAction}
+                          level={level + 1}
+                        />
+                      </div>
+                    )}
+                    {buttonBoxes.map((bb, bbi) => {
+                      const visibleBtns = bb.buttons.filter((b) => isButtonVisible(b, record))
+                      if (visibleBtns.length === 0) return null
+                      return (
+                        <ButtonBoxRenderer
+                          key={`sheet-bbox-${bbi}`}
+                          buttons={visibleBtns}
+                          record={record}
+                          model={model}
+                          recordId={recordId}
+                          inline
+                        />
+                      )
+                    })}
+                  </div>
+                )}
+                <FormLayoutNode
+                  elements={body}
+                  record={record}
+                  fields={fields}
+                  model={model}
+                  recordId={recordId}
+                  editMode={editMode}
+                  onChange={onChange}
+                  onAction={onAction}
+                  onButtonAction={onButtonAction}
+                  level={level + 1}
+                />
+              </div>
+            )
+          }
+          case 'title_block':
+            return (
+              <div key={`title-${i}`} className="o_form_title">
+                <FormLayoutNode
+                  elements={el.elements}
+                  record={record}
+                  fields={fields}
+                  model={model}
+                  recordId={recordId}
+                  editMode={editMode}
+                  onChange={onChange}
+                  onAction={onAction}
+                  onButtonAction={onButtonAction}
+                  level={level + 1}
+                />
+              </div>
             )
           case 'button': {
             const btn = el as ButtonElement
@@ -1112,12 +1244,18 @@ function FormLayoutNode({
           }
           case 'group': {
             if (evalModifier(el.invisible, record)) return null
-            const colClass =
-              el.col === 3 ? 'o_group_col_3' : el.col === 4 ? 'o_group_col_4' : 'o_group_col_2'
+            const col = Math.max(1, Math.min(el.col ?? 2, 6))
             return (
-              <div key={`grp-${i}`} className={`o_group ${colClass}`}>
+              <div
+                key={`grp-${i}`}
+                className="o_group"
+                style={{ gridTemplateColumns: `repeat(${col}, minmax(0, 1fr))` }}
+                data-cols={col}
+              >
                 {el.string && (
-                  <div className="o_horizontal_separator col-span-full">{el.string}</div>
+                  <div className="o_horizontal_separator" style={{ gridColumn: '1 / -1' }}>
+                    {el.string}
+                  </div>
                 )}
                 {renderGroupItems(el.elements, {
                   record,
@@ -1129,6 +1267,7 @@ function FormLayoutNode({
                   onAction,
                   onButtonAction,
                   level: level + 1,
+                  groupCol: col,
                 })}
               </div>
             )
@@ -1167,7 +1306,8 @@ function FormLayoutNode({
                 typeof el.required === 'string' ? evalModifier(el.required, record) : el.required
             }
             const deco = getDecoClass(el as unknown as Record<string, unknown>, record)
-            const colSpanStyle = el.colspan ? { gridColumn: `span ${el.colspan}` } : undefined
+            const span = fieldGridSpan ?? el.colspan
+            const colSpanStyle = span ? { gridColumn: `span ${span}` } : undefined
             if (el.nolabel) {
               return (
                 <div key={`fld-${i}`} className={deco} style={colSpanStyle}>

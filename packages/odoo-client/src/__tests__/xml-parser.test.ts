@@ -334,6 +334,21 @@ describe('parseFormXml', () => {
     expect(box.buttons[1].content?.textFallback).toBe('Total')
   })
 
+  test('parses oe_title div as title_block', () => {
+    const xml = `<form><sheet>
+      <div class="oe_title">
+        <h1><field name="name" nolabel="1" class="oe_inline"/></h1>
+      </div>
+    </sheet></form>`
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: { type: 'title_block'; elements: { type: 'field'; name: string }[] }[]
+    }
+    expect(sheet.elements[0].type).toBe('title_block')
+    expect(sheet.elements[0].elements[0].name).toBe('name')
+  })
+
   test('parses field with colspan attribute', () => {
     const xml = `<form><group col="4"><field name="description" colspan="4"/></group></form>`
 

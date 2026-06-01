@@ -29,6 +29,6 @@ export type {
   ToolbarAction, ViewToolbar, IrFilterRecord, SearchPanelField, SearchPanelCategory, ParsedSearchPanel,
   ReadGroupResult, O2mCommand, O2mSubView, O2mFormSubView, KanbanProgressbar,
   ControlButton, ButtonBoxElement, StatButtonElement, StatButtonContent,
-  SeparatorElement, NewlineElement, LabelElement, SheetElement,
+  SeparatorElement, NewlineElement, LabelElement, SheetElement, TitleBlockElement,
   ListButtonElement, ListButtonGroup,
 } from './types'

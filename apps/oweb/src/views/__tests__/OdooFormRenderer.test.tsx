@@ -760,4 +760,56 @@ describe('OdooFormRenderer', () => {
       expect(checkbox).toBeChecked()
     })
   })
+
+  test('renders sheet title row and inline button box', async () => {
+    const leadArch = `<form string="Lead">
+      <sheet>
+        <div class="oe_button_box" name="button_box">
+          <button name="action_open" type="object" class="oe_stat_button" icon="fa-pencil">
+            <field name="meeting_count" widget="statinfo" string="Meetings"/>
+          </button>
+        </div>
+        <group>
+          <field name="name" nolabel="1" class="oe_inline"/>
+        </group>
+        <group col="2">
+          <field name="email"/>
+          <field name="state"/>
+        </group>
+      </sheet>
+    </form>`
+
+    const leadFields: Record<string, OdooFieldMeta> = {
+      ...fields,
+      name: { ...fields.name, string: 'Subject' },
+      meeting_count: {
+        name: 'meeting_count',
+        type: 'integer',
+        string: 'Meetings',
+        required: false,
+        readonly: true,
+        store: true,
+        searchable: false,
+        sortable: false,
+      },
+    }
+
+    mockCallKw.mockResolvedValue([
+      { id: 1, name: 'Big Deal', email: 'a@b.com', state: 'draft', meeting_count: 3 },
+    ])
+
+    const { container } = render(
+      <OdooFormRenderer model="crm.lead" arch={leadArch} fields={leadFields} recordId={1} />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Big Deal')).toBeInTheDocument()
+    })
+
+    expect(container.querySelector('.o_form_sheet_top')).toBeTruthy()
+    expect(container.querySelector('.o_form_title')).toBeTruthy()
+    expect(container.querySelector('.o_form_button_box')).toBeTruthy()
+    expect(screen.getByText('Meetings')).toBeInTheDocument()
+  })
 })
