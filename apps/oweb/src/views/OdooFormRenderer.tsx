@@ -1018,7 +1018,7 @@ function renderGroupItems(
     result.push(
       <div
         key={itemKey}
-        className={el.type === 'field' ? 'o_inner_group' : ''}
+        className="min-w-0"
         style={el.type === 'field' && colspan > 1 ? { gridColumn: `span ${colspan}` } : undefined}
       >
         <FormLayoutNode
@@ -1115,7 +1115,7 @@ function FormLayoutNode({
             const colClass =
               el.col === 3 ? 'o_group_col_3' : el.col === 4 ? 'o_group_col_4' : 'o_group_col_2'
             return (
-              <div key={`grp-${i}`} className={colClass}>
+              <div key={`grp-${i}`} className={`o_group ${colClass}`}>
                 {el.string && (
                   <div className="o_horizontal_separator col-span-full">{el.string}</div>
                 )}
@@ -1211,12 +1211,8 @@ function FormLayoutNode({
               )
             }
             return (
-              <div
-                key={`fld-${i}`}
-                className={`grid items-baseline gap-x-3 ${deco ?? ''}`}
-                style={{ gridTemplateColumns: 'auto 1fr', ...colSpanStyle }}
-              >
-                <label className="o_form_label truncate py-1 text-right">
+              <div key={`fld-${i}`} className={`o_inner_group ${deco ?? ''}`} style={colSpanStyle}>
+                <label className="o_form_label py-1">
                   {el.string || meta.string || el.name}
                   {editMode && fieldRequired && <span className="ml-0.5 text-danger">*</span>}
                   {meta.help && <HelpPopover text={meta.help} />}

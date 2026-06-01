@@ -220,9 +220,12 @@ body,
 
 .o_inner_group {
   display: grid;
-  grid-template-columns: fit-content(150px) minmax(0, 1fr);
+  grid-template-columns: minmax(max-content, 11rem) minmax(0, 1fr);
   gap: 4px 12px;
   margin-bottom: 4px;
+  width: 100%;
+  min-width: 0;
+  align-items: baseline;
 }
 
 .o_inner_group .o_form_label {
@@ -231,8 +234,6 @@ body,
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
