@@ -66,10 +66,7 @@ function ActivityRecordBox({
   onClick?: () => void
 }) {
   const recordId = record.id as number
-  const avatarSrc = resolveOdooImageFromRecord(record, model, recordId, [
-    'avatar_128',
-    'image_128',
-  ])
+  const avatarSrc = resolveOdooImageFromRecord(record, model, recordId, ['avatar_128', 'image_128'])
 
   const lines =
     boxFields.length > 0
@@ -96,7 +93,12 @@ function ActivityRecordBox({
       className="flex w-full min-w-[220px] cursor-pointer items-center gap-2 rounded px-2 py-2 text-left transition-colors hover:bg-hover"
     >
       {avatarSrc ? (
-        <img src={avatarSrc} alt="" className="h-8 w-8 shrink-0 rounded object-cover" loading="lazy" />
+        <img
+          src={avatarSrc}
+          alt=""
+          className="h-8 w-8 shrink-0 rounded object-cover"
+          loading="lazy"
+        />
       ) : (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-surface text-xs text-text-muted">
           ?
@@ -116,11 +118,7 @@ function ActivityRecordBox({
   )
 }
 
-function ActivityCell({
-  group,
-}: {
-  group: OdooActivityGroupCell
-}) {
+function ActivityCell({ group }: { group: OdooActivityGroupCell }) {
   const state = group.state || 'planned'
   const cellClass = STATE_CELL_CLASS[state] ?? 'bg-surface text-text-primary'
   const count = activityCount(group)
@@ -132,7 +130,11 @@ function ActivityCell({
       className={`flex h-full min-h-[4.5rem] cursor-default flex-col justify-between p-2 text-xs ${cellClass}`}
       title={summary || undefined}
     >
-      {summary ? <div className="line-clamp-2 opacity-90">{summary}</div> : <div className="flex-1" />}
+      {summary ? (
+        <div className="line-clamp-2 opacity-90">{summary}</div>
+      ) : (
+        <div className="flex-1" />
+      )}
       <div className="mt-2 flex items-end justify-between gap-1">
         <span>{dateLabel}</span>
         {count > 1 ? (
@@ -251,12 +253,17 @@ export function OdooActivityRenderer({
                 {activityTypes.map((type) => {
                   const group = activityGroupFor(grouped, resId, type.id)
                   return (
-                    <td key={type.id} className="h-px border border-border-subtle p-0 align-stretch">
+                    <td
+                      key={type.id}
+                      className="h-px border border-border-subtle p-0 align-stretch"
+                    >
                       {group && group.state ? (
                         <ActivityCell group={group} />
                       ) : (
                         <div className="flex h-full min-h-[4.5rem] items-center justify-center text-text-muted hover:bg-hover">
-                          <span className="text-lg opacity-0 transition-opacity hover:opacity-100">+</span>
+                          <span className="text-lg opacity-0 transition-opacity hover:opacity-100">
+                            +
+                          </span>
                         </div>
                       )}
                     </td>
