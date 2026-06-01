@@ -1,10 +1,29 @@
 # HR 模块原生功能对齐
 
-> **版本**: 1.0
+> **版本**: 1.1
 > **日期**: 2026-06-01
 > **前置**: Phase 1-40 已完成（泛型视图引擎 + CRUD + Calendar/Form/Kanban/List/Pivot/Graph）
 > **目标**: 将前端功能对齐 Odoo 19 `addons/hr` 模块的全部功能
 > **Odoo 参照**: `addons/hr/models/`, `addons/hr/views/`, `addons/hr/security/`
+
+---
+
+## 实施状态总览（2026-06-01）
+
+Phase 41–47 前端交付已合入 `main`（PR [#158](https://github.com/FDE-GROUP/odooseek/pull/158)–[#165](https://github.com/FDE-GROUP/odooseek/pull/165)）；全视图主题对齐见 PR [#150](https://github.com/FDE-GROUP/odooseek/pull/150)（#149）。
+
+| Phase | Issue | 状态 | 交付摘要 |
+|:-----:|:-----:|:----:|----------|
+| 41 基础对齐 | #151 | ✅ 已关闭 | `/hr/*` 路由、codegen 10 模型、`Navbar`/`HomeMenu` 映射 |
+| 42 组织图 + 考勤 | #152 | ✅ 已关闭 | `OrgChartWidget`、`PresenceIcon` / Kanban overlay |
+| 43 版本化 | #153 | ✅ 已关闭 | `HrVersionProvider`、`VersionTimeline`、历史只读预览 |
+| 44 工牌打印 | #154 | ✅ 已关闭 | `BadgeWidget` 浏览器打印（非 QWeb PDF） |
+| 45 Wizard | #155 | ✅ 已关闭 | `WizardDialog` + `hr-wizards` 占位步骤 |
+| 46 安全 + 目录 | #156 | ✅ 已关闭 | `groups.ts` / `hasGroup`、`hr.employee.public` 目录 |
+| 47 设置 + Demo | #157 | ✅ 已关闭 | Settings HR 区块、`load-hr-demo.ts` |
+| — 硬化迭代 | #151 | ✅ PR #165 | XML `groups`、深链、`odoo-image`、widget 文档 v2.0 |
+
+**仍待后续（非阻塞）**：QWeb PDF 工牌、`react-d3-tree` 级组织图、后端专属设置面板、部分 wizard 方法名与 Odoo 19 真机对齐。
 
 ---
 
@@ -28,46 +47,38 @@
 | 按钮操作（object/action/special） | ✅ | 通用引擎，自动处理 hr.button 等 |
 | 表达式求值（invisible/readonly/required） | ✅ | 通用引擎，自动处理 groups 条件（需后端配合） |
 
-### 1.2 当前状态基线
+### 1.2 前端基线（PR #158–#165 之后）
 
-**已存在的 HR 相关基础设施**：
+**已具备**：
 
-- 无专属 `hr/` 路由
-- codegen 未包含 `hr.employee`/`hr.department`/`hr.job` 等模型
-- 无 `hr.version` 版本化引擎支持
-- 无组织架构图 widget
-- 无考勤状态图标系统
-- 无印章/报告打印系统
-- 无 wizard 系统（离职/薪资分配/合同模板）
-- 无 SQL VIEW 代理（hr.employee.public）
-- 无后端 HR 设置面板（res.config.settings 扩展）
+- 专属路由：`/hr/employees`、`/hr/employee/:id`、`/hr/departments`、`/hr/department/:id`、`/hr/directory`
+- `packages/odoo-codegen` + `odoo-types`：10 个 HR 模型（`bun run generate` 可对真机再生）
+- Widget：`org_chart`、`presence_icon`、`version_timeline`、`badge_print`（含 Odoo arch 别名）
+- Session 组：`hasGroup` / `useHasGroup`；表单 arch `groups` 属性过滤
+- `hr.employee.public` 目录列表；Settings 页 HR 入口与权限展示
+- Wizard 对话框框架；版本时间线 + 表单只读预览
 
-### 1.3 未对齐清单（按优先级）
+**仍缺或简化**：
 
-| # | 功能 | 复杂度 | Odoo 参照 | 依赖 |
-|:--|------|:------:|-----------|:----:|
-| 1 | 专属路由 + 菜单 | 低 | hr_views.xml | 无 |
-| 2 | codegen 生成 hr.* 类型 | 低 | hr_employee.py 等 | 无 |
-| 3 | 组织架构图 widget | 中 | hr_department_chart + form 右栏 | 无 |
-| 4 | hr.employee.public SQL VIEW 代理 | 中 | hr_employee_public.py | 后端 |
-| 5 | 考勤状态图标（看板+form） | 中 | hr_employee.py `_compute_presence_state` | 后端 |
-| 6 | 印章打印（QWeb-PDF badge） | 中 | report/hr_employee_badge.xml | 报告系统 |
-| 7 | hr.version 版本化架构 | 大 | hr_version.py + timeline widget | 无 |
-| 8 | 离职向导 | 中 | hr/departure/wizard | 无 |
-| 9 | 薪资分配 UI | 中 | bank allocation wizard | 无 |
-| 10 | 合同模板加载 wizard | 中 | hr/version/wizard | 无 |
-| 11 | 入职/离职计划按钮 | 低 | plan_wizard_action | 无 |
-| 12 | 考勤设置面板 | 低 | res_config_settings_views.xml | 无 |
-| 13 | 用户 ↔ 员工同步 | 中 | res_users.py write/create | 后端 |
-| 14 | 部门自动订阅 discuss channel | 低 | discuss_channel.py | 后端 |
-| 15 | 合同到期/工作许可提醒 cron | 低 | ir_cron_data_employee_* | 后端 |
-| 16 | 演示数据加载 | 低 | hr_demo.xml | 无 |
+- 印章：客户端打印，未接 Odoo `report/hr_employee_badge`
+- 组织图：自研横向树，非 Odoo `web_graph` / d3
+- 后端：`res.config.settings` HR 面板、cron、部分 wizard RPC 与 Odoo 19 完全一致
+
+### 1.3 后续 backlog（按优先级）
+
+| # | 功能 | 复杂度 | 说明 |
+|:--|------|:------:|------|
+| 1 | QWeb-PDF 工牌 | 中 | 当前为 `BadgeWidget` 浏览器打印 |
+| 2 | 组织图增强（d3 / 缩放） | 大 | 见 `WIDGET_SYSTEM_DESIGN.md` |
+| 3 | Wizard 与 Odoo 19 方法名对齐 | 中 | `hr-wizards.ts` 占位需真机验证 |
+| 4 | 后端 HR 设置 / cron / 用户同步 | 中–大 | 纯后端或 BFF 扩展 |
+| 5 | 入职/离职计划、薪资分配等次要 wizard | 中 | Phase 45 框架已有，步骤待补 |
 
 ---
 
-## 二、Phase 41 — 基础对齐（P0）
+## 二、Phase 41 — 基础对齐（P0）✅
 
-> Issue: #151
+> Issue: #151（已关闭）· PR [#158](https://github.com/FDE-GROUP/odooseek/pull/158)、[#165](https://github.com/FDE-GROUP/odooseek/pull/165)
 
 ### 2.1 专属路由（`apps/oweb/src/routes/hr/`）
 
@@ -208,9 +219,9 @@ apps/oweb/src/routes/hr/
 
 ---
 
-## 三、Phase 42 — 组织架构图 + 考勤状态（P1）
+## 三、Phase 42 — 组织架构图 + 考勤状态（P1）✅
 
-> Issue: #152
+> Issue: #152（已关闭）· PR [#159](https://github.com/FDE-GROUP/odooseek/pull/159)、[#165](https://github.com/FDE-GROUP/odooseek/pull/165)
 
 ### 3.1 组织架构图（新 widget：`apps/oweb/src/views/widgets/orgchart.tsx`）
 
@@ -309,9 +320,10 @@ apps/oweb/src/views/widgets/__tests__/PresenceIcon.test.tsx
 
 ---
 
-## 四、Phase 43 — hr.version 版本化架构（P1-P2）
+## 四、Phase 43 — hr.version 版本化架构（P1-P2）✅
 
-> Issue: #153
+> Issue: #153（已关闭）· PR [#160](https://github.com/FDE-GROUP/odooseek/pull/160)、[#165](https://github.com/FDE-GROUP/odooseek/pull/165)
+
 > **复杂度**: 高（架构级变更）
 
 ### 4.1 当前局限
@@ -383,7 +395,9 @@ apps/oweb/src/views/widgets/__tests__/VersionTimeline.test.tsx
 
 ---
 
-## 五、Phase 44 — 印章打印 + 报告（P2）
+## 五、Phase 44 — 印章打印 + 报告（P2）✅（简化）
+
+> Issue: #154（已关闭）· PR [#161](https://github.com/FDE-GROUP/odooseek/pull/161) — 浏览器打印，非 Odoo PDF
 
 > Issue: #154
 
@@ -426,7 +440,9 @@ await generateReport('hr.action_report_employee_badge', [employeeId])
 
 ---
 
-## 六、Phase 45 — Wizard 系统（P2）
+## 六、Phase 45 — Wizard 系统（P2）✅（框架）
+
+> Issue: #155（已关闭）· PR [#162](https://github.com/FDE-GROUP/odooseek/pull/162)
 
 > Issue: #155
 
@@ -494,7 +510,9 @@ apps/oweb/src/components/__tests__/WizardDialog.test.tsx
 
 ---
 
-## 七、Phase 46 — 安全 + 公开视图（P2）
+## 七、Phase 46 — 安全 + 公开视图（P2）✅
+
+> Issue: #156（已关闭）· PR [#163](https://github.com/FDE-GROUP/odooseek/pull/163)、[#165](https://github.com/FDE-GROUP/odooseek/pull/165)
 
 > Issue: #156
 
@@ -532,7 +550,9 @@ OdooSeek 前端无法直接读取 SQL VIEW。需要方法：
 
 ---
 
-## 八、Phase 47 — 设置面板 + 数据（P3）
+## 八、Phase 47 — 设置面板 + 数据（P3）✅
+
+> Issue: #157（已关闭）· PR [#163](https://github.com/FDE-GROUP/odooseek/pull/163)
 
 > Issue: #157
 
@@ -701,7 +721,7 @@ apps/oweb/src/
 cd apps/oweb
 bun run build     # tsc + vite build
 bun run lint      # biome check
-bun run test      # vitest（291+ tests）
+bun run test      # vitest（326+ tests）
 ```
 
 **手动验证**（使用 `hr.employee` 模型）：
@@ -726,7 +746,7 @@ Phase 46（安全）    Phase 44（印章打印）
 Phase 43（版本化）→ Phase 45（wizard）→ Phase 47（设置+数据）
 ```
 
-**最短可用路径**：Phase 41 → Phase 46 → Phase 42 → 其余可选
+**最短可用路径（已完成）**：Phase 41 → Phase 46 → Phase 42 → 43–47；后续以 backlog（§1.3）为主。
 
 ---
 
@@ -742,6 +762,6 @@ Phase 43（版本化）→ Phase 45（wizard）→ Phase 47（设置+数据）
 
 ---
 
-**文档版本**: 1.0
+**文档版本**: 1.1
 **更新日期**: 2026-06-01
-**关联 Issues**: #151 (Phase 41), #152 (Phase 42), #153 (Phase 43), #154 (Phase 44), #155 (Phase 45), #156 (Phase 46), #157 (Phase 47)
+**关联 Issues**: #151–#157（均已关闭）· 硬化 PR [#165](https://github.com/FDE-GROUP/odooseek/pull/165)
