@@ -5,6 +5,9 @@ import { resolveMenuRoute } from './menu-navigation'
 export const HR_EMPLOYEE_MODEL = 'hr.employee'
 export const HR_EMPLOYEE_PUBLIC_MODEL = 'hr.employee.public'
 export const HR_DEPARTMENT_MODEL = 'hr.department'
+export const HR_JOB_MODEL = 'hr.job'
+export const HR_WORK_LOCATION_MODEL = 'hr.work.location'
+export const MAIL_ACTIVITY_PLAN_MODEL = 'mail.activity.plan'
 export const HR_VERSION_MODEL = 'hr.version'
 
 /** Fields safe for directory / public employee views (Odoo hr.employee.public). */
