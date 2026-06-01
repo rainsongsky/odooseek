@@ -52,8 +52,9 @@ odooseek/
 │   └── odoo-core/              # 共享类型与工具
 │
 ├── docker/                     # Docker 编排 (Odoo + PostgreSQL)
-├── docs/                       # 设计文档与开发计划
 └── CLAUDE.md                   # 开发规范
+
+> `docs/` 为本地设计文档目录（已 `.gitignore`），**不会**推送到 [GitHub 仓库](https://github.com/FDE-GROUP/odooseek)。
 ```
 
 ## 功能特性

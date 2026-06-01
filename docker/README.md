@@ -209,7 +209,7 @@ bun run generate --check
 | `Login failed: 401` 且 BFF 不可达 | `server` 未启动或端口未映射 | `docker compose ps`，确认 `3000:3000` 或改 `ODOO_URL` |
 | `index.ts` 只剩 HR 导出 | 使用了 `--models hr.*` 未再全量生成 | 再执行一次无参数的 `bun run generate` |
 
-完整说明见 [`docs/ODOO_CODEGEN_AND_TYPES.md`](../docs/ODOO_CODEGEN_AND_TYPES.md)（设计目的、原理、用法）；实现计划见 [`docs/plans/CODEGEN_TECHNICAL_DESIGN.md`](../docs/plans/CODEGEN_TECHNICAL_DESIGN.md)。
+更完整的设计说明在本地 `docs/`（已 gitignore，不入远程仓库）；克隆后可在工作区查看 `docs/ODOO_CODEGEN_AND_TYPES.md` 等文件。
 
 ## 注意事项
 

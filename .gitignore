@@ -46,7 +46,7 @@ docker_*
 # OS
 .DS_Store
 
-# Local docs
+# Local design docs — never commit (do not use `git add -f docs/`)
 docs/
 
 # Test artifacts
