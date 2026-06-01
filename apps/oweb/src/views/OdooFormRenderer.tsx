@@ -1026,7 +1026,8 @@ function isAvatarField(el: FormElement): el is FieldElement {
 
 function isGroupColumnsLayout(elements: FormElement[]): boolean {
   const items = elements.filter((e) => e.type !== 'newline')
-  return items.length >= 2 && items.every((e) => e.type === 'group')
+  if (items.length < 2) return false
+  return items.every((e) => e.type === 'group')
 }
 
 function partitionSheetElements(elements: FormElement[]) {
@@ -1058,6 +1059,10 @@ function partitionSheetElements(elements: FormElement[]) {
     }
     if (titlePhase && el.type === 'group') {
       const inner = el.elements.filter((c) => c.type !== 'newline')
+      if (inner.length === 1 && isTitleField(inner[0])) {
+        titleElements.push(inner[0])
+        continue
+      }
       const avatars = inner.filter(isAvatarField)
       const titles = inner.filter(isTitleField)
       const rest = inner.filter((c) => !isAvatarField(c) && !isTitleField(c))
@@ -1159,7 +1164,6 @@ function FormLayoutNode({
   onAction,
   onButtonAction,
   level = 0,
-  groupCol,
   fieldGridSpan,
 }: NodeProps) {
   return (

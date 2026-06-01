@@ -14,6 +14,7 @@ import {
   FIELD_TYPE_WIDTHS,
   getColumnPrefs,
   getDecorationClass,
+  isListCellImage,
   parseListXml,
   readGroup,
   renderCell,
@@ -30,6 +31,23 @@ import { useDialog } from '../hooks/useDialog'
 import { useRecordActions } from '../hooks/useRecordActions'
 import type { ListPagerInfo } from './list-pager'
 import { getFieldWidget } from './widgets'
+
+function renderListCellContent(content: ReturnType<typeof renderCell>): React.ReactNode {
+  if (isListCellImage(content)) {
+    return (
+      <img
+        src={content.src}
+        alt=""
+        className="h-8 w-8 rounded object-cover"
+        loading="lazy"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none'
+        }}
+      />
+    )
+  }
+  return content
+}
 
 interface ListRendererProps {
   model: string
@@ -935,7 +953,9 @@ export function OdooListRenderer({
                 >
                   {isGroupField ? (
                     <>
-                      <span className="font-medium">{renderCell(val, meta, model)}</span>
+                      <span className="font-medium">
+                        {renderListCellContent(renderCell(val, meta, model))}
+                      </span>
                       <span className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-text-muted">
                         {String(count)}
                       </span>
@@ -964,7 +984,9 @@ export function OdooListRenderer({
                     </>
                   ) : (
                     <span className="text-text-muted">
-                      {val !== undefined && val !== null ? renderCell(val, meta, model) : ''}
+                      {val !== undefined && val !== null
+                        ? renderListCellContent(renderCell(val, meta, model))
+                        : ''}
                     </span>
                   )}
                 </td>
@@ -1050,7 +1072,14 @@ export function OdooListRenderer({
                           .filter(Boolean)
                           .join(' ')}
                       >
-                        {renderCell(record[col.name], fields[col.name], model, record.id as number)}
+                        {renderListCellContent(
+                          renderCell(
+                            record[col.name],
+                            fields[col.name],
+                            model,
+                            record.id as number,
+                          ),
+                        )}
                       </td>
                     )
                   })}
@@ -1610,11 +1639,13 @@ export function OdooListRenderer({
                             <td
                               key={`d-${col.name}-${ci}`}
                               title={(() => {
-                                const t = renderCell(
-                                  record[col.name],
-                                  fields[col.name],
-                                  model,
-                                  record.id as number,
+                                const t = renderListCellContent(
+                                  renderCell(
+                                    record[col.name],
+                                    fields[col.name],
+                                    model,
+                                    record.id as number,
+                                  ),
                                 )
                                 if (typeof t !== 'string') return undefined
                                 return t.length > 30 ? t : undefined
@@ -1641,11 +1672,13 @@ export function OdooListRenderer({
                                   : undefined
                               }
                             >
-                              {renderCell(
-                                record[col.name],
-                                fields[col.name],
-                                model,
-                                record.id as number,
+                              {renderListCellContent(
+                                renderCell(
+                                  record[col.name],
+                                  fields[col.name],
+                                  model,
+                                  record.id as number,
+                                ),
                               )}
                             </td>
                           )

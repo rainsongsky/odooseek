@@ -416,12 +416,6 @@ body,
   overflow-x: auto;
 }
 
-.o_group_col_2,
-.o_group_col_3,
-.o_group_col_4 {
-  /* column count set inline via group@col on .o_group */
-}
-
 .o_horizontal_separator {
   border-bottom: 1px solid var(--color-border-default);
   margin: 1rem 0 0.75rem;
@@ -451,11 +445,6 @@ body,
     grid-template-columns: 1fr;
   }
   .o_group_nested_row {
-    grid-template-columns: 1fr !important;
-  }
-  .o_group_col_2,
-  .o_group_col_3,
-  .o_group_col_4 {
     grid-template-columns: 1fr !important;
   }
 }

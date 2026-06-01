@@ -14,7 +14,14 @@ export { formatFloatTime, parseFloatTime, formatPercentage, parsePercentage, for
 
 export { cacheKey, getCachedViews, setCachedViews, getColumnPrefs, setColumnPrefs } from './view-cache'
 
-export { renderCell, FIELD_TYPE_WIDTHS, DEFAULT_COL_WIDTH } from './list-formatters'
+export {
+  renderCell,
+  isListCellImage,
+  FIELD_TYPE_WIDTHS,
+  DEFAULT_COL_WIDTH,
+  type ListCellImage,
+  type ListCellDisplay,
+} from './list-formatters'
 
 export { readModel, searchReadModel, readSingleModel, writeModel, createModel, unlinkModel, defaultGetModel } from './typed-api'
 export type { RpcContext } from './typed-api'

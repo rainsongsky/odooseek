@@ -15,7 +15,24 @@ export const FIELD_TYPE_WIDTHS: Record<string, number> = {
 }
 export const DEFAULT_COL_WIDTH = 160
 
-export function renderCell(value: unknown, meta?: OdooFieldMeta, model?: string, recordId?: number): React.ReactNode {
+/** Serializable list cell image; rendered by the host UI (e.g. oweb). */
+export type ListCellImage = {
+  type: 'list-cell-image'
+  src: string
+}
+
+export type ListCellDisplay = string | ListCellImage
+
+export function isListCellImage(value: unknown): value is ListCellImage {
+  return typeof value === 'object' && value !== null && (value as ListCellImage).type === 'list-cell-image'
+}
+
+export function renderCell(
+  value: unknown,
+  meta?: OdooFieldMeta,
+  model?: string,
+  recordId?: number,
+): ListCellDisplay {
   if (value === null || value === undefined || value === false) return ''
   if (typeof value === 'boolean') return value ? '✓' : ''
   if (typeof value === 'string') {
@@ -45,25 +62,23 @@ export function renderCell(value: unknown, meta?: OdooFieldMeta, model?: string,
   return JSON.stringify(value)
 }
 
-function renderImageFromUrl(model?: string, recordId?: number, meta?: OdooFieldMeta, value?: string): React.ReactNode {
+function renderImageFromUrl(
+  model?: string,
+  recordId?: number,
+  meta?: OdooFieldMeta,
+  value?: string,
+): ListCellDisplay {
   if (!model || !recordId) {
     if (value && /^[A-Za-z0-9+/=]+$/.test(value)) {
-      return <img src={`data:image/png;base64,${value}`} alt="" className="h-8 w-8 rounded object-cover" />
+      return { type: 'list-cell-image', src: `data:image/png;base64,${value}` }
     }
     return '🖼'
   }
   const fieldName = meta?.name ?? ''
-  return (
-    <img
-      src={`/api/web/image/${model}/${recordId}/${fieldName}`}
-      alt=""
-      className="h-8 w-8 rounded object-cover"
-      loading="lazy"
-      onError={(e) => {
-        ;(e.target as HTMLImageElement).style.display = 'none'
-      }}
-    />
-  )
+  return {
+    type: 'list-cell-image',
+    src: `/api/web/image/${model}/${recordId}/${fieldName}`,
+  }
 }
 
 function formatMonetary(value: number): string {

@@ -146,6 +146,8 @@ function parseFormElements(container: Element): FormElement[] {
           elements: parseFormElements(child),
         })
       }
+    } else if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+      elements.push(...parseFormElements(child))
     } else if (tag === 'field') {
       const fieldEl = parseFieldElement(child)
 
