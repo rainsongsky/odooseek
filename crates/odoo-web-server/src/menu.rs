@@ -8,9 +8,9 @@ use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 use serde_json::Value;
 
-use crate::menu_enrich::{apply_action_res_models, collect_act_window_action_ids};
 use crate::AppState;
 use crate::error::AppError;
+use crate::menu_enrich::{apply_action_res_models, collect_act_window_action_ids};
 use odoo_core::error::OdooError;
 
 /// GET /api/menus — proxy Odoo's /web/webclient/load_menus
@@ -196,10 +196,7 @@ pub async fn get_menu(State(state): State<AppState>) -> Result<Response, AppErro
 
     let body: Value = response.json().await?;
 
-    let menu_items = body
-        .get("result")
-        .cloned()
-        .unwrap_or(Value::Array(vec![]));
+    let menu_items = body.get("result").cloned().unwrap_or(Value::Array(vec![]));
 
     Ok(Json(menu_items).into_response())
 }

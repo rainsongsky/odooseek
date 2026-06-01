@@ -18,9 +18,7 @@ pub fn collect_act_window_action_ids(menus: &Value) -> Vec<i64> {
             continue;
         }
         let action_model = entry.get("actionModel").and_then(|v| v.as_str());
-        if action_model.is_some()
-            && action_model != Some("ir.actions.act_window")
-        {
+        if action_model.is_some() && action_model != Some("ir.actions.act_window") {
             continue;
         }
         ids.insert(action_id);
