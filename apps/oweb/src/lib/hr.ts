@@ -30,7 +30,12 @@ export const HR_DIRECTORY_FIELDS = [
 ] as const
 
 /** @deprecated Use `resolveMenuRoute` from `menu-navigation.ts` (xmlid/actionPath/actionID). */
-export function resolveHrMenuRoute(menu: { name?: string; xmlid?: string; actionID?: number | false; actionPath?: string | false }): string | undefined {
+export function resolveHrMenuRoute(menu: {
+  name?: string
+  xmlid?: string
+  actionID?: number | false
+  actionPath?: string | false
+}): string | undefined {
   const target = resolveMenuRoute({
     name: menu.name,
     xmlid: menu.xmlid,
