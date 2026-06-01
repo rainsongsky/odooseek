@@ -3,6 +3,7 @@ import type {
   ButtonElement,
   FieldElement,
   FormElement,
+  GroupElement,
   HeaderElement,
   OdooFieldMeta,
   StatButtonElement,
@@ -414,32 +415,36 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         ref={formRef}
         className="o_form_body min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-2"
       >
-        <div className="o_form_sheet_bg">
-          {awaitingRecord ? (
-            <FormSheetSkeleton />
-          ) : (
-            <div className="o_form_sheet">
-              <FormLayoutNode
-                elements={nonHeaderElements}
-                record={currentRecord}
-                fields={fields}
-                model={model}
-                recordId={recordId}
-                editMode={editMode}
-                onChange={handleChange}
-                onAction={onAction}
-                onButtonAction={handleActionButton}
-              />
-              {recordId && <FormTimestamps record={record?.[0]} />}
+        <div className={recordId ? 'o_form_main' : 'o_form_main o_form_main--solo'}>
+          <div className="o_form_sheet_bg">
+            {awaitingRecord ? (
+              <FormSheetSkeleton />
+            ) : (
+              <div className="o_form_sheet">
+                <FormLayoutNode
+                  elements={nonHeaderElements}
+                  record={currentRecord}
+                  fields={fields}
+                  model={model}
+                  recordId={recordId}
+                  editMode={editMode}
+                  onChange={handleChange}
+                  onAction={onAction}
+                  onButtonAction={handleActionButton}
+                />
+                {recordId && <FormTimestamps record={record?.[0]} />}
+              </div>
+            )}
+          </div>
+          {!awaitingRecord && recordId && (
+            <div className="o_form_chatter_col">
+              <div className="o_form_sheet_bg">
+                <ActivityPanel model={model} recordId={recordId} />
+                <Chatter model={model} recordId={recordId} />
+              </div>
             </div>
           )}
         </div>
-        {!awaitingRecord && (
-          <div className="o_form_sheet_bg mt-4">
-            <ActivityPanel model={model} recordId={recordId} />
-            <Chatter model={model} recordId={recordId} />
-          </div>
-        )}
       </div>
     </div>
   )
@@ -792,13 +797,11 @@ function StatButton({
       onClick={handleClick}
       disabled={loading}
       title={error ?? undefined}
-      className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${error ? 'text-danger bg-danger/10 hover:bg-danger/20' : 'text-text-secondary hover:bg-hover'}`}
+      className={`oe_stat_button ${error ? 'oe_stat_button--error' : ''}`}
     >
-      {button.icon && (
-        <i className={`fa ${button.icon} text-sm ${error ? 'text-danger' : 'text-text-muted'}`} />
-      )}
-      {value !== '' && <span className="font-semibold text-text-primary">{value}</span>}
-      <span>{error ?? text}</span>
+      {button.icon && <i className={`fa ${button.icon} oe_stat_button_icon`} />}
+      {value !== '' && <span className="oe_stat_button_value">{value}</span>}
+      <span className="oe_stat_button_text">{error ?? text}</span>
     </button>
   )
 }
@@ -869,8 +872,8 @@ function NotebookRenderer({
   }, [visiblePages, editMode, fields, record])
 
   return (
-    <div className="mt-4">
-      <div className="flex border-b border-border-subtle">
+    <div className="o_notebook mt-4">
+      <div className="o_notebook_tabs flex border-b border-border-subtle">
         {visiblePages.map((page, pi) => (
           <button
             key={pi}
@@ -889,7 +892,7 @@ function NotebookRenderer({
           </button>
         ))}
       </div>
-      <div className="py-4">
+      <div className="o_notebook_page py-4">
         {visiblePages[safeActive] && (
           <FormLayoutNode
             elements={visiblePages[safeActive].elements}
@@ -1012,9 +1015,24 @@ function isTitleField(el: FormElement): el is FieldElement {
   return !!(el.nolabel || cls.includes('oe_inline') || cls.includes('text-break'))
 }
 
+function isAvatarField(el: FormElement): el is FieldElement {
+  if (el.type !== 'field') return false
+  const cls = el.class ?? ''
+  if (cls.includes('oe_avatar')) return true
+  return (
+    (el.widget === 'image' || el.widget === 'contact_image') && /^(image_|avatar)/.test(el.name)
+  )
+}
+
+function isGroupColumnsLayout(elements: FormElement[]): boolean {
+  const items = elements.filter((e) => e.type !== 'newline')
+  return items.length >= 2 && items.every((e) => e.type === 'group')
+}
+
 function partitionSheetElements(elements: FormElement[]) {
   const buttonBoxes: ButtonBoxElement[] = []
   const titleElements: FormElement[] = []
+  const avatarElements: FormElement[] = []
   const body: FormElement[] = []
   let titlePhase = true
 
@@ -1024,7 +1042,14 @@ function partitionSheetElements(elements: FormElement[]) {
       continue
     }
     if (el.type === 'title_block') {
-      titleElements.push(...el.elements)
+      for (const child of el.elements) {
+        if (isAvatarField(child)) avatarElements.push(child)
+        else titleElements.push(child)
+      }
+      continue
+    }
+    if (titlePhase && isAvatarField(el)) {
+      avatarElements.push(el)
       continue
     }
     if (titlePhase && isTitleField(el)) {
@@ -1033,8 +1058,14 @@ function partitionSheetElements(elements: FormElement[]) {
     }
     if (titlePhase && el.type === 'group') {
       const inner = el.elements.filter((c) => c.type !== 'newline')
-      if (inner.length === 1 && isTitleField(inner[0])) {
-        titleElements.push(inner[0])
+      const avatars = inner.filter(isAvatarField)
+      const titles = inner.filter(isTitleField)
+      const rest = inner.filter((c) => !isAvatarField(c) && !isTitleField(c))
+      if (avatars.length > 0 || titles.length > 0) {
+        avatarElements.push(...avatars)
+        titleElements.push(...titles)
+        if (rest.length === 0) continue
+        body.push({ ...el, elements: rest })
         continue
       }
     }
@@ -1042,7 +1073,7 @@ function partitionSheetElements(elements: FormElement[]) {
     body.push(el)
   }
 
-  return { buttonBoxes, titleElements, body }
+  return { buttonBoxes, titleElements, avatarElements, body }
 }
 
 function renderGroupItems(
@@ -1138,15 +1169,19 @@ function FormLayoutNode({
           case 'header':
             return null
           case 'sheet': {
-            const { buttonBoxes, titleElements, body } = partitionSheetElements(el.elements)
+            const { buttonBoxes, titleElements, avatarElements, body } = partitionSheetElements(
+              el.elements,
+            )
+            const hasTop =
+              buttonBoxes.length > 0 || titleElements.length > 0 || avatarElements.length > 0
             return (
               <div key={`sheet-${i}`}>
-                {(buttonBoxes.length > 0 || titleElements.length > 0) && (
+                {hasTop && (
                   <div className="o_form_sheet_top">
-                    {titleElements.length > 0 && (
-                      <div className="o_form_title">
+                    {avatarElements.length > 0 && (
+                      <div className="o_form_avatar">
                         <FormLayoutNode
-                          elements={titleElements}
+                          elements={avatarElements}
                           record={record}
                           fields={fields}
                           model={model}
@@ -1159,20 +1194,38 @@ function FormLayoutNode({
                         />
                       </div>
                     )}
-                    {buttonBoxes.map((bb, bbi) => {
-                      const visibleBtns = bb.buttons.filter((b) => isButtonVisible(b, record))
-                      if (visibleBtns.length === 0) return null
-                      return (
-                        <ButtonBoxRenderer
-                          key={`sheet-bbox-${bbi}`}
-                          buttons={visibleBtns}
-                          record={record}
-                          model={model}
-                          recordId={recordId}
-                          inline
-                        />
-                      )
-                    })}
+                    <div className="o_form_sheet_top_content">
+                      {titleElements.length > 0 && (
+                        <div className="o_form_title">
+                          <FormLayoutNode
+                            elements={titleElements}
+                            record={record}
+                            fields={fields}
+                            model={model}
+                            recordId={recordId}
+                            editMode={editMode}
+                            onChange={onChange}
+                            onAction={onAction}
+                            onButtonAction={onButtonAction}
+                            level={level + 1}
+                          />
+                        </div>
+                      )}
+                      {buttonBoxes.map((bb, bbi) => {
+                        const visibleBtns = bb.buttons.filter((b) => isButtonVisible(b, record))
+                        if (visibleBtns.length === 0) return null
+                        return (
+                          <ButtonBoxRenderer
+                            key={`sheet-bbox-${bbi}`}
+                            buttons={visibleBtns}
+                            record={record}
+                            model={model}
+                            recordId={recordId}
+                            inline
+                          />
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
                 <FormLayoutNode
@@ -1245,6 +1298,54 @@ function FormLayoutNode({
           case 'group': {
             if (evalModifier(el.invisible, record)) return null
             const col = Math.max(1, Math.min(el.col ?? 2, 6))
+
+            if (isGroupColumnsLayout(el.elements)) {
+              const childGroups = el.elements.filter((c): c is GroupElement => c.type === 'group')
+              return (
+                <div key={`grp-${i}`} className="o_group o_group_nested">
+                  {el.string && (
+                    <div className="o_horizontal_separator" style={{ gridColumn: '1 / -1' }}>
+                      {el.string}
+                    </div>
+                  )}
+                  <div
+                    className="o_group_nested_row"
+                    style={{
+                      gridTemplateColumns: `repeat(${childGroups.length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {childGroups.map((child, ci) => {
+                      if (evalModifier(child.invisible, record)) return null
+                      const childCol = Math.max(1, Math.min(child.col ?? 1, 6))
+                      return (
+                        <div
+                          key={`grp-${i}-col-${ci}`}
+                          className="o_group_col"
+                          data-cols={childCol}
+                        >
+                          {child.string && (
+                            <div className="o_horizontal_separator mb-2">{child.string}</div>
+                          )}
+                          {renderGroupItems(child.elements, {
+                            record,
+                            fields,
+                            model,
+                            recordId,
+                            editMode,
+                            onChange,
+                            onAction,
+                            onButtonAction,
+                            level: level + 1,
+                            groupCol: childCol,
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            }
+
             return (
               <div
                 key={`grp-${i}`}

@@ -812,4 +812,31 @@ describe('OdooFormRenderer', () => {
     expect(container.querySelector('.o_form_button_box')).toBeTruthy()
     expect(screen.getByText('Meetings')).toBeInTheDocument()
   })
+
+  test('renders nested side-by-side groups', async () => {
+    const nestedArch = `<form string="Partner">
+      <sheet>
+        <group>
+          <group>
+            <field name="email"/>
+          </group>
+          <group>
+            <field name="state"/>
+          </group>
+        </group>
+      </sheet>
+    </form>`
+
+    mockCallKw.mockResolvedValue(readResult)
+    const { container } = render(
+      <OdooFormRenderer model="res.partner" arch={nestedArch} fields={fields} recordId={1} />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('t@e.com')).toBeInTheDocument()
+    })
+
+    expect(container.querySelector('.o_group_nested_row')).toBeTruthy()
+  })
 })
