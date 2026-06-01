@@ -1,3 +1,4 @@
+import { useHrVersion } from '../../hooks/HrVersionProvider'
 import { useVersioning } from '../../hooks/useVersioning'
 import type { FieldWidgetProps } from './index'
 
@@ -13,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   past: 'Past',
 }
 
-function getStatus(v: { isCurrent: boolean; isFuture: boolean; isPast: boolean }): string {
+function getStatus(v: { isCurrent: boolean; isFuture: boolean }): string {
   if (v.isCurrent) return 'current'
   if (v.isFuture) return 'future'
   return 'past'
@@ -21,8 +22,16 @@ function getStatus(v: { isCurrent: boolean; isFuture: boolean; isPast: boolean }
 
 export function VersionTimeline({ record, recordId }: FieldWidgetProps) {
   const employeeId = recordId ?? (record?.id as number | undefined)
-  const { versions, currentVersionId, selectedVersionId, isLoading, selectVersion, goToCurrent } =
-    useVersioning(employeeId)
+  const hrCtx = useHrVersion()
+  const local = useVersioning(employeeId, { enabled: hrCtx == null })
+
+  const versions = hrCtx?.versions ?? local.versions
+  const currentVersionId = hrCtx?.currentVersionId ?? local.currentVersionId
+  const selectedVersionId = hrCtx?.selectedVersionId ?? local.selectedVersionId
+  const isLoading = hrCtx?.isLoading ?? local.isLoading
+  const selectVersion = hrCtx?.selectVersion ?? local.selectVersion
+  const goToCurrent = hrCtx?.goToCurrent ?? local.goToCurrent
+  const isReadonlyPreview = hrCtx?.isReadonlyPreview ?? false
 
   if (!employeeId) {
     return <div className="text-sm text-text-muted py-2">Version history unavailable</div>
@@ -44,6 +53,9 @@ export function VersionTimeline({ record, recordId }: FieldWidgetProps) {
 
   return (
     <div className="py-2">
+      {isReadonlyPreview && (
+        <p className="mb-2 text-xs text-text-muted">Viewing a past version (read-only).</p>
+      )}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
         {versions.map((v) => {
           const status = getStatus(v)
@@ -83,7 +95,7 @@ export function VersionTimeline({ record, recordId }: FieldWidgetProps) {
           )
         })}
       </div>
-      {selectedVersionId && selectedVersionId !== currentVersionId && (
+      {(selectedVersionId && selectedVersionId !== currentVersionId) || isReadonlyPreview ? (
         <button
           type="button"
           onClick={goToCurrent}
@@ -91,7 +103,7 @@ export function VersionTimeline({ record, recordId }: FieldWidgetProps) {
         >
           ← Back to current version
         </button>
-      )}
+      ) : null}
     </div>
   )
 }

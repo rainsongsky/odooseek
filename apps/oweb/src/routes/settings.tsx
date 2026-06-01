@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { ThemeToggle } from '../components/ThemeToggle'
-import { useAuth } from '../lib/auth'
+import { useAuth, useHasGroup } from '../lib/auth'
+import { HR_EMPLOYEE_MODEL } from '../lib/hr'
 
 function SettingsPage() {
   const { session } = useAuth()
+  const isHrUser = useHasGroup('hr.group_hr_user')
+  const isHrManager = useHasGroup('hr.group_hr_manager')
+  const isHrOfficer = isHrUser || isHrManager
 
   const { data: modules } = useQuery({
     queryKey: ['odoo', 'installed-modules'],
@@ -125,6 +130,29 @@ function SettingsPage() {
                       {name} ({code})
                     </span>
                   ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Human Resources */}
+            {modules?.includes('hr') && (
+              <Section title="Human Resources">
+                <KVRow label="Module" value="hr (installed)" />
+                <KVRow label="HR access" value={isHrOfficer ? 'Yes' : 'No'} />
+                <KVRow label="Employee model" value={HR_EMPLOYEE_MODEL} />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    to="/hr/employees"
+                    className="rounded-md border border-border-default bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-hover hover:text-text-primary"
+                  >
+                    Open Employees
+                  </Link>
+                  <Link
+                    to="/hr/directory"
+                    className="rounded-md border border-border-default bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-hover hover:text-text-primary"
+                  >
+                    Open Directory
+                  </Link>
                 </div>
               </Section>
             )}

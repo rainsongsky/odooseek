@@ -1,6 +1,6 @@
 import { callKw } from '@odooseek/odoo-client'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface WizardField {
   name: string
@@ -11,13 +11,13 @@ interface WizardField {
   relation?: string
 }
 
-interface WizardStep {
+export interface WizardStep {
   title: string
   fields: string[]
   buttons: WizardButton[]
 }
 
-interface WizardButton {
+export interface WizardButton {
   label: string
   type: 'object' | 'action'
   name: string
@@ -46,47 +46,62 @@ export function WizardDialog({
   const [values, setValues] = useState<Record<string, unknown>>({})
   const [wizardId, setWizardId] = useState<number | null>(null)
 
-  // Create wizard record on open
-  const { isLoading: isCreating } = useQuery({
-    queryKey: ['odoo', 'wizard', model, 'create'],
-    queryFn: () =>
-      callKw<number>(model, 'create', [{ ...context }], {}).then((id) => {
-        setWizardId(id as number)
-        return id
-      }),
+  useEffect(() => {
+    if (!open) {
+      setStepIndex(0)
+      setValues({})
+      setWizardId(null)
+    }
+  }, [open])
+
+  const { isPending: isCreating } = useQuery({
+    queryKey: ['odoo', 'wizard', model, 'create', open],
+    queryFn: async () => {
+      const id = await callKw<number>(model, 'create', [{ ...context }], { context })
+      setWizardId(id)
+      return id
+    },
     enabled: open && wizardId === null,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
   })
 
-  // Fetch current step fields
   const step = steps[stepIndex]
   const { data: fieldDefs, isLoading: isLoadingFields } = useQuery({
-    queryKey: ['odoo', 'wizard', model, 'fields', wizardId],
+    queryKey: ['odoo', 'wizard', model, 'fields_get'],
     queryFn: () =>
       callKw<Record<string, WizardField>>(model, 'fields_get', [[], []], {}).catch(
         () => ({}) as Record<string, WizardField>,
       ),
-    enabled: !!wizardId && stepIndex === 0,
+    enabled: open && !!wizardId,
+    staleTime: 5 * 60_000,
   })
 
   const stepMutation = useMutation({
     mutationFn: async ({
       button,
-      values: stepValues,
+      stepValues,
     }: {
       button: WizardButton
-      values: Record<string, unknown>
+      stepValues: Record<string, unknown>
     }) => {
       if (!wizardId) return
-      return callKw(model, button.name, [[wizardId], stepValues], {})
+      const writeVals = Object.fromEntries(
+        Object.entries(stepValues).filter(([, v]) => v !== '' && v !== undefined),
+      )
+      if (Object.keys(writeVals).length > 0) {
+        await callKw(model, 'write', [[wizardId], writeVals], { context })
+      }
+      if (button.special === 'cancel' || button.special === 'close') return
+      return callKw(model, button.name, [[wizardId]], { context })
     },
     onSuccess: (_, { button }) => {
       if (button.special === 'cancel' || button.special === 'close') {
         onCancel()
         return
       }
-      // Advance to next step
       if (stepIndex < steps.length - 1) {
-        setStepIndex(stepIndex + 1)
+        setStepIndex((i) => i + 1)
       } else {
         onDone()
       }
@@ -114,7 +129,7 @@ export function WizardDialog({
         </div>
 
         <div className="px-5 py-4">
-          {isCreating || isLoadingFields ? (
+          {isCreating || isLoadingFields || !wizardId ? (
             <div className="flex items-center justify-center py-8">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
             </div>
@@ -164,7 +179,7 @@ export function WizardDialog({
             {stepIndex > 0 && (
               <button
                 type="button"
-                onClick={() => setStepIndex(stepIndex - 1)}
+                onClick={() => setStepIndex((i) => i - 1)}
                 className="rounded-md px-3 py-1.5 text-xs text-text-secondary hover:bg-hover hover:text-text-primary"
               >
                 ← Back
@@ -176,8 +191,8 @@ export function WizardDialog({
               <button
                 key={btn.name}
                 type="button"
-                onClick={() => stepMutation.mutate({ button: btn, values })}
-                disabled={stepMutation.isPending}
+                onClick={() => stepMutation.mutate({ button: btn, stepValues: values })}
+                disabled={stepMutation.isPending || !wizardId}
                 className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
                   btn.special === 'cancel'
                     ? 'border border-border-default text-text-secondary hover:bg-hover'
@@ -193,5 +208,3 @@ export function WizardDialog({
     </div>
   )
 }
-
-export type { WizardButton, WizardStep }

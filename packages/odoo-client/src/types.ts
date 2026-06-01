@@ -135,6 +135,7 @@ export interface ButtonElement {
   class?: string
   icon?: string
   invisible?: string
+  groups?: string
   states?: string
   confirm?: string
   special?: 'cancel'
@@ -171,6 +172,7 @@ export interface GroupElement {
   type: 'group'
   string?: string
   invisible?: string
+  groups?: string
   col?: number
   elements: FormElement[]
 }
@@ -186,6 +188,7 @@ export interface FieldElement {
   widget?: string
   string?: string
   options?: Record<string, unknown>
+  groups?: string
   invisible?: string
   required?: string | boolean
   readonly?: string | boolean

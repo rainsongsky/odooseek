@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { redirect } from '@tanstack/react-router'
 import { createContext, type ReactNode, useContext } from 'react'
+import { parseSessionGroups, type SessionGroups, userHasGroup } from './groups'
 
-interface AuthState {
+export interface AuthState {
   authenticated: boolean
   uid: number | null
   name: string | null
@@ -14,6 +15,7 @@ interface AuthState {
   partner_display_name: string | null
   server_version: string | null
   home_action_id: number | null
+  groups?: SessionGroups
   user_companies?: unknown
   web_base_url?: string
   max_file_upload_size?: number
@@ -41,7 +43,11 @@ const ANONYMOUS: AuthState = {
 async function fetchSession(): Promise<AuthState> {
   const res = await fetch('/api/session', { credentials: 'include' })
   if (!res.ok) return ANONYMOUS
-  return res.json()
+  const data = (await res.json()) as AuthState & { groups?: unknown }
+  return {
+    ...data,
+    groups: parseSessionGroups(data.groups),
+  }
 }
 
 const AuthContext = createContext<{
@@ -95,18 +101,22 @@ export async function requireAuth(): Promise<void> {
   }
 }
 
-/**
- * Check if current user belongs to a security group.
- * Uses session info from Odoo. For now, maps known HR groups
- * to is_admin/is_system flags. Full group_ids support requires
- * proxy enhancement.
- */
-export function hasGroup(groupXmlId: string): boolean {
-  // Simple proxy: HR groups map to admin/system
-  const hrGroups = ['hr.group_hr_user', 'hr.group_hr_manager']
-  if (hrGroups.includes(groupXmlId)) {
-    // In production, this should read from session.group_ids
-    return true
-  }
-  return false
+/** Subset of session used for XML `groups` / `hasGroup` checks. */
+export type GroupCheckSession = {
+  groups?: SessionGroups
+  is_admin: boolean
+  is_system: boolean
+}
+
+/** Check security group from session (pass from `useAuth().session` when in React). */
+export function hasGroup(groupXmlId: string, session?: GroupCheckSession): boolean {
+  return userHasGroup(session?.groups, groupXmlId, {
+    isAdmin: session?.is_admin,
+    isSystem: session?.is_system,
+  })
+}
+
+export function useHasGroup(groupXmlId: string): boolean {
+  const { session } = useAuth()
+  return hasGroup(groupXmlId, session)
 }
