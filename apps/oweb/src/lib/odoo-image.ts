@@ -1,8 +1,22 @@
+/** True when value is Odoo-style base64 (may start with `/9j/` for JPEG). */
+function isBase64ImagePayload(raw: string): boolean {
+  return raw.length >= 4 && /^[A-Za-z0-9+/=]+$/.test(raw)
+}
+
+function base64DataUrl(raw: string): string {
+  let mime = 'image/png'
+  if (raw.startsWith('iVBORw0KGgo')) mime = 'image/png'
+  else if (raw.startsWith('/9j/') || raw.startsWith('9j/')) mime = 'image/jpeg'
+  return `data:${mime};base64,${raw}`
+}
+
 /** Normalize Odoo binary / base64 / URL image field values for <img src>. */
 function normalizeRawImage(raw: string): string | undefined {
   if (!raw) return undefined
-  if (raw.startsWith('data:') || raw.startsWith('http') || raw.startsWith('/')) return raw
-  if (/^[A-Za-z0-9+/=]+$/.test(raw)) return `data:image/png;base64,${raw}`
+  if (raw.startsWith('data:') || raw.startsWith('http')) return raw
+  // Only pass through known app paths — not `/9j/...` JPEG base64
+  if (raw.startsWith('/api/') || raw.startsWith('/web/')) return raw
+  if (isBase64ImagePayload(raw)) return base64DataUrl(raw)
   return undefined
 }
 

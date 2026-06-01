@@ -138,7 +138,7 @@ function parseFormElements(container: Element): FormElement[] {
       elements.push({ type: 'header', buttons })
     } else if (tag === 'button') {
       elements.push(parseButtonElement(child))
-    } else if (tag === 'div') {
+    } else if (tag === 'div' || tag === 'aside') {
       const cls = child.getAttribute('class') ?? ''
       if (cls.includes('oe_button_box')) {
         elements.push(parseButtonBox(child))
@@ -147,8 +147,11 @@ function parseFormElements(container: Element): FormElement[] {
           type: 'title_block',
           elements: parseFormElements(child),
         })
+      } else {
+        // Layout wrappers (e.g. #o_employee_right with hr_org_chart) — flatten children
+        elements.push(...parseFormElements(child))
       }
-    } else if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+    } else if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       elements.push(...parseFormElements(child))
     } else if (tag === 'field') {
       const fieldEl = parseFieldElement(child)

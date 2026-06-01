@@ -6,6 +6,11 @@ describe('resolveOdooImageSrc', () => {
     expect(resolveOdooImageSrc({ raw: 'aGVsbG8=' })).toBe('data:image/png;base64,aGVsbG8=')
   })
 
+  test('returns data URL for JPEG base64 starting with /9j/', () => {
+    const jpeg = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBD'
+    expect(resolveOdooImageSrc({ raw: jpeg })).toBe(`data:image/jpeg;base64,${jpeg}`)
+  })
+
   test('returns web/image path when model and id given without raw', () => {
     expect(resolveOdooImageSrc({ model: 'hr.employee', recordId: 7, field: 'avatar_128' })).toBe(
       '/api/web/image/hr.employee/7/avatar_128',

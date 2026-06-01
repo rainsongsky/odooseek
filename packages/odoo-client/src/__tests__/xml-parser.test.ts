@@ -76,6 +76,25 @@ describe('parseFormXml', () => {
     expect(sheet.elements).toHaveLength(2)
   })
 
+  test('parses fields inside layout div wrappers (hr org chart)', () => {
+    const xml = `<form string="Employee">
+      <sheet>
+        <div id="o_employee_right">
+          <h4 class="o_org_chart_title">Organization Chart</h4>
+          <field name="child_ids" widget="hr_org_chart" nolabel="1"/>
+        </div>
+      </sheet>
+    </form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: { type: string; name?: string; widget?: string }[]
+    }
+    const orgField = sheet.elements.find((e) => e.type === 'field' && e.name === 'child_ids')
+    expect(orgField).toMatchObject({ type: 'field', name: 'child_ids', widget: 'hr_org_chart' })
+  })
+
   test('parses notebook with pages', () => {
     const xml = `<form string="Partner">
       <sheet>
