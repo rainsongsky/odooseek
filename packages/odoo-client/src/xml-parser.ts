@@ -48,6 +48,7 @@ function parseFieldElement(el: Element): FieldElement {
       ? parseInt(el.getAttribute('colspan') as string, 10)
       : undefined,
     class: el.getAttribute('class') ?? undefined,
+    groups: el.getAttribute('groups') ?? undefined,
   }
 }
 
@@ -72,6 +73,7 @@ function parseButtonElement(el: Element): ButtonElement {
     class: el.getAttribute('class') ?? undefined,
     icon: el.getAttribute('icon') ?? undefined,
     invisible: el.getAttribute('invisible') ?? undefined,
+    groups: el.getAttribute('groups') ?? undefined,
     states: el.getAttribute('states') ?? undefined,
     confirm: el.getAttribute('confirm') ?? undefined,
     special: (el.getAttribute('special') as 'cancel') ?? undefined,
@@ -186,6 +188,7 @@ function parseFormElements(container: Element): FormElement[] {
         type: 'group',
         string: child.getAttribute('string') ?? undefined,
         invisible: child.getAttribute('invisible') ?? undefined,
+        groups: child.getAttribute('groups') ?? undefined,
         col,
         elements: parseFormElements(child),
       })

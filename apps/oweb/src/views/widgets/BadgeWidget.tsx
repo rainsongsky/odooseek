@@ -1,49 +1,82 @@
-import { useCallback, useRef } from 'react'
+import { createElement, useCallback, useRef } from 'react'
+import { createRoot } from 'react-dom/client'
 import type { FieldWidgetProps } from './index'
 
-export function BadgeWidget({ record, readOnly }: FieldWidgetProps) {
-  const printRef = useRef<HTMLDivElement>(null)
+function resolveBadgeImageSrc(
+  record: Record<string, unknown> | undefined,
+  model: string | undefined,
+  recordId: number | undefined,
+): string | undefined {
+  const raw = (record?.image_128 as string) || (record?.avatar_128 as string) || ''
+  if (!raw) return undefined
+  if (raw.startsWith('data:') || raw.startsWith('http') || raw.startsWith('/')) return raw
+  if (/^[A-Za-z0-9+/=]+$/.test(raw)) return `data:image/png;base64,${raw}`
+  if (model && recordId) return `/api/web/image/${model}/${recordId}/image_128`
+  return undefined
+}
+
+function BadgePreview({
+  name,
+  jobTitle,
+  barcode,
+  imageSrc,
+}: {
+  name: string
+  jobTitle: string
+  barcode: string
+  imageSrc?: string
+}) {
+  return (
+    <div className="badge flex flex-col items-center justify-center rounded-xl border-2 border-border-default p-4 print:break-inside-avoid">
+      {imageSrc ? (
+        <img src={imageSrc} alt="" className="h-16 w-16 rounded-full object-cover" />
+      ) : (
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-hover text-2xl text-text-muted">
+          {name.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <div className="mt-2 text-sm font-semibold text-text-primary">{name}</div>
+      {jobTitle ? <div className="text-xs text-text-muted">{jobTitle}</div> : null}
+      <div className="mt-2 rounded bg-hover px-3 py-0.5 font-mono text-xs text-text-secondary">
+        {barcode}
+      </div>
+    </div>
+  )
+}
+
+export function BadgeWidget({ record, readOnly, model, recordId }: FieldWidgetProps) {
+  const printHostRef = useRef<HTMLDivElement>(null)
   const barcode = record?.barcode as string | undefined
   const name = (record?.display_name as string) || (record?.name as string) || ''
   const jobTitle = (record?.job_title as string) || (record?.job_id as [number, string])?.[1] || ''
-  const imageSrc = (record?.image_128 as string) || (record?.avatar_128 as string) || ''
+  const imageSrc = resolveBadgeImageSrc(record, model, recordId)
 
   const handlePrint = useCallback(() => {
-    if (!printRef.current) return
-    const content = printRef.current.innerHTML
+    const host = printHostRef.current
+    if (!host) return
     const printWindow = window.open('', '_blank', 'width=600,height=800')
     if (!printWindow) return
-    printWindow.document.write(`
-      <html>
-        <head><title>Employee Badge</title>
-        <style>
-          body { margin:0; padding:0; display:flex; flex-wrap:wrap; justify-content:center; }
-          .badge { width:243pt; height:153pt; border:2px solid #ccc; border-radius:12pt; margin:10pt; display:flex; flex-direction:column; align-items:center; justify-content:center; page-break-inside:avoid; }
-          .badge img.avatar { width:64pt; height:64pt; border-radius:50%; object-fit:cover; }
-          .badge .name { font-size:14pt; font-weight:600; margin-top:8pt; }
-          .badge .job { font-size:10pt; color:#666; margin-top:2pt; }
-          .badge .barcode-text { font-size:9pt; color:#333; margin-top:6pt; font-family:monospace; background:#f0f0f0; padding:2pt 12pt; border-radius:4pt; }
-          @media print { @page { margin:0; size:auto; } body { margin:0; } }
-        </style></head>
-        <body>${content}</body>
-      </html>`)
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Employee Badge</title>
+<style>
+  body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; }
+  .badge { width: 243pt; min-height: 153pt; margin: 10pt auto; }
+  @media print { @page { margin: 0; } }
+</style></head><body><div id="root"></div></body></html>`)
     printWindow.document.close()
-    printWindow.print()
-    printWindow.close()
-  }, [])
+    const mount = printWindow.document.getElementById('root')
+    if (!mount) return
+    const root = createRoot(mount)
+    root.render(createElement(BadgePreview, { name, jobTitle, barcode: barcode ?? '', imageSrc }))
+    requestAnimationFrame(() => {
+      printWindow.focus()
+      printWindow.print()
+      printWindow.close()
+    })
+  }, [name, jobTitle, barcode, imageSrc])
 
   if (!barcode) {
     return readOnly ? null : <div className="text-xs text-text-muted py-1">No barcode set</div>
   }
-
-  const badgeHtml = `
-    <div class="badge">
-      ${imageSrc ? `<img class="avatar" src="${imageSrc}" alt="${name}" />` : `<div class="avatar" style="width:64pt;height:64pt;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:24pt;color:#666;">${name.charAt(0).toUpperCase()}</div>`}
-      <div class="name">${name}</div>
-      ${jobTitle ? `<div class="job">${jobTitle}</div>` : ''}
-      <div class="barcode-text">${barcode}</div>
-    </div>
-  `
 
   return (
     <div className="py-2">
@@ -54,11 +87,9 @@ export function BadgeWidget({ record, readOnly }: FieldWidgetProps) {
       >
         Print Badge
       </button>
-      <div
-        ref={printRef}
-        style={{ display: 'none' }}
-        dangerouslySetInnerHTML={{ __html: badgeHtml }}
-      />
+      <div ref={printHostRef} className="sr-only" aria-hidden>
+        <BadgePreview name={name} jobTitle={jobTitle} barcode={barcode} imageSrc={imageSrc} />
+      </div>
     </div>
   )
 }

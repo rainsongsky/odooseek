@@ -31,6 +31,9 @@ import { ActivityPanel } from '../components/ActivityPanel'
 import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { FormSheetSkeleton } from '../components/Skeleton'
+import { mergeVersionPreviewIntoRecord, useHrVersion } from '../hooks/HrVersionProvider'
+import { useAuth } from '../lib/auth'
+import { passesXmlGroups } from '../lib/field-access'
 import { getFieldWidget } from './widgets'
 
 export interface OdooFormRendererRef {
@@ -62,6 +65,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   ref: React.Ref<OdooFormRendererRef>,
 ) {
   const queryClient = useQueryClient()
+  const { session } = useAuth()
   const confirmDialog = useConfirmDialog()
   const formLayout = useMemo(() => parseFormXml(arch), [arch])
   const [editMode, setEditMode] = useState(false)
@@ -373,25 +377,34 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     [model, recordId, fields.state, queryClient],
   )
 
+  const hrVersion = useHrVersion()
+  const baseRecord = editMode ? formValues : record?.[0]
+  const currentRecord = useMemo(() => {
+    if (!baseRecord || !hrVersion?.isReadonlyPreview || !hrVersion.previewRecord) return baseRecord
+    return mergeVersionPreviewIntoRecord(baseRecord, hrVersion.previewRecord)
+  }, [baseRecord, hrVersion?.isReadonlyPreview, hrVersion?.previewRecord])
+  const versionReadOnly = hrVersion?.isReadonlyPreview ?? false
+  const effectiveEditMode = editMode && !versionReadOnly
+  const awaitingRecord = !!recordId && !record?.[0]
+
   if (!formLayout)
     return <div className="p-6 text-sm text-text-muted">Failed to parse form XML</div>
 
-  const currentRecord = editMode ? formValues : record?.[0]
-  const awaitingRecord = !!recordId && !record?.[0]
-
-  return (
+  const formBody = (
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <HeaderBar
         headerElement={headerElement}
         stateField={fields.state}
         currentRecord={currentRecord}
+        session={session}
         onAction={handleActionButton}
         onStatusChange={handleStatusChange}
-        editMode={editMode}
+        editMode={effectiveEditMode}
         isDirty={isDirty}
         justSaved={justSaved}
         saveError={saveError}
         onEdit={() => {
+          if (versionReadOnly) return
           setFormValues(record?.[0] ? { ...record[0] } : { ...formValues })
           setEditMode(true)
         }}
@@ -427,10 +440,11 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
                   fields={fields}
                   model={model}
                   recordId={recordId}
-                  editMode={editMode}
+                  editMode={effectiveEditMode}
                   onChange={handleChange}
                   onAction={onAction}
                   onButtonAction={handleActionButton}
+                  session={session}
                 />
                 {recordId && <FormTimestamps record={record?.[0]} />}
               </div>
@@ -448,6 +462,8 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       </div>
     </div>
   )
+
+  return formBody
 })
 
 const MAX_HEADER_BUTTONS = 3
@@ -520,6 +536,7 @@ function HeaderBar({
   headerElement,
   stateField,
   currentRecord,
+  session,
   onAction,
   onStatusChange,
   editMode,
@@ -534,6 +551,7 @@ function HeaderBar({
   headerElement?: HeaderElement
   stateField?: OdooFieldMeta
   currentRecord?: Record<string, unknown>
+  session?: Parameters<typeof passesXmlGroups>[1]
   onAction: (btn: ButtonElement) => void
   onStatusChange?: (value: string) => void
   editMode: boolean
@@ -565,7 +583,7 @@ function HeaderBar({
   const stateIdx = stateSelection.findIndex(([k]) => k === stateValue)
 
   const visibleButtons = headerElement
-    ? headerElement.buttons.filter((btn) => isButtonVisible(btn, currentRecord))
+    ? headerElement.buttons.filter((btn) => isButtonVisible(btn, currentRecord, session))
     : []
 
   const hasContent = stateSelection.length > 1 || visibleButtons.length > 0 || editMode
@@ -717,7 +735,9 @@ function ActionButtons({
 function isButtonVisible(
   btn: ButtonElement | StatButtonElement,
   record?: Record<string, unknown>,
+  session?: Parameters<typeof passesXmlGroups>[1],
 ): boolean {
+  if ('groups' in btn && btn.groups && !passesXmlGroups(btn.groups, session)) return false
   if (btn.invisible && evalModifier(btn.invisible, record)) return false
   if ('states' in btn && btn.states) {
     const allowedStates = btn.states.split(',').map((s) => s.trim())
@@ -823,8 +843,8 @@ interface NodeProps {
   onButtonAction?: (btn: ButtonElement) => void
   level?: number
   groupCol?: number
-  /** Span within parent `.o_group` grid (from field colspan). */
   fieldGridSpan?: number
+  session?: Parameters<typeof passesXmlGroups>[1]
 }
 
 function NotebookRenderer({
@@ -838,6 +858,7 @@ function NotebookRenderer({
   onAction,
   onButtonAction,
   level,
+  session,
 }: {
   pages: { string: string; invisible?: string; elements: FormElement[] }[]
   record?: Record<string, unknown>
@@ -849,6 +870,7 @@ function NotebookRenderer({
   onAction?: (action: OdooAction) => void
   onButtonAction?: (btn: ButtonElement) => void
   level: number
+  session?: Parameters<typeof passesXmlGroups>[1]
 }) {
   const [activePage, setActivePage] = useState(0)
   const visiblePages = useMemo(
@@ -904,6 +926,7 @@ function NotebookRenderer({
             onChange={onChange}
             onAction={onAction}
             onButtonAction={onButtonAction}
+            session={session}
             level={level + 1}
           />
         )}
@@ -1123,6 +1146,7 @@ function renderGroupItems(
             onButtonAction={ctx.onButtonAction}
             level={ctx.level}
             groupCol={ctx.groupCol}
+            session={ctx.session}
           />
         </div>,
       )
@@ -1144,6 +1168,7 @@ function renderGroupItems(
           level={ctx.level}
           groupCol={ctx.groupCol}
           fieldGridSpan={colspan > 1 ? colspan : undefined}
+          session={ctx.session}
         />
       </div>,
     )
@@ -1165,6 +1190,7 @@ function FormLayoutNode({
   onButtonAction,
   level = 0,
   fieldGridSpan,
+  session,
 }: NodeProps) {
   return (
     <>
@@ -1194,6 +1220,7 @@ function FormLayoutNode({
                           onChange={onChange}
                           onAction={onAction}
                           onButtonAction={onButtonAction}
+                          session={session}
                           level={level + 1}
                         />
                       </div>
@@ -1211,12 +1238,15 @@ function FormLayoutNode({
                             onChange={onChange}
                             onAction={onAction}
                             onButtonAction={onButtonAction}
+                            session={session}
                             level={level + 1}
                           />
                         </div>
                       )}
                       {buttonBoxes.map((bb, bbi) => {
-                        const visibleBtns = bb.buttons.filter((b) => isButtonVisible(b, record))
+                        const visibleBtns = bb.buttons.filter((b) =>
+                          isButtonVisible(b, record, session),
+                        )
                         if (visibleBtns.length === 0) return null
                         return (
                           <ButtonBoxRenderer
@@ -1242,6 +1272,7 @@ function FormLayoutNode({
                   onChange={onChange}
                   onAction={onAction}
                   onButtonAction={onButtonAction}
+                  session={session}
                   level={level + 1}
                 />
               </div>
@@ -1260,13 +1291,14 @@ function FormLayoutNode({
                   onChange={onChange}
                   onAction={onAction}
                   onButtonAction={onButtonAction}
+                  session={session}
                   level={level + 1}
                 />
               </div>
             )
           case 'button': {
             const btn = el as ButtonElement
-            if (!isButtonVisible(btn, record)) return null
+            if (!isButtonVisible(btn, record, session)) return null
             if (editMode) return null
             return (
               <div key={`btn-${i}`} className="flex items-center">
@@ -1287,7 +1319,7 @@ function FormLayoutNode({
           }
           case 'button_box': {
             const bbe = el as ButtonBoxElement
-            const visibleBtns = bbe.buttons.filter((b) => isButtonVisible(b, record))
+            const visibleBtns = bbe.buttons.filter((b) => isButtonVisible(b, record, session))
             if (visibleBtns.length === 0) return null
             return (
               <ButtonBoxRenderer
@@ -1300,6 +1332,7 @@ function FormLayoutNode({
             )
           }
           case 'group': {
+            if (!passesXmlGroups(el.groups, session)) return null
             if (evalModifier(el.invisible, record)) return null
             const col = Math.max(1, Math.min(el.col ?? 2, 6))
 
@@ -1341,6 +1374,7 @@ function FormLayoutNode({
                             onButtonAction,
                             level: level + 1,
                             groupCol: childCol,
+                            session,
                           })}
                         </div>
                       )
@@ -1373,6 +1407,7 @@ function FormLayoutNode({
                   onButtonAction,
                   level: level + 1,
                   groupCol: col,
+                  session,
                 })}
               </div>
             )
@@ -1391,11 +1426,13 @@ function FormLayoutNode({
                 onAction={onAction}
                 onButtonAction={onButtonAction}
                 level={level}
+                session={session}
               />
             )
           case 'field': {
             const meta = fields[el.name]
             if (!meta) return null
+            if (!passesXmlGroups(el.groups, session)) return null
             if (evalModifier(el.invisible, record)) return null
             if (editMode && SYSTEM_FIELDS.has(el.name)) return null
             const Widget = getFieldWidget(el, meta.type)

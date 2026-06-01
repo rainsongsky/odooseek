@@ -4,6 +4,18 @@ export type { AccountMoveRecord, AccountMoveFieldName, AccountMoveSearchResult }
 export type { AccountMoveLineRecord, AccountMoveLineFieldName, AccountMoveLineSearchResult } from './models/account.move.line'
 export type { CalendarEventRecord, CalendarEventFieldName, CalendarEventSearchResult } from './models/calendar.event'
 export type { CrmLeadRecord, CrmLeadFieldName, CrmLeadSearchResult } from './models/crm.lead'
+export type {
+  HrDepartmentRecord,
+  HrDepartmentFieldName,
+  HrDepartmentSearchResult,
+} from './models/hr.department'
+export type { HrEmployeeRecord, HrEmployeeFieldName, HrEmployeeSearchResult } from './models/hr.employee'
+export type {
+  HrEmployeePublicRecord,
+  HrEmployeePublicFieldName,
+  HrEmployeePublicSearchResult,
+} from './models/hr.employee.public'
+export type { HrVersionRecord, HrVersionFieldName, HrVersionSearchResult } from './models/hr.version'
 export type { IrFiltersRecord, IrFiltersFieldName, IrFiltersSearchResult } from './models/ir.filters'
 export type { MailActivityRecord, MailActivityFieldName, MailActivitySearchResult } from './models/mail.activity'
 export type { MailActivityTypeRecord, MailActivityTypeFieldName, MailActivityTypeSearchResult } from './models/mail.activity.type'

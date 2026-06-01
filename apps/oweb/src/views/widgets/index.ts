@@ -192,10 +192,30 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   badge_print: BadgeWidget,
 }
 
+const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
+  hr_presence_status: 'presence_icon',
+  hr_icon_display: 'presence_icon',
+  hr_org_chart: 'org_chart',
+  hr_department_chart: 'org_chart',
+  hr_version_timeline: 'version_timeline',
+  employee_badge: 'badge_print',
+  hr_employee_badge: 'badge_print',
+}
+
+function resolveWidgetOverride(widget?: string) {
+  if (!widget) return undefined
+  if (WIDGET_OVERRIDES[widget]) return WIDGET_OVERRIDES[widget]
+  const alias = WIDGET_ALIASES[widget]
+  if (alias) return WIDGET_OVERRIDES[alias]
+  return undefined
+}
+
 export function getFieldWidget(
   field: FieldElement,
   type: string,
 ): React.ComponentType<FieldWidgetProps> {
+  const override = resolveWidgetOverride(field.widget)
+  if (override) return override
   // widget attribute from XML arch overrides type-based selection
   if (field.widget && WIDGET_OVERRIDES[field.widget]) {
     return WIDGET_OVERRIDES[field.widget]

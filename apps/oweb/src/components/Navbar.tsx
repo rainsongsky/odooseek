@@ -12,6 +12,7 @@ import { useTranslations } from 'use-intl'
 import { LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
 import { useHomeMenu } from '../hooks/useHomeMenu'
 import { useAuth } from '../lib/auth'
+import { navigateHrOrAction } from '../lib/hr'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Navbar() {
@@ -126,9 +127,11 @@ export function Navbar() {
       setOpenSubmenu(openSubmenu === section.id ? null : section.id)
       return
     }
-    if (section.actionID) {
-      navigate({ to: '/web', search: { action: section.actionID } })
-    }
+    navigateHrOrAction(navigate, {
+      name: section.name,
+      xmlid: section.xmlid,
+      actionID: section.actionID,
+    })
   }
 
   const settingsActive = currentPath === '/settings'
@@ -221,9 +224,11 @@ export function Navbar() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                if (sub.actionID) {
-                                  navigate({ to: '/web', search: { action: sub.actionID } })
-                                }
+                                navigateHrOrAction(navigate, {
+                                  name: sub.name,
+                                  xmlid: sub.xmlid,
+                                  actionID: sub.actionID,
+                                })
                                 setOpenSubmenu(null)
                               }}
                               className="flex w-full items-center px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-hover/50"
