@@ -12,7 +12,7 @@ import { useTranslations } from 'use-intl'
 import { LogIn, LogOut, Menu, Settings } from '@/lib/lucide-icons'
 import { useHomeMenu } from '../hooks/useHomeMenu'
 import { useAuth } from '../lib/auth'
-import { navigateHrOrAction } from '../lib/hr'
+import { isMenuEntryActive, menuEntryFromOdoo, navigateMenuEntry } from '../lib/menu-navigation'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Navbar() {
@@ -127,10 +127,9 @@ export function Navbar() {
       setOpenSubmenu(openSubmenu === section.id ? null : section.id)
       return
     }
-    navigateHrOrAction(navigate, {
-      name: section.name,
-      xmlid: section.xmlid,
-      actionID: section.actionID,
+    navigateMenuEntry(navigate, menuEntryFromOdoo(section, section.children.length), {
+      context: 'menu-leaf',
+      menus,
     })
   }
 
@@ -180,11 +179,12 @@ export function Navbar() {
             {sections.length > 0 && (
               <div className="ml-2 flex items-center gap-0.5 border-l border-border-subtle pl-2">
                 {sections.map((section) => {
-                  const currentAction = currentSearch?.action as number | undefined
-                  const isActive =
-                    section.actionID != null &&
-                    section.actionID !== false &&
-                    Number(section.actionID) === currentAction
+                  const isActive = isMenuEntryActive(
+                    menuEntryFromOdoo(section, section.children.length),
+                    currentPath,
+                    { action: currentSearch?.action as number | undefined },
+                    menus,
+                  )
                   return (
                     <div
                       key={section.id}
@@ -224,10 +224,9 @@ export function Navbar() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                navigateHrOrAction(navigate, {
-                                  name: sub.name,
-                                  xmlid: sub.xmlid,
-                                  actionID: sub.actionID,
+                                navigateMenuEntry(navigate, menuEntryFromOdoo(sub, sub.children.length), {
+                                  context: 'menu-leaf',
+                                  menus,
                                 })
                                 setOpenSubmenu(null)
                               }}

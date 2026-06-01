@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
+import { menuEntryFromOdoo, navigateMenuEntry } from '../lib/menu-navigation'
 
 /** Fuzzy match: returns a score (higher = better) or -1 if no match. */
 export function fuzzyMatch(text: string, query: string): number {
@@ -73,9 +74,10 @@ export function CommandPalette() {
         label: menu.name,
         path: path.join(' / '),
         execute: () => {
-          if (menu.actionID) {
-            navigate({ to: '/web', search: { action: menu.actionID } })
-          }
+          navigateMenuEntry(navigate, menuEntryFromOdoo(menu), {
+            context: 'command',
+            menus,
+          })
           setOpen(false)
           setQuery('')
         },

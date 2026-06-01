@@ -19,6 +19,7 @@ import { Route as SaleIndexRouteImport } from './routes/sale/index'
 import { Route as InventoryIndexRouteImport } from './routes/inventory/index'
 import { Route as HrIndexRouteImport } from './routes/hr/index'
 import { Route as CrmIndexRouteImport } from './routes/crm/index'
+import { Route as ContactsIndexRouteImport } from './routes/contacts/index'
 import { Route as AccountingIndexRouteImport } from './routes/accounting/index'
 import { Route as SaleOrdersRouteImport } from './routes/sale/orders'
 import { Route as InventoryPickingsRouteImport } from './routes/inventory/pickings'
@@ -27,12 +28,14 @@ import { Route as HrDirectoryRouteImport } from './routes/hr/directory'
 import { Route as HrDepartmentsRouteImport } from './routes/hr/departments'
 import { Route as CrmPipelineRouteImport } from './routes/crm/pipeline'
 import { Route as CrmLeadsRouteImport } from './routes/crm/leads'
+import { Route as ContactsPartnersRouteImport } from './routes/contacts/partners'
 import { Route as AccountingMovesRouteImport } from './routes/accounting/moves'
 import { Route as SaleOrderIdRouteImport } from './routes/sale/order.$id'
 import { Route as InventoryPickingIdRouteImport } from './routes/inventory/picking.$id'
 import { Route as HrEmployeeIdRouteImport } from './routes/hr/employee.$id'
 import { Route as HrDepartmentIdRouteImport } from './routes/hr/department.$id'
 import { Route as CrmLeadIdRouteImport } from './routes/crm/lead.$id'
+import { Route as ContactsPartnerIdRouteImport } from './routes/contacts/partner.$id'
 import { Route as AccountingMoveIdRouteImport } from './routes/accounting/move.$id'
 
 const WebRoute = WebRouteImport.update({
@@ -85,6 +88,11 @@ const CrmIndexRoute = CrmIndexRouteImport.update({
   path: '/crm/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactsIndexRoute = ContactsIndexRouteImport.update({
+  id: '/contacts/',
+  path: '/contacts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountingIndexRoute = AccountingIndexRouteImport.update({
   id: '/accounting/',
   path: '/accounting/',
@@ -125,6 +133,11 @@ const CrmLeadsRoute = CrmLeadsRouteImport.update({
   path: '/crm/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactsPartnersRoute = ContactsPartnersRouteImport.update({
+  id: '/contacts/partners',
+  path: '/contacts/partners',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountingMovesRoute = AccountingMovesRouteImport.update({
   id: '/accounting/moves',
   path: '/accounting/moves',
@@ -155,6 +168,11 @@ const CrmLeadIdRoute = CrmLeadIdRouteImport.update({
   path: '/crm/lead/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactsPartnerIdRoute = ContactsPartnerIdRouteImport.update({
+  id: '/contacts/partner/$id',
+  path: '/contacts/partner/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountingMoveIdRoute = AccountingMoveIdRouteImport.update({
   id: '/accounting/move/$id',
   path: '/accounting/move/$id',
@@ -169,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/web': typeof WebRoute
   '/accounting/moves': typeof AccountingMovesRoute
+  '/contacts/partners': typeof ContactsPartnersRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
   '/hr/departments': typeof HrDepartmentsRoute
@@ -177,11 +196,13 @@ export interface FileRoutesByFullPath {
   '/inventory/pickings': typeof InventoryPickingsRoute
   '/sale/orders': typeof SaleOrdersRoute
   '/accounting/': typeof AccountingIndexRoute
+  '/contacts/': typeof ContactsIndexRoute
   '/crm/': typeof CrmIndexRoute
   '/hr/': typeof HrIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/sale/': typeof SaleIndexRoute
   '/accounting/move/$id': typeof AccountingMoveIdRoute
+  '/contacts/partner/$id': typeof ContactsPartnerIdRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
   '/hr/department/$id': typeof HrDepartmentIdRoute
   '/hr/employee/$id': typeof HrEmployeeIdRoute
@@ -196,6 +217,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/web': typeof WebRoute
   '/accounting/moves': typeof AccountingMovesRoute
+  '/contacts/partners': typeof ContactsPartnersRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
   '/hr/departments': typeof HrDepartmentsRoute
@@ -204,11 +226,13 @@ export interface FileRoutesByTo {
   '/inventory/pickings': typeof InventoryPickingsRoute
   '/sale/orders': typeof SaleOrdersRoute
   '/accounting': typeof AccountingIndexRoute
+  '/contacts': typeof ContactsIndexRoute
   '/crm': typeof CrmIndexRoute
   '/hr': typeof HrIndexRoute
   '/inventory': typeof InventoryIndexRoute
   '/sale': typeof SaleIndexRoute
   '/accounting/move/$id': typeof AccountingMoveIdRoute
+  '/contacts/partner/$id': typeof ContactsPartnerIdRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
   '/hr/department/$id': typeof HrDepartmentIdRoute
   '/hr/employee/$id': typeof HrEmployeeIdRoute
@@ -224,6 +248,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/web': typeof WebRoute
   '/accounting/moves': typeof AccountingMovesRoute
+  '/contacts/partners': typeof ContactsPartnersRoute
   '/crm/leads': typeof CrmLeadsRoute
   '/crm/pipeline': typeof CrmPipelineRoute
   '/hr/departments': typeof HrDepartmentsRoute
@@ -232,11 +257,13 @@ export interface FileRoutesById {
   '/inventory/pickings': typeof InventoryPickingsRoute
   '/sale/orders': typeof SaleOrdersRoute
   '/accounting/': typeof AccountingIndexRoute
+  '/contacts/': typeof ContactsIndexRoute
   '/crm/': typeof CrmIndexRoute
   '/hr/': typeof HrIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/sale/': typeof SaleIndexRoute
   '/accounting/move/$id': typeof AccountingMoveIdRoute
+  '/contacts/partner/$id': typeof ContactsPartnerIdRoute
   '/crm/lead/$id': typeof CrmLeadIdRoute
   '/hr/department/$id': typeof HrDepartmentIdRoute
   '/hr/employee/$id': typeof HrEmployeeIdRoute
@@ -253,6 +280,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/web'
     | '/accounting/moves'
+    | '/contacts/partners'
     | '/crm/leads'
     | '/crm/pipeline'
     | '/hr/departments'
@@ -261,11 +289,13 @@ export interface FileRouteTypes {
     | '/inventory/pickings'
     | '/sale/orders'
     | '/accounting/'
+    | '/contacts/'
     | '/crm/'
     | '/hr/'
     | '/inventory/'
     | '/sale/'
     | '/accounting/move/$id'
+    | '/contacts/partner/$id'
     | '/crm/lead/$id'
     | '/hr/department/$id'
     | '/hr/employee/$id'
@@ -280,6 +310,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/web'
     | '/accounting/moves'
+    | '/contacts/partners'
     | '/crm/leads'
     | '/crm/pipeline'
     | '/hr/departments'
@@ -288,11 +319,13 @@ export interface FileRouteTypes {
     | '/inventory/pickings'
     | '/sale/orders'
     | '/accounting'
+    | '/contacts'
     | '/crm'
     | '/hr'
     | '/inventory'
     | '/sale'
     | '/accounting/move/$id'
+    | '/contacts/partner/$id'
     | '/crm/lead/$id'
     | '/hr/department/$id'
     | '/hr/employee/$id'
@@ -307,6 +340,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/web'
     | '/accounting/moves'
+    | '/contacts/partners'
     | '/crm/leads'
     | '/crm/pipeline'
     | '/hr/departments'
@@ -315,11 +349,13 @@ export interface FileRouteTypes {
     | '/inventory/pickings'
     | '/sale/orders'
     | '/accounting/'
+    | '/contacts/'
     | '/crm/'
     | '/hr/'
     | '/inventory/'
     | '/sale/'
     | '/accounting/move/$id'
+    | '/contacts/partner/$id'
     | '/crm/lead/$id'
     | '/hr/department/$id'
     | '/hr/employee/$id'
@@ -335,6 +371,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   WebRoute: typeof WebRoute
   AccountingMovesRoute: typeof AccountingMovesRoute
+  ContactsPartnersRoute: typeof ContactsPartnersRoute
   CrmLeadsRoute: typeof CrmLeadsRoute
   CrmPipelineRoute: typeof CrmPipelineRoute
   HrDepartmentsRoute: typeof HrDepartmentsRoute
@@ -343,11 +380,13 @@ export interface RootRouteChildren {
   InventoryPickingsRoute: typeof InventoryPickingsRoute
   SaleOrdersRoute: typeof SaleOrdersRoute
   AccountingIndexRoute: typeof AccountingIndexRoute
+  ContactsIndexRoute: typeof ContactsIndexRoute
   CrmIndexRoute: typeof CrmIndexRoute
   HrIndexRoute: typeof HrIndexRoute
   InventoryIndexRoute: typeof InventoryIndexRoute
   SaleIndexRoute: typeof SaleIndexRoute
   AccountingMoveIdRoute: typeof AccountingMoveIdRoute
+  ContactsPartnerIdRoute: typeof ContactsPartnerIdRoute
   CrmLeadIdRoute: typeof CrmLeadIdRoute
   HrDepartmentIdRoute: typeof HrDepartmentIdRoute
   HrEmployeeIdRoute: typeof HrEmployeeIdRoute
@@ -427,6 +466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contacts/': {
+      id: '/contacts/'
+      path: '/contacts'
+      fullPath: '/contacts/'
+      preLoaderRoute: typeof ContactsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/accounting/': {
       id: '/accounting/'
       path: '/accounting'
@@ -483,6 +529,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contacts/partners': {
+      id: '/contacts/partners'
+      path: '/contacts/partners'
+      fullPath: '/contacts/partners'
+      preLoaderRoute: typeof ContactsPartnersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/accounting/moves': {
       id: '/accounting/moves'
       path: '/accounting/moves'
@@ -525,6 +578,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmLeadIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contacts/partner/$id': {
+      id: '/contacts/partner/$id'
+      path: '/contacts/partner/$id'
+      fullPath: '/contacts/partner/$id'
+      preLoaderRoute: typeof ContactsPartnerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/accounting/move/$id': {
       id: '/accounting/move/$id'
       path: '/accounting/move/$id'
@@ -543,6 +603,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   WebRoute: WebRoute,
   AccountingMovesRoute: AccountingMovesRoute,
+  ContactsPartnersRoute: ContactsPartnersRoute,
   CrmLeadsRoute: CrmLeadsRoute,
   CrmPipelineRoute: CrmPipelineRoute,
   HrDepartmentsRoute: HrDepartmentsRoute,
@@ -551,11 +612,13 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryPickingsRoute: InventoryPickingsRoute,
   SaleOrdersRoute: SaleOrdersRoute,
   AccountingIndexRoute: AccountingIndexRoute,
+  ContactsIndexRoute: ContactsIndexRoute,
   CrmIndexRoute: CrmIndexRoute,
   HrIndexRoute: HrIndexRoute,
   InventoryIndexRoute: InventoryIndexRoute,
   SaleIndexRoute: SaleIndexRoute,
   AccountingMoveIdRoute: AccountingMoveIdRoute,
+  ContactsPartnerIdRoute: ContactsPartnerIdRoute,
   CrmLeadIdRoute: CrmLeadIdRoute,
   HrDepartmentIdRoute: HrDepartmentIdRoute,
   HrEmployeeIdRoute: HrEmployeeIdRoute,

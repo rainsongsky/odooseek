@@ -5,14 +5,9 @@ import { createFileRoute, useBlocker, useSearch } from '@tanstack/react-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
+import { type WebSearch, parseWebSearch } from '../lib/web-search'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 import { OdooViewLoader } from '../views/OdooViewLoader'
-
-interface WebSearch {
-  model?: string
-  action?: number
-  viewType?: string
-}
 
 function WebPage() {
   const t = useTranslations()
@@ -25,7 +20,7 @@ function WebPage() {
   const { data: actionData, isLoading: resolvingAction } = useQuery({
     queryKey: ['odoo', 'action', search.action],
     queryFn: () => resolveAction(search.action as number),
-    enabled: !!search.action && !search.model,
+    enabled: search.action != null && !search.model,
     staleTime: 15 * 60_000,
   })
 
@@ -70,9 +65,9 @@ function WebPage() {
   }, [])
 
   const handleBackToList = useCallback(() => {
-    setViewType('list')
+    setViewType(defaultView)
     setRecordId(undefined)
-  }, [])
+  }, [defaultView])
 
   const handleCreateClick = useCallback(() => {
     setViewType('form')
@@ -151,5 +146,5 @@ function WebPage() {
 
 export const Route = createFileRoute('/web')({
   component: WebPage,
-  validateSearch: (search: Record<string, unknown>) => search,
+  validateSearch: parseWebSearch,
 })

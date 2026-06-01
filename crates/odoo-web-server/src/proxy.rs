@@ -86,6 +86,7 @@ pub async fn proxy_odoo(
         && (m == "button_immediate_install" || m == "button_immediate_upgrade")
     {
         state.cache.invalidate("session:menus").await;
+        state.cache.invalidate("menus:enriched").await;
     }
 
     let mut request = state

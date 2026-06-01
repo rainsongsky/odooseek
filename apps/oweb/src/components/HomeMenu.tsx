@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom'
 import { GripVertical, Search, X } from '@/lib/lucide-icons'
 import { useHomeMenu } from '../hooks/useHomeMenu'
 import { useAuth } from '../lib/auth'
-import { navigateHrOrAction } from '../lib/hr'
+import { menuEntryFromOdoo, navigateMenuEntry } from '../lib/menu-navigation'
 import '../styles/odoo-icons.css'
 
 const ICON_FALLBACK: Record<string, string> = {
@@ -116,7 +116,10 @@ export function HomeMenuOverlay() {
     (app: OdooMenuEntry) => {
       close()
       if (
-        navigateHrOrAction(navigate, { name: app.name, xmlid: app.xmlid, actionID: app.actionID })
+        navigateMenuEntry(navigate, menuEntryFromOdoo(app, app.children.length), {
+          context: 'app-root',
+          menus,
+        })
       ) {
         return
       }
@@ -124,7 +127,10 @@ export function HomeMenuOverlay() {
         const sections = getAppSections(menus, app.id as number)
         const firstWithAction = sections.find((s) => s.actionID)
         if (firstWithAction?.actionID) {
-          navigate({ to: '/web', search: { action: firstWithAction.actionID } })
+          navigateMenuEntry(navigate, menuEntryFromOdoo(firstWithAction, firstWithAction.children.length), {
+            context: 'menu-leaf',
+            menus,
+          })
         }
       }
     },

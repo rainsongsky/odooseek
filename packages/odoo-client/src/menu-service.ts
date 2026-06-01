@@ -7,6 +7,8 @@ export interface OdooMenuEntry {
   actionID: number | false
   actionModel: string | false
   actionPath: string | false
+  /** BFF-enriched from `ir.actions.act_window.res_model` (not from Odoo load_menus). */
+  resModel?: string | false
   webIcon: string | null
   webIconData: string | null
 }
@@ -25,6 +27,8 @@ export interface MenuTreeNode {
   actionID: number | false
   actionModel: string | false
   actionPath: string | false
+  /** BFF-enriched from `ir.actions.act_window.res_model` (not from Odoo load_menus). */
+  resModel?: string | false
   webIcon: string | null
   webIconData: string | null
   isLeaf: boolean
@@ -76,6 +80,7 @@ export function getMenuAsTree(menus: MenusData, menuId: number | 'root'): MenuTr
     actionID: entry.actionID,
     actionModel: entry.actionModel,
     actionPath: entry.actionPath,
+    resModel: entry.resModel,
     webIcon: entry.webIcon,
     webIconData: entry.webIconData,
     isLeaf: entry.children.length === 0,
