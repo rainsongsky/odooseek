@@ -178,7 +178,7 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
             type="button"
             onClick={handleCreate}
             disabled={createMutation.isPending || !newSummary}
-            className="rounded bg-accent px-3 py-1 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
           >
             {createMutation.isPending ? '...' : 'Add'}
           </button>
@@ -191,9 +191,9 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
 
       {(
         [
-          ['overdue', 'Overdue', 'text-red-500', groups.overdue],
-          ['today', 'Today', 'text-amber-500', groups.today],
-          ['planned', 'Planned', 'text-green-500', groups.planned],
+          ['overdue', 'Overdue', 'text-danger', groups.overdue],
+          ['today', 'Today', 'text-warning', groups.today],
+          ['planned', 'Planned', 'text-success', groups.planned],
         ] as const
       ).map(
         ([key, label, color, items]) =>
@@ -227,7 +227,7 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
                         type="button"
                         onClick={() => doneMutation.mutate({ id: a.id, feedback: feedbackText })}
                         disabled={doneMutation.isPending}
-                        className="rounded bg-green-600 px-1.5 py-0.5 text-[10px] text-white"
+                        className="rounded bg-success px-1.5 py-0.5 text-[10px] text-on-accent"
                       >
                         Done
                       </button>
@@ -247,14 +247,14 @@ export function ActivityPanel({ model, recordId }: ActivityPanelProps) {
                       <button
                         type="button"
                         onClick={() => setFeedbackId(a.id)}
-                        className="rounded px-1.5 py-0.5 text-[10px] text-green-600 hover:bg-green-50"
+                        className="rounded px-1.5 py-0.5 text-[10px] text-success hover:bg-success/10"
                       >
                         Done
                       </button>
                       <button
                         type="button"
                         onClick={() => cancelMutation.mutate(a.id)}
-                        className="rounded px-1.5 py-0.5 text-[10px] text-text-muted hover:text-red-500"
+                        className="rounded px-1.5 py-0.5 text-[10px] text-text-muted hover:text-danger"
                       >
                         Cancel
                       </button>

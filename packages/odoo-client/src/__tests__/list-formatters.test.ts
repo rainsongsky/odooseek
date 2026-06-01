@@ -45,11 +45,13 @@ describe('renderCell', () => {
     expect(renderCell('<b>Bold</b> text', meta)).toBe('Bold text')
   })
 
-  test('binary type with model renders image tag', () => {
+  test('binary type with model renders image descriptor', () => {
     const meta = { type: 'binary', name: 'image_128' } as OdooFieldMeta
     const result = renderCell('', meta, 'product.product', 1)
-    expect(result).toBeTruthy()
-    expect(typeof result).toBe('object')
+    expect(result).toEqual({
+      type: 'list-cell-image',
+      src: '/api/web/image/product.product/1/image_128',
+    })
   })
 
   test('selection value resolves label', () => {

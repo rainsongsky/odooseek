@@ -8,11 +8,11 @@ import {
   useState,
 } from 'react'
 import { getPreset } from './presets.ts'
+import { resolveInitialTheme, saveThemeToStorage } from './resolve-theme.ts'
 import { applyTheme } from './theme-engine.ts'
 import type { PresetId, ThemeConfig, ThemePreset } from './types.ts'
-import { DEFAULT_THEME_CONFIG } from './types.ts'
 
-const STORAGE_KEY = 'oweb-theme'
+export { resolveInitialTheme } from './resolve-theme.ts'
 
 interface ThemeContextValue {
   config: ThemeConfig
@@ -23,44 +23,22 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-function loadFromLocalStorage(): ThemeConfig | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed.presetId === 'string' && typeof parsed.accentId === 'string') {
-      return parsed as ThemeConfig
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-function saveToLocalStorage(config: ThemeConfig): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-  } catch {
-    // Storage full or unavailable — ignore
-  }
-}
-
-function resolveInitialTheme(): ThemeConfig {
-  return loadFromLocalStorage() ?? DEFAULT_THEME_CONFIG
-}
-
 interface ThemeProviderProps {
   children: ReactNode
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [config, setConfig] = useState<ThemeConfig>(() => resolveInitialTheme())
+  const [config, setConfig] = useState<ThemeConfig>(() => {
+    const initial = resolveInitialTheme()
+    applyTheme(initial)
+    return initial
+  })
   const initialized = useRef(false)
 
   useEffect(() => {
     applyTheme(config)
     if (initialized.current) {
-      saveToLocalStorage(config)
+      saveThemeToStorage(config)
     }
     initialized.current = true
   }, [config])

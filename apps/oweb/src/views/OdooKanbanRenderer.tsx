@@ -219,7 +219,7 @@ export function OdooKanbanRenderer({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-12">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
       </div>
     )
@@ -228,27 +228,29 @@ export function OdooKanbanRenderer({
   // Ungrouped: show cards in a responsive grid
   if (!groupBy) {
     return (
-      <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {(records ?? []).map((record) => (
-          <KanbanCard
-            key={record.id as number}
-            model={model}
-            record={record}
-            cardFields={cardFields}
-            templateNodes={templateNodes}
-            fields={fields}
-            highlightColor={highlightColor}
-            onClick={onRecordClick}
-            onDelete={handleCardDelete}
-            onArchive={handleCardArchive}
-          />
-        ))}
+      <div className="min-h-0 flex-1 overflow-auto p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {(records ?? []).map((record) => (
+            <KanbanCard
+              key={record.id as number}
+              model={model}
+              record={record}
+              cardFields={cardFields}
+              templateNodes={templateNodes}
+              fields={fields}
+              highlightColor={highlightColor}
+              onClick={onRecordClick}
+              onDelete={handleCardDelete}
+              onArchive={handleCardArchive}
+            />
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto p-4">
+    <div className="kanban-scroll flex min-h-0 w-full flex-1 gap-4 overflow-x-auto p-4">
       {columnOrder.map((colId) => {
         const colRecords = groups.get(colId) ?? []
         const stageName =
@@ -329,8 +331,8 @@ function KanbanColumn({
   }, [name, stageId, onQuickCreate])
 
   return (
-    <div className="flex w-64 shrink-0 flex-col rounded-lg border border-border-subtle bg-surface/30">
-      <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+    <div className="flex h-full min-h-0 min-w-64 flex-1 flex-col rounded-lg border border-border-subtle bg-surface/30">
+      <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-3 py-2">
         <span className="text-sm font-medium text-text-primary">{title}</span>
         <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] text-text-muted">
           {count}
@@ -340,7 +342,7 @@ function KanbanColumn({
         <KanbanProgressbarBar colors={progressbar.colors} counts={progressbarCounts} />
       )}
       <div
-        className="flex flex-col gap-2 overflow-y-auto p-2"
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           const recordId = Number(e.dataTransfer.getData('recordId'))
@@ -379,7 +381,7 @@ function KanbanColumn({
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent/90"
+                  className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium text-on-accent hover:opacity-90"
                 >
                   Add
                 </button>
@@ -407,10 +409,10 @@ function KanbanColumn({
 }
 
 const PROGRESSBAR_COLOR_MAP: Record<string, string> = {
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  danger: 'bg-red-500',
-  info: 'bg-blue-500',
+  success: 'bg-accent',
+  warning: 'bg-accent-bright',
+  danger: 'bg-accent-dim',
+  info: 'bg-text-muted/40',
 }
 
 function KanbanProgressbarBar({
@@ -427,7 +429,7 @@ function KanbanProgressbarBar({
     .map(([value, colorName]) => ({
       value,
       count: counts[value] || 0,
-      className: PROGRESSBAR_COLOR_MAP[colorName] || 'bg-gray-400',
+      className: PROGRESSBAR_COLOR_MAP[colorName] || 'bg-border-default',
     }))
     .filter((s) => s.count > 0)
 
@@ -622,7 +624,7 @@ function CardActions({
                 onDelete(recordId)
                 setOpen(false)
               }}
-              className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-hover"
+              className="w-full px-3 py-1.5 text-left text-xs text-text-muted hover:bg-hover hover:text-text-primary"
             >
               Delete
             </button>

@@ -3,10 +3,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { scopeRbcCss } from './vite/scope-rbc-css'
+import { injectThemeBoot } from './vite/inject-theme-boot'
 
 export default defineConfig({
   plugins: [
     TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
+    injectThemeBoot(),
+    scopeRbcCss(),
     react(),
     tailwindcss(),
   ],

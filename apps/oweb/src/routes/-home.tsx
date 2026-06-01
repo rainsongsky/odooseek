@@ -120,7 +120,7 @@ export function HomePage() {
           <button
             type="button"
             onClick={() => navigate({ to: '/login' })}
-            className="rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:brightness-110"
+            className="rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:brightness-110"
           >
             Connect to Odoo
           </button>

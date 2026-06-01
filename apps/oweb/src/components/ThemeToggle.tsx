@@ -57,7 +57,7 @@ export function ThemeToggle() {
         </button>
 
         {open && (
-          <div className="glass-heavy animate-fade-slide-in absolute right-0 top-full z-50 mt-2 w-64 rounded-lg p-3 shadow-xl">
+          <div className="glass-heavy animate-fade-slide-in absolute right-0 top-full z-50 mt-2 w-[min(16rem,calc(100vw-2rem))] rounded-lg p-3 shadow-xl">
             <div className="space-y-3">
               <div>
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-text-muted">

@@ -2,6 +2,7 @@ import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, test, vi } from 'vitest'
+import { ThemeProvider } from '../../themes/ThemeContext'
 import { OdooGraphRenderer } from '../OdooGraphRenderer'
 
 const mockCallKw = vi.fn()
@@ -19,7 +20,9 @@ vi.mock('@odooseek/odoo-client', async (original) => {
 let queryClient: QueryClient
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider>{children}</ThemeProvider>
+  </QueryClientProvider>
 )
 
 const barArch = `<graph string="Sales">

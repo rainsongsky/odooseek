@@ -39,122 +39,124 @@ function SettingsPage() {
       : []
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
-      <div className="mx-auto w-full max-w-3xl px-6 py-8">
-        <h2 className="mb-6 text-xl font-semibold text-text-primary">Settings</h2>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl px-6 py-8">
+          <h2 className="mb-6 text-xl font-semibold text-text-primary">Settings</h2>
 
-        <div className="space-y-4">
-          {/* User Profile */}
-          <Section title="User Profile">
-            <KVRow label="Name" value={session.name} />
-            <KVRow label="Username" value={session.username} />
-            <KVRow label="User ID" value={session.uid} />
-            <KVRow label="Partner" value={session.partner_display_name} />
-            <KVRow
-              label="Language"
-              value={(session.user_context as Record<string, string>)?.lang ?? 'en_US'}
-            />
-            <KVRow
-              label="Timezone"
-              value={(session.user_context as Record<string, string>)?.tz ?? 'UTC'}
-            />
-            <KVRow label="Admin" value={session.is_admin ? 'Yes' : 'No'} />
-            <KVRow label="System" value={session.is_system ? 'Yes' : 'No'} />
-          </Section>
-
-          {/* Odoo Server */}
-          <Section title="Odoo Server">
-            <KVRow label="Database" value={session.db} />
-            <KVRow label="Version" value={session.server_version} />
-            <KVRow label="Web Base URL" value={session.web_base_url} />
-            <KVRow
-              label="Max Upload Size"
-              value={
-                session.max_file_upload_size
-                  ? `${(session.max_file_upload_size / 1024 / 1024).toFixed(0)} MB`
-                  : undefined
-              }
-            />
-            <KVRow label="Active IDs Limit" value={session.active_ids_limit} />
-          </Section>
-
-          {/* Companies */}
-          {companyList.length > 0 && (
-            <Section title={`Companies (${companyList.length})`}>
-              <div className="flex flex-wrap gap-2">
-                {companyList.map((c) => (
-                  <span
-                    key={c.id}
-                    className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
-                  >
-                    {c.name}
-                  </span>
-                ))}
-              </div>
+          <div className="space-y-4">
+            {/* User Profile */}
+            <Section title="User Profile">
+              <KVRow label="Name" value={session.name} />
+              <KVRow label="Username" value={session.username} />
+              <KVRow label="User ID" value={session.uid} />
+              <KVRow label="Partner" value={session.partner_display_name} />
+              <KVRow
+                label="Language"
+                value={(session.user_context as Record<string, string>)?.lang ?? 'en_US'}
+              />
+              <KVRow
+                label="Timezone"
+                value={(session.user_context as Record<string, string>)?.tz ?? 'UTC'}
+              />
+              <KVRow label="Admin" value={session.is_admin ? 'Yes' : 'No'} />
+              <KVRow label="System" value={session.is_system ? 'Yes' : 'No'} />
             </Section>
-          )}
 
-          {/* Installed Modules */}
-          {modules && modules.length > 0 && (
-            <Section title={`Installed Modules (${modules.length})`}>
-              <div className="max-h-60 overflow-y-auto">
-                <div className="flex flex-wrap gap-1">
-                  {modules.map((name) => (
+            {/* Odoo Server */}
+            <Section title="Odoo Server">
+              <KVRow label="Database" value={session.db} />
+              <KVRow label="Version" value={session.server_version} />
+              <KVRow label="Web Base URL" value={session.web_base_url} />
+              <KVRow
+                label="Max Upload Size"
+                value={
+                  session.max_file_upload_size
+                    ? `${(session.max_file_upload_size / 1024 / 1024).toFixed(0)} MB`
+                    : undefined
+                }
+              />
+              <KVRow label="Active IDs Limit" value={session.active_ids_limit} />
+            </Section>
+
+            {/* Companies */}
+            {companyList.length > 0 && (
+              <Section title={`Companies (${companyList.length})`}>
+                <div className="flex flex-wrap gap-2">
+                  {companyList.map((c) => (
                     <span
-                      key={name}
-                      className="rounded border border-border-subtle bg-surface px-2 py-0.5 font-mono text-[11px] text-text-secondary"
+                      key={c.id}
+                      className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
                     >
-                      {name}
+                      {c.name}
                     </span>
                   ))}
                 </div>
-              </div>
-            </Section>
-          )}
+              </Section>
+            )}
 
-          {/* Languages */}
-          {langList && langList.length > 0 && (
-            <Section title={`Languages (${langList.length})`}>
+            {/* Installed Modules */}
+            {modules && modules.length > 0 && (
+              <Section title={`Installed Modules (${modules.length})`}>
+                <div className="max-h-60 overflow-y-auto">
+                  <div className="flex flex-wrap gap-1">
+                    {modules.map((name) => (
+                      <span
+                        key={name}
+                        className="rounded border border-border-subtle bg-surface px-2 py-0.5 font-mono text-[11px] text-text-secondary"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </Section>
+            )}
+
+            {/* Languages */}
+            {langList && langList.length > 0 && (
+              <Section title={`Languages (${langList.length})`}>
+                <div className="flex flex-wrap gap-2">
+                  {langList.map(([code, name]) => (
+                    <span
+                      key={code}
+                      className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
+                    >
+                      {name} ({code})
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Appearance */}
+            <Section title="Appearance">
+              <ThemeToggle />
+            </Section>
+
+            {/* Technology Stack */}
+            <Section title="Technology Stack">
               <div className="flex flex-wrap gap-2">
-                {langList.map(([code, name]) => (
+                {[
+                  'React 19',
+                  'TypeScript 6',
+                  'TanStack Router',
+                  'TanStack Query',
+                  'Vite 8',
+                  'Bun',
+                  'Tailwind CSS 4',
+                  'Rust (axum)',
+                ].map((tech) => (
                   <span
-                    key={code}
+                    key={tech}
                     className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
                   >
-                    {name} ({code})
+                    {tech}
                   </span>
                 ))}
               </div>
             </Section>
-          )}
-
-          {/* Appearance */}
-          <Section title="Appearance">
-            <ThemeToggle />
-          </Section>
-
-          {/* Technology Stack */}
-          <Section title="Technology Stack">
-            <div className="flex flex-wrap gap-2">
-              {[
-                'React 19',
-                'TypeScript 6',
-                'TanStack Router',
-                'TanStack Query',
-                'Vite 8',
-                'Bun',
-                'Tailwind CSS 4',
-                'Rust (axum)',
-              ].map((tech) => (
-                <span
-                  key={tech}
-                  className="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-text-secondary"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-          </Section>
+          </div>
         </div>
       </div>
     </div>

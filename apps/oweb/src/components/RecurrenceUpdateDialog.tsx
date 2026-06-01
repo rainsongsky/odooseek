@@ -24,7 +24,7 @@ export function RecurrenceUpdateDialog({ mode, onConfirm, onCancel }: Recurrence
         </p>
 
         <div className="space-y-2">
-          <label className="flex items-center gap-3 rounded-lg border border-border-subtle p-3 cursor-pointer hover:bg-surface-hover">
+          <label className="flex items-center gap-3 rounded-lg border border-border-subtle p-3 cursor-pointer hover:bg-hover">
             <input
               type="radio"
               name="recurrence_policy"
@@ -38,7 +38,7 @@ export function RecurrenceUpdateDialog({ mode, onConfirm, onCancel }: Recurrence
             </div>
           </label>
 
-          <label className="flex items-center gap-3 rounded-lg border border-border-subtle p-3 cursor-pointer hover:bg-surface-hover">
+          <label className="flex items-center gap-3 rounded-lg border border-border-subtle p-3 cursor-pointer hover:bg-hover">
             <input
               type="radio"
               name="recurrence_policy"
@@ -54,7 +54,7 @@ export function RecurrenceUpdateDialog({ mode, onConfirm, onCancel }: Recurrence
             </div>
           </label>
 
-          <label className="flex items-center gap-3 rounded-lg border border-border-subtle p-3 cursor-pointer hover:bg-surface-hover">
+          <label className="flex items-center gap-3 rounded-lg border border-border-subtle p-3 cursor-pointer hover:bg-hover">
             <input
               type="radio"
               name="recurrence_policy"
@@ -75,14 +75,14 @@ export function RecurrenceUpdateDialog({ mode, onConfirm, onCancel }: Recurrence
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-border-subtle px-3 py-1.5 text-xs text-text-muted hover:bg-surface-hover"
+            className="rounded-lg border border-border-subtle px-3 py-1.5 text-xs text-text-muted hover:bg-hover"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onConfirm(policy)}
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
+            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-on-accent hover:bg-accent/90"
           >
             {mode === 'delete' ? 'Delete' : 'Edit'}
           </button>

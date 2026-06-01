@@ -102,7 +102,7 @@ function FormDialogBody({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="mt-3 rounded bg-accent px-3 py-1 text-xs text-white"
+                  className="mt-3 rounded bg-accent px-3 py-1 text-xs text-on-accent"
                 >
                   Close
                 </button>

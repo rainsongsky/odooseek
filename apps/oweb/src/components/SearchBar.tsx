@@ -666,7 +666,7 @@ export function SearchBar({
                 </svg>
               </button>
               {showFilterMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-lg border border-border-subtle bg-surface p-3 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 w-[min(18rem,calc(100vw-2rem))] rounded-lg border border-border-subtle bg-surface p-3 shadow-lg">
                   {domainFilters.length > 0 && (
                     <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-text-muted">
                       <svg
@@ -751,7 +751,7 @@ export function SearchBar({
                 </svg>
               </button>
               {showGroupByMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-border-subtle bg-surface p-3 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 w-[min(16rem,calc(100vw-2rem))] rounded-lg border border-border-subtle bg-surface p-3 shadow-lg">
                   <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-text-muted">
                     <svg
                       width="12"
@@ -780,7 +780,7 @@ export function SearchBar({
                             type="checkbox"
                             checked={activeGroupBys.includes(ref)}
                             onChange={() => toggleGroupBy(gb)}
-                            className="h-3 w-3 rounded accent-emerald-600"
+                            className="h-3 w-3 rounded accent-accent"
                           />
                           <span className="truncate">{gb.string}</span>
                         </label>
@@ -880,7 +880,7 @@ export function SearchBar({
           )}
           <button
             type="submit"
-            className="rounded bg-accent px-3 py-1 text-xs font-medium text-white transition-colors hover:brightness-110"
+            className="rounded bg-accent px-3 py-1 text-xs font-medium text-on-accent transition-colors hover:brightness-110"
           >
             Apply
           </button>
@@ -918,7 +918,7 @@ function FacetChip({
   color: 'blue' | 'green'
   onRemove: () => void
 }) {
-  const labelClass = color === 'green' ? 'bg-emerald-600 text-white' : 'bg-accent text-white'
+  const labelClass = color === 'green' ? 'bg-success text-on-accent' : 'bg-accent text-on-accent'
   return (
     <span className="inline-flex items-stretch overflow-hidden rounded text-nowrap animate-fade-slide-in">
       <span
@@ -934,7 +934,7 @@ function FacetChip({
         }}
         className={`flex items-center px-1 text-[10px] ${
           color === 'green'
-            ? 'bg-emerald-600/10 text-emerald-600 hover:bg-emerald-600/20'
+            ? 'bg-success/10 text-success hover:bg-success/20'
             : 'bg-accent/10 text-accent hover:bg-accent/20'
         }`}
       >

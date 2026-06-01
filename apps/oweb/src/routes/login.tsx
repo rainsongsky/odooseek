@@ -144,7 +144,7 @@ function LoginPage() {
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs text-red-400">
+            <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
               {error}
             </div>
           )}
@@ -152,7 +152,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full cursor-pointer rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full cursor-pointer rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Signing in...' : t('login.submit')}
           </button>

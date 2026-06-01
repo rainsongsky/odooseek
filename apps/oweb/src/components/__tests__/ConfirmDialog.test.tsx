@@ -116,7 +116,7 @@ describe('ConfirmDialog', () => {
 
     const confirmBtn = screen.getByRole('button', { name: 'Delete' })
     expect(confirmBtn).toBeInTheDocument()
-    expect(confirmBtn.className).toContain('bg-red-500')
+    expect(confirmBtn.className).toContain('bg-danger')
   })
 
   test('uses custom confirm and cancel labels', () => {

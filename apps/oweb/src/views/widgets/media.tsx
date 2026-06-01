@@ -108,7 +108,7 @@ export function ImageFieldWidget({
   const maxH = Number(opts.max_height) || 1024
   const sizeOpt = opts.size as [number, number] | undefined
   const previewImage = opts.preview_image as string | undefined
-  const imgClass = (opts.img_class as string) ?? ''
+  const imgClass = [opts.img_class, field.class].filter(Boolean).join(' ')
   const enableZoom = opts.zoom === true || opts.zoom === 'true'
   const isContact = field.widget === 'contact_image'
   const base64 = value as string | false | null | undefined

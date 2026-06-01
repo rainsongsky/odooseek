@@ -326,8 +326,8 @@ describe('field-widgets', () => {
     )
     const badge = screen.getByText('Yes')
     expect(badge).toBeTruthy()
-    expect(badge.className).toContain('bg-emerald-500/10')
-    expect(badge.className).toContain('text-emerald-500')
+    expect(badge.className).toContain('bg-success/10')
+    expect(badge.className).toContain('text-success')
   })
 
   test('BooleanToggleWidget readonly false shows "No" badge', () => {
@@ -841,7 +841,7 @@ describe('field-widgets', () => {
       }),
     )
     expect(screen.getByText('Alpha').className).toContain('bg-accent')
-    expect(screen.getByText('Beta').className).toContain('bg-gray-100')
+    expect(screen.getByText('Beta').className).toContain('bg-elevated')
   })
 
   // ── LabelSelectionWidget ────────────────────────────────────────────
@@ -864,7 +864,7 @@ describe('field-widgets', () => {
     )
     const label = screen.getByText('Done')
     expect(label).toBeInTheDocument()
-    expect(label.className).toContain('bg-green-100')
+    expect(label.className).toContain('bg-success/15')
   })
 
   // ── StateSelectionWidget ────────────────────────────────────────────

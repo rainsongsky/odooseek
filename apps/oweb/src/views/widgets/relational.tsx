@@ -652,7 +652,7 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
                           <button
                             type="button"
                             onClick={handleCancelEdit}
-                            className="text-xs text-text-muted hover:text-red-500"
+                            className="text-xs text-text-muted hover:text-danger"
                             title="Cancel"
                           >
                             ✕
@@ -672,7 +672,7 @@ export function One2ManyWidget({ field, value, onChange, readOnly, meta }: Field
                               handleDelete(rid)
                             }
                           }}
-                          className="text-xs text-text-muted hover:text-red-500"
+                          className="text-xs text-text-muted hover:text-danger"
                         >
                           ×
                         </button>

@@ -12,8 +12,12 @@ import { AuthProvider } from './lib/auth'
 import { I18nProvider } from './lib/i18n'
 import { routeTree } from './routeTree.gen'
 import { ThemeProvider } from './themes'
+import { resolveInitialTheme } from './themes/resolve-theme'
+import { applyTheme } from './themes/theme-engine'
 import './index.css'
 import './styles/odoo-icons.css'
+
+applyTheme(resolveInitialTheme())
 
 const queryClient = new QueryClient({
   defaultOptions: {

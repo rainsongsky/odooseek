@@ -18,13 +18,9 @@
   },
   "keywords": ["odoo", "json-rpc", "erp", "xml-parser", "bff"],
   "license": "MIT",
-  "peerDependencies": {},
   "devDependencies": {
-    "@testing-library/react": "^16.0",
-    "@types/react": "^19.2.15",
     "@vitest/ui": "^4.1.7",
     "jsdom": "^29.1.1",
-    "react": "^19.2.6",
     "typescript": "^5.0",
     "vitest": "^4.0"
   }

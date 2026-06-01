@@ -1,7 +1,9 @@
 import type {
   ButtonBoxElement,
   ButtonElement,
+  FieldElement,
   FormElement,
+  GroupElement,
   HeaderElement,
   OdooFieldMeta,
   StatButtonElement,
@@ -28,6 +30,7 @@ import { createPortal } from 'react-dom'
 import { ActivityPanel } from '../components/ActivityPanel'
 import { Chatter } from '../components/Chatter'
 import { useConfirmDialog } from '../components/ConfirmDialog'
+import { FormSheetSkeleton } from '../components/Skeleton'
 import { getFieldWidget } from './widgets'
 
 export interface OdooFormRendererRef {
@@ -374,9 +377,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     return <div className="p-6 text-sm text-text-muted">Failed to parse form XML</div>
 
   const currentRecord = editMode ? formValues : record?.[0]
+  const awaitingRecord = !!recordId && !record?.[0]
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <HeaderBar
         headerElement={headerElement}
         stateField={fields.state}
@@ -397,36 +401,49 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       />
 
       {saveError && (
-        <div className="mx-auto mt-1 max-w-[860px] w-full rounded border border-red-400/30 bg-red-400/10 px-4 py-2 text-xs text-red-400">
+        <div className="o_form_sheet_bg mt-1 w-full rounded border border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger">
           {saveError}
         </div>
       )}
       {warning && (
-        <div className="mx-auto mt-1 max-w-[860px] w-full rounded border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs text-yellow-400">
+        <div className="o_form_sheet_bg mt-1 w-full rounded border border-warning/30 bg-warning/10 px-4 py-2 text-xs text-warning">
           <span className="font-medium">{warning.title}</span>: {warning.message}
         </div>
       )}
 
-      <div ref={formRef} className="o_form_body flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
-        <div className="o_form_sheet_bg mx-auto">
-          <div className="o_form_sheet">
-            <FormLayoutNode
-              elements={nonHeaderElements}
-              record={currentRecord}
-              fields={fields}
-              model={model}
-              recordId={recordId}
-              editMode={editMode}
-              onChange={handleChange}
-              onAction={onAction}
-              onButtonAction={handleActionButton}
-            />
-            {recordId && <FormTimestamps record={record?.[0]} />}
+      <div
+        ref={formRef}
+        className="o_form_body min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-2"
+      >
+        <div className={recordId ? 'o_form_main' : 'o_form_main o_form_main--solo'}>
+          <div className="o_form_sheet_bg">
+            {awaitingRecord ? (
+              <FormSheetSkeleton />
+            ) : (
+              <div className="o_form_sheet">
+                <FormLayoutNode
+                  elements={nonHeaderElements}
+                  record={currentRecord}
+                  fields={fields}
+                  model={model}
+                  recordId={recordId}
+                  editMode={editMode}
+                  onChange={handleChange}
+                  onAction={onAction}
+                  onButtonAction={handleActionButton}
+                />
+                {recordId && <FormTimestamps record={record?.[0]} />}
+              </div>
+            )}
           </div>
-        </div>
-        <div className="mx-auto max-w-[860px]">
-          <ActivityPanel model={model} recordId={recordId} />
-          <Chatter model={model} recordId={recordId} />
+          {!awaitingRecord && recordId && (
+            <div className="o_form_chatter_col">
+              <div className="o_form_sheet_bg">
+                <ActivityPanel model={model} recordId={recordId} />
+                <Chatter model={model} recordId={recordId} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -449,7 +466,7 @@ function HeaderButtonGroup({
   const btnClass = (btn: ButtonElement) =>
     `px-3 py-1 text-xs font-medium transition-colors ${
       btn.class?.includes('btn-primary')
-        ? 'bg-accent text-white hover:bg-accent/90 rounded'
+        ? 'bg-accent text-on-accent hover:bg-accent/90 rounded'
         : 'text-text-secondary hover:bg-hover rounded'
     }`
 
@@ -589,10 +606,10 @@ function HeaderBar({
                 const baseClass = 'px-3 py-1 text-[11px] font-medium transition-colors'
                 const roundedClass = isFirst ? 'rounded-l' : isLast ? 'rounded-r' : ''
                 const colorClass = isCurrent
-                  ? 'bg-accent text-white'
+                  ? 'bg-accent text-on-accent'
                   : isPast
-                    ? 'bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50'
-                    : 'bg-gray-700/50 text-text-muted hover:bg-gray-600/50'
+                    ? 'bg-success/20 text-success hover:bg-success/30'
+                    : 'bg-elevated text-text-muted hover:bg-hover'
                 const cursorClass = isCurrent || editMode ? 'cursor-default' : 'cursor-pointer'
                 return (
                   <button
@@ -649,20 +666,20 @@ function ActionButtons({
   return (
     <div className="flex items-center gap-2 shrink-0">
       {saveError && (
-        <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400 transition-all duration-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+        <span className="flex items-center gap-1.5 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger transition-all duration-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-danger" />
           Invalid
         </span>
       )}
       {isDirty && (
-        <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500 transition-all duration-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <span className="flex items-center gap-1.5 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning transition-all duration-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
           Unsaved
         </span>
       )}
       {justSaved && !isDirty && (
-        <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500 transition-all duration-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success transition-all duration-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" />
           Saved
         </span>
       )}
@@ -679,7 +696,7 @@ function ActionButtons({
             type="button"
             onClick={onSave}
             disabled={isSaving}
-            className="rounded bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1 text-xs font-semibold text-on-accent hover:bg-accent/90 disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save'}
           </button>
@@ -688,7 +705,7 @@ function ActionButtons({
         <button
           type="button"
           onClick={onEdit}
-          className="rounded bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90"
+          className="rounded bg-accent px-3 py-1 text-xs font-semibold text-on-accent hover:bg-accent/90"
         >
           Edit
         </button>
@@ -780,13 +797,11 @@ function StatButton({
       onClick={handleClick}
       disabled={loading}
       title={error ?? undefined}
-      className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${error ? 'text-red-400 bg-red-400/10 hover:bg-red-400/20' : 'text-text-secondary hover:bg-hover'}`}
+      className={`oe_stat_button ${error ? 'oe_stat_button--error' : ''}`}
     >
-      {button.icon && (
-        <i className={`fa ${button.icon} text-sm ${error ? 'text-red-400' : 'text-text-muted'}`} />
-      )}
-      {value !== '' && <span className="font-semibold text-text-primary">{value}</span>}
-      <span>{error ?? text}</span>
+      {button.icon && <i className={`fa ${button.icon} oe_stat_button_icon`} />}
+      {value !== '' && <span className="oe_stat_button_value">{value}</span>}
+      <span className="oe_stat_button_text">{error ?? text}</span>
     </button>
   )
 }
@@ -807,6 +822,9 @@ interface NodeProps {
   onAction?: (action: OdooAction) => void
   onButtonAction?: (btn: ButtonElement) => void
   level?: number
+  groupCol?: number
+  /** Span within parent `.o_group` grid (from field colspan). */
+  fieldGridSpan?: number
 }
 
 function NotebookRenderer({
@@ -854,8 +872,8 @@ function NotebookRenderer({
   }, [visiblePages, editMode, fields, record])
 
   return (
-    <div className="mt-4">
-      <div className="flex border-b border-border-subtle">
+    <div className="o_notebook mt-4">
+      <div className="o_notebook_tabs flex border-b border-border-subtle">
         {visiblePages.map((page, pi) => (
           <button
             key={pi}
@@ -869,12 +887,12 @@ function NotebookRenderer({
           >
             {page.string}
             {pageHasMissing[pi] && (
-              <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
+              <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-danger" />
             )}
           </button>
         ))}
       </div>
-      <div className="py-4">
+      <div className="o_notebook_page py-4">
         {visiblePages[safeActive] && (
           <FormLayoutNode
             elements={visiblePages[safeActive].elements}
@@ -904,7 +922,7 @@ function HelpPopover({ text }: { text: string }) {
         type="button"
         onClick={() => setOpen(!open)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="inline-flex items-center text-[10px] text-blue-400 cursor-help hover:text-blue-500"
+        className="inline-flex items-center text-[10px] text-info cursor-help hover:opacity-80"
       >
         ?
       </button>
@@ -913,7 +931,7 @@ function HelpPopover({ text }: { text: string }) {
         createPortal(
           <div className="fixed inset-0 z-[9999]" onMouseDown={() => setOpen(false)}>
             <div
-              className="absolute z-[10000] mt-1 w-72 rounded-lg border border-border-subtle bg-surface p-3 text-xs leading-relaxed text-text-secondary shadow-lg"
+              className="absolute z-[10000] mt-1 w-[min(18rem,calc(100vw-2rem))] rounded-lg border border-border-subtle bg-surface p-3 text-xs leading-relaxed text-text-secondary shadow-lg"
               style={{
                 top: btnRef.current?.getBoundingClientRect().bottom + 4,
                 left: Math.min(
@@ -939,18 +957,27 @@ function ButtonBoxRenderer({
   record,
   model,
   recordId,
+  inline = false,
 }: {
   buttons: StatButtonElement[]
   record?: Record<string, unknown>
   model: string
   recordId?: number
+  /** When true, render in sheet header (no bottom border). */
+  inline?: boolean
 }) {
   const [overflowOpen, setOverflowOpen] = useState(false)
   const primary = buttons.slice(0, MAX_BUTTON_BOX)
   const overflow = buttons.slice(MAX_BUTTON_BOX)
 
   return (
-    <div className="flex flex-wrap gap-1 border-b border-border-subtle pb-3 mb-3">
+    <div
+      className={
+        inline
+          ? 'o_form_button_box'
+          : 'flex flex-wrap gap-1 border-b border-border-subtle pb-3 mb-3'
+      }
+    >
       {primary.map((btn, bi) => (
         <StatButton key={bi} button={btn} record={record} model={model} recordId={recordId} />
       ))}
@@ -979,37 +1006,131 @@ function ButtonBoxRenderer({
   )
 }
 
+const TITLE_FIELD_NAMES = new Set(['name', 'display_name'])
+
+function isTitleField(el: FormElement): el is FieldElement {
+  if (el.type !== 'field') return false
+  if (!TITLE_FIELD_NAMES.has(el.name)) return false
+  const cls = el.class ?? ''
+  return !!(el.nolabel || cls.includes('oe_inline') || cls.includes('text-break'))
+}
+
+function isAvatarField(el: FormElement): el is FieldElement {
+  if (el.type !== 'field') return false
+  const cls = el.class ?? ''
+  if (cls.includes('oe_avatar')) return true
+  return (
+    (el.widget === 'image' || el.widget === 'contact_image') && /^(image_|avatar)/.test(el.name)
+  )
+}
+
+function isGroupColumnsLayout(elements: FormElement[]): boolean {
+  const items = elements.filter((e) => e.type !== 'newline')
+  if (items.length < 2) return false
+  return items.every((e) => e.type === 'group')
+}
+
+function partitionSheetElements(elements: FormElement[]) {
+  const buttonBoxes: ButtonBoxElement[] = []
+  const titleElements: FormElement[] = []
+  const avatarElements: FormElement[] = []
+  const body: FormElement[] = []
+  let titlePhase = true
+
+  for (const el of elements) {
+    if (el.type === 'button_box') {
+      buttonBoxes.push(el)
+      continue
+    }
+    if (el.type === 'title_block') {
+      for (const child of el.elements) {
+        if (isAvatarField(child)) avatarElements.push(child)
+        else titleElements.push(child)
+      }
+      continue
+    }
+    if (titlePhase && isAvatarField(el)) {
+      avatarElements.push(el)
+      continue
+    }
+    if (titlePhase && isTitleField(el)) {
+      titleElements.push(el)
+      continue
+    }
+    if (titlePhase && el.type === 'group') {
+      const inner = el.elements.filter((c) => c.type !== 'newline')
+      if (inner.length === 1 && isTitleField(inner[0])) {
+        titleElements.push(inner[0])
+        continue
+      }
+      const avatars = inner.filter(isAvatarField)
+      const titles = inner.filter(isTitleField)
+      const rest = inner.filter((c) => !isAvatarField(c) && !isTitleField(c))
+      if (avatars.length > 0 || titles.length > 0) {
+        avatarElements.push(...avatars)
+        titleElements.push(...titles)
+        if (rest.length === 0) continue
+        body.push({ ...el, elements: rest })
+        continue
+      }
+    }
+    titlePhase = false
+    body.push(el)
+  }
+
+  return { buttonBoxes, titleElements, avatarElements, body }
+}
+
 function renderGroupItems(
   elements: FormElement[],
-  ctx: Omit<NodeProps, 'elements'>,
+  ctx: Omit<NodeProps, 'elements'> & { groupCol?: number },
 ): React.ReactNode[] {
   const result: React.ReactNode[] = []
   let colIndex = 0
-  const maxCols = 2
+  const maxCols = Math.max(1, Math.min(ctx.groupCol ?? 2, 6))
 
   for (let i = 0; i < elements.length; i++) {
     const el = elements[i]
 
-    // newline: force column break (move to next row)
+    // newline: next field starts on a new row
     if (el.type === 'newline') {
       colIndex = 0
-      result.push(<div key={`nl-${i}`} className="col-span-full" />)
+      result.push(<div key={`nl-${i}`} style={{ gridColumn: '1 / -1' }} aria-hidden />)
       continue
     }
 
     const colspan = el.type === 'field' ? (el.colspan ?? 1) : 1
     if (colIndex + colspan > maxCols) {
       colIndex = 0
-      result.push(<div key={`wrap-${i}`} className="col-span-full" />)
+      result.push(<div key={`wrap-${i}`} style={{ gridColumn: '1 / -1' }} aria-hidden />)
     }
 
-    const itemKey = `${el.type === 'field' ? 'fld' : 'other'}-${i}`
+    const itemKey = `${el.type === 'field' ? 'fld' : el.type}-${i}`
+    const isField = el.type === 'field'
+
+    if (!isField) {
+      result.push(
+        <div key={itemKey} style={{ gridColumn: '1 / -1' }}>
+          <FormLayoutNode
+            elements={[el]}
+            record={ctx.record}
+            fields={ctx.fields}
+            model={ctx.model}
+            recordId={ctx.recordId}
+            editMode={ctx.editMode}
+            onChange={ctx.onChange}
+            onAction={ctx.onAction}
+            onButtonAction={ctx.onButtonAction}
+            level={ctx.level}
+            groupCol={ctx.groupCol}
+          />
+        </div>,
+      )
+      continue
+    }
+
     result.push(
-      <div
-        key={itemKey}
-        className={el.type === 'field' ? 'o_inner_group' : ''}
-        style={el.type === 'field' && colspan > 1 ? { gridColumn: `span ${colspan}` } : undefined}
-      >
+      <div key={itemKey} className="o_group_item" style={{ display: 'contents' }}>
         <FormLayoutNode
           elements={[el]}
           record={ctx.record}
@@ -1021,6 +1142,8 @@ function renderGroupItems(
           onAction={ctx.onAction}
           onButtonAction={ctx.onButtonAction}
           level={ctx.level}
+          groupCol={ctx.groupCol}
+          fieldGridSpan={colspan > 1 ? colspan : undefined}
         />
       </div>,
     )
@@ -1041,6 +1164,7 @@ function FormLayoutNode({
   onAction,
   onButtonAction,
   level = 0,
+  fieldGridSpan,
 }: NodeProps) {
   return (
     <>
@@ -1048,21 +1172,97 @@ function FormLayoutNode({
         switch (el.type) {
           case 'header':
             return null
-          case 'sheet':
+          case 'sheet': {
+            const { buttonBoxes, titleElements, avatarElements, body } = partitionSheetElements(
+              el.elements,
+            )
+            const hasTop =
+              buttonBoxes.length > 0 || titleElements.length > 0 || avatarElements.length > 0
             return (
-              <FormLayoutNode
-                key={`sheet-${i}`}
-                elements={el.elements}
-                record={record}
-                fields={fields}
-                model={model}
-                recordId={recordId}
-                editMode={editMode}
-                onChange={onChange}
-                onAction={onAction}
-                onButtonAction={onButtonAction}
-                level={level + 1}
-              />
+              <div key={`sheet-${i}`}>
+                {hasTop && (
+                  <div className="o_form_sheet_top">
+                    {avatarElements.length > 0 && (
+                      <div className="o_form_avatar">
+                        <FormLayoutNode
+                          elements={avatarElements}
+                          record={record}
+                          fields={fields}
+                          model={model}
+                          recordId={recordId}
+                          editMode={editMode}
+                          onChange={onChange}
+                          onAction={onAction}
+                          onButtonAction={onButtonAction}
+                          level={level + 1}
+                        />
+                      </div>
+                    )}
+                    <div className="o_form_sheet_top_content">
+                      {titleElements.length > 0 && (
+                        <div className="o_form_title">
+                          <FormLayoutNode
+                            elements={titleElements}
+                            record={record}
+                            fields={fields}
+                            model={model}
+                            recordId={recordId}
+                            editMode={editMode}
+                            onChange={onChange}
+                            onAction={onAction}
+                            onButtonAction={onButtonAction}
+                            level={level + 1}
+                          />
+                        </div>
+                      )}
+                      {buttonBoxes.map((bb, bbi) => {
+                        const visibleBtns = bb.buttons.filter((b) => isButtonVisible(b, record))
+                        if (visibleBtns.length === 0) return null
+                        return (
+                          <ButtonBoxRenderer
+                            key={`sheet-bbox-${bbi}`}
+                            buttons={visibleBtns}
+                            record={record}
+                            model={model}
+                            recordId={recordId}
+                            inline
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                <FormLayoutNode
+                  elements={body}
+                  record={record}
+                  fields={fields}
+                  model={model}
+                  recordId={recordId}
+                  editMode={editMode}
+                  onChange={onChange}
+                  onAction={onAction}
+                  onButtonAction={onButtonAction}
+                  level={level + 1}
+                />
+              </div>
+            )
+          }
+          case 'title_block':
+            return (
+              <div key={`title-${i}`} className="o_form_title">
+                <FormLayoutNode
+                  elements={el.elements}
+                  record={record}
+                  fields={fields}
+                  model={model}
+                  recordId={recordId}
+                  editMode={editMode}
+                  onChange={onChange}
+                  onAction={onAction}
+                  onButtonAction={onButtonAction}
+                  level={level + 1}
+                />
+              </div>
             )
           case 'button': {
             const btn = el as ButtonElement
@@ -1075,7 +1275,7 @@ function FormLayoutNode({
                   onClick={() => onButtonAction?.(btn)}
                   className={`px-3 py-1 text-xs font-medium transition-colors ${
                     btn.class?.includes('btn-primary')
-                      ? 'bg-accent text-white hover:bg-accent/90 rounded'
+                      ? 'bg-accent text-on-accent hover:bg-accent/90 rounded'
                       : 'text-text-secondary hover:bg-hover rounded border border-border-default'
                   }`}
                 >
@@ -1101,12 +1301,66 @@ function FormLayoutNode({
           }
           case 'group': {
             if (evalModifier(el.invisible, record)) return null
-            const colClass =
-              el.col === 3 ? 'o_group_col_3' : el.col === 4 ? 'o_group_col_4' : 'o_group_col_2'
+            const col = Math.max(1, Math.min(el.col ?? 2, 6))
+
+            if (isGroupColumnsLayout(el.elements)) {
+              const childGroups = el.elements.filter((c): c is GroupElement => c.type === 'group')
+              return (
+                <div key={`grp-${i}`} className="o_group o_group_nested">
+                  {el.string && (
+                    <div className="o_horizontal_separator" style={{ gridColumn: '1 / -1' }}>
+                      {el.string}
+                    </div>
+                  )}
+                  <div
+                    className="o_group_nested_row"
+                    style={{
+                      gridTemplateColumns: `repeat(${childGroups.length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {childGroups.map((child, ci) => {
+                      if (evalModifier(child.invisible, record)) return null
+                      const childCol = Math.max(1, Math.min(child.col ?? 1, 6))
+                      return (
+                        <div
+                          key={`grp-${i}-col-${ci}`}
+                          className="o_group_col"
+                          data-cols={childCol}
+                        >
+                          {child.string && (
+                            <div className="o_horizontal_separator mb-2">{child.string}</div>
+                          )}
+                          {renderGroupItems(child.elements, {
+                            record,
+                            fields,
+                            model,
+                            recordId,
+                            editMode,
+                            onChange,
+                            onAction,
+                            onButtonAction,
+                            level: level + 1,
+                            groupCol: childCol,
+                          })}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            }
+
             return (
-              <div key={`grp-${i}`} className={colClass}>
+              <div
+                key={`grp-${i}`}
+                className="o_group"
+                style={{ gridTemplateColumns: `repeat(${col}, minmax(0, 1fr))` }}
+                data-cols={col}
+              >
                 {el.string && (
-                  <div className="o_horizontal_separator col-span-full">{el.string}</div>
+                  <div className="o_horizontal_separator" style={{ gridColumn: '1 / -1' }}>
+                    {el.string}
+                  </div>
                 )}
                 {renderGroupItems(el.elements, {
                   record,
@@ -1118,6 +1372,7 @@ function FormLayoutNode({
                   onAction,
                   onButtonAction,
                   level: level + 1,
+                  groupCol: col,
                 })}
               </div>
             )
@@ -1156,7 +1411,8 @@ function FormLayoutNode({
                 typeof el.required === 'string' ? evalModifier(el.required, record) : el.required
             }
             const deco = getDecoClass(el as unknown as Record<string, unknown>, record)
-            const colSpanStyle = el.colspan ? { gridColumn: `span ${el.colspan}` } : undefined
+            const span = fieldGridSpan ?? el.colspan
+            const colSpanStyle = span ? { gridColumn: `span ${span}` } : undefined
             if (el.nolabel) {
               return (
                 <div key={`fld-${i}`} className={deco} style={colSpanStyle}>
@@ -1193,21 +1449,17 @@ function FormLayoutNode({
                   />
                   <label className="o_form_label">
                     {el.string || meta.string || el.name}
-                    {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
+                    {editMode && fieldRequired && <span className="ml-0.5 text-danger">*</span>}
                     {meta.help && <HelpPopover text={meta.help} />}
                   </label>
                 </div>
               )
             }
             return (
-              <div
-                key={`fld-${i}`}
-                className={`grid items-baseline gap-x-3 ${deco ?? ''}`}
-                style={{ gridTemplateColumns: 'auto 1fr', ...colSpanStyle }}
-              >
-                <label className="o_form_label truncate py-1 text-right">
+              <div key={`fld-${i}`} className={`o_inner_group ${deco ?? ''}`} style={colSpanStyle}>
+                <label className="o_form_label py-1">
                   {el.string || meta.string || el.name}
-                  {editMode && fieldRequired && <span className="ml-0.5 text-red-400">*</span>}
+                  {editMode && fieldRequired && <span className="ml-0.5 text-danger">*</span>}
                   {meta.help && <HelpPopover text={meta.help} />}
                 </label>
                 <Widget

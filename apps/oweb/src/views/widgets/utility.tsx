@@ -214,7 +214,7 @@ export function ProgressbarWidget({ value, onChange, readOnly }: FieldWidgetProp
         onClick={handleClick}
       >
         <div
-          className={`h-3 rounded-full transition-all ${pct >= 100 ? 'bg-emerald-500' : 'bg-accent'}`}
+          className={`h-3 rounded-full transition-all ${pct >= 100 ? 'bg-success' : 'bg-accent'}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -231,7 +231,7 @@ export function BooleanFavoriteWidget({ value, onChange, readOnly }: FieldWidget
     <button
       type="button"
       onClick={() => !readOnly && onChange(!active)}
-      className={`text-lg ${active ? 'text-amber-500' : 'text-border-default hover:text-amber-400'}`}
+      className={`text-lg ${active ? 'text-warning' : 'text-border-default hover:text-warning/80'}`}
       disabled={readOnly}
     >
       {active ? '★' : '☆'}
@@ -323,7 +323,14 @@ export function PercentPieWidget({ value }: FieldWidgetProps) {
   return (
     <div className="flex items-center gap-2">
       <svg width="36" height="36" viewBox="0 0 36 36">
-        <circle cx="18" cy="18" r={r} fill="none" stroke="#e5e7eb" strokeWidth="3" />
+        <circle
+          cx="18"
+          cy="18"
+          r={r}
+          fill="none"
+          stroke="var(--color-border-default)"
+          strokeWidth="3"
+        />
         <circle
           cx="18"
           cy="18"
@@ -353,16 +360,16 @@ export function WebRibbonWidget({ field, record }: FieldWidgetProps) {
   if (field.invisible && record && evalCondition(field.invisible, record)) return null
 
   const colorMap: Record<string, string> = {
-    'text-bg-danger': 'bg-red-500',
-    'text-bg-warning': 'bg-amber-500',
-    'text-bg-success': 'bg-emerald-500',
-    'text-bg-info': 'bg-blue-500',
+    'text-bg-danger': 'bg-danger',
+    'text-bg-warning': 'bg-warning',
+    'text-bg-success': 'bg-success',
+    'text-bg-info': 'bg-info',
   }
-  const bg = colorMap[bgColor] ?? 'bg-red-500'
+  const bg = colorMap[bgColor] ?? 'bg-danger'
 
   return (
     <div
-      className={`pointer-events-none absolute -right-2 -top-2 z-10 rounded px-2 py-0.5 text-[10px] font-bold text-white shadow ${bg}`}
+      className={`pointer-events-none absolute -right-2 -top-2 z-10 rounded px-2 py-0.5 text-[10px] font-bold text-on-accent shadow ${bg}`}
       style={{ transform: 'rotate(3deg)' }}
     >
       {title}
@@ -375,9 +382,9 @@ export function WebRibbonWidget({ field, record }: FieldWidgetProps) {
 export function KanbanActivityWidget({ value }: FieldWidgetProps) {
   const state = String(value ?? '')
   const config: Record<string, { color: string; label: string }> = {
-    planned: { color: 'bg-emerald-500', label: 'Planned' },
-    today: { color: 'bg-amber-500', label: 'Today' },
-    overdue: { color: 'bg-red-500', label: 'Overdue' },
+    planned: { color: 'bg-success', label: 'Planned' },
+    today: { color: 'bg-warning', label: 'Today' },
+    overdue: { color: 'bg-danger', label: 'Overdue' },
   }
   const info = config[state]
   if (!info) return null
@@ -398,7 +405,7 @@ export function RottingWidget({ value }: FieldWidgetProps) {
 
   const isOverdue = days > 14
   return (
-    <span className={`text-xs ${isOverdue ? 'text-red-400 font-medium' : 'text-text-muted'}`}>
+    <span className={`text-xs ${isOverdue ? 'text-danger font-medium' : 'text-text-muted'}`}>
       {days}d
     </span>
   )

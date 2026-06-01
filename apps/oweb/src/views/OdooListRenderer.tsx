@@ -14,6 +14,7 @@ import {
   FIELD_TYPE_WIDTHS,
   getColumnPrefs,
   getDecorationClass,
+  isListCellImage,
   parseListXml,
   readGroup,
   renderCell,
@@ -28,7 +29,25 @@ import { ExportDialog } from '../components/ExportDialog'
 import { Pagination } from '../components/Pagination'
 import { useDialog } from '../hooks/useDialog'
 import { useRecordActions } from '../hooks/useRecordActions'
+import type { ListPagerInfo } from './list-pager'
 import { getFieldWidget } from './widgets'
+
+function renderListCellContent(content: ReturnType<typeof renderCell>): React.ReactNode {
+  if (isListCellImage(content)) {
+    return (
+      <img
+        src={content.src}
+        alt=""
+        className="h-8 w-8 rounded object-cover"
+        loading="lazy"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none'
+        }}
+      />
+    )
+  }
+  return content
+}
 
 interface ListRendererProps {
   model: string
@@ -37,6 +56,9 @@ interface ListRendererProps {
   domain?: unknown[]
   groupBy?: string[]
   onRowClick?: (recordId: number) => void
+  /** When true, pagination renders in ControlPanel via onPagerChange instead of below the table. */
+  externalPager?: boolean
+  onPagerChange?: (info: ListPagerInfo | null) => void
 }
 
 interface InlineEditState {
@@ -79,6 +101,8 @@ export function OdooListRenderer({
   domain = [],
   groupBy = [],
   onRowClick,
+  externalPager = false,
+  onPagerChange,
 }: ListRendererProps) {
   const t = useTranslations()
   const queryClient = useQueryClient()
@@ -311,6 +335,31 @@ export function OdooListRenderer({
     enabled: !groupByActive,
     staleTime: 30_000,
   })
+
+  const handlePageChange = useCallback((newOffset: number) => {
+    if (tableContainerRef.current) savedScrollTop.current = tableContainerRef.current.scrollTop
+    setOffset(newOffset)
+  }, [])
+
+  const handleLimitChange = useCallback((newLimit: number) => {
+    setLimit(newLimit)
+    setOffset(0)
+  }, [])
+
+  useEffect(() => {
+    if (!onPagerChange) return
+    if (groupByActive || totalCount == null) {
+      onPagerChange(null)
+      return
+    }
+    onPagerChange({
+      offset,
+      limit,
+      total: totalCount,
+      onPageChange: handlePageChange,
+      onLimitChange: handleLimitChange,
+    })
+  }, [onPagerChange, groupByActive, totalCount, offset, limit, handlePageChange, handleLimitChange])
 
   const invalidateList = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['odoo', 'data', model] })
@@ -904,7 +953,9 @@ export function OdooListRenderer({
                 >
                   {isGroupField ? (
                     <>
-                      <span className="font-medium">{renderCell(val, meta, model)}</span>
+                      <span className="font-medium">
+                        {renderListCellContent(renderCell(val, meta, model))}
+                      </span>
                       <span className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-text-muted">
                         {String(count)}
                       </span>
@@ -925,7 +976,7 @@ export function OdooListRenderer({
                                   callKw(model, 'unlink', [[val[0]]]).then(invalidateList),
                               })
                             }}
-                            className="ml-2 rounded px-1 py-0 text-[10px] text-text-muted hover:text-red-400"
+                            className="ml-2 rounded px-1 py-0 text-[10px] text-text-muted hover:text-danger"
                           >
                             ×
                           </button>
@@ -933,7 +984,9 @@ export function OdooListRenderer({
                     </>
                   ) : (
                     <span className="text-text-muted">
-                      {val !== undefined && val !== null ? renderCell(val, meta, model) : ''}
+                      {val !== undefined && val !== null
+                        ? renderListCellContent(renderCell(val, meta, model))
+                        : ''}
                     </span>
                   )}
                 </td>
@@ -1019,7 +1072,14 @@ export function OdooListRenderer({
                           .filter(Boolean)
                           .join(' ')}
                       >
-                        {renderCell(record[col.name], fields[col.name], model, record.id as number)}
+                        {renderListCellContent(
+                          renderCell(
+                            record[col.name],
+                            fields[col.name],
+                            model,
+                            record.id as number,
+                          ),
+                        )}
                       </td>
                     )
                   })}
@@ -1082,8 +1142,8 @@ export function OdooListRenderer({
   )
 
   return (
-    <div className="flex flex-col gap-2 p-4">
-      <div className="flex items-center justify-between px-1">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+      <div className="flex shrink-0 items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-text-primary">{listView.string || model}</h3>
           {!groupByActive && data.length > 0 && listView.exportXlsx !== false && (
@@ -1140,7 +1200,7 @@ export function OdooListRenderer({
             <button
               type="button"
               onClick={handleAddRow}
-              className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-white hover:bg-accent/90"
+              className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-on-accent hover:bg-accent/90"
             >
               {listView.controlButtons?.find((b) => b.type === 'create')?.string ?? 'Add'}
             </button>
@@ -1162,7 +1222,7 @@ export function OdooListRenderer({
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error instanceof Error ? error.message : t('list.failedToLoad')}
         </div>
       )}
@@ -1204,7 +1264,7 @@ export function OdooListRenderer({
                   })
                 }}
                 disabled={bulkDeleteMutation.isPending}
-                className="rounded border border-red-400/30 px-2 py-0.5 text-[11px] text-red-400 hover:bg-red-400/10 disabled:opacity-50"
+                className="rounded border border-danger/30 px-2 py-0.5 text-[11px] text-danger hover:bg-danger/10 disabled:opacity-50"
               >
                 Delete
               </button>
@@ -1324,7 +1384,7 @@ export function OdooListRenderer({
                     })
                   }}
                   disabled={bulkWriteMutation.isPending}
-                  className="rounded bg-accent px-3 py-1 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                  className="rounded bg-accent px-3 py-1 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
                 >
                   {bulkWriteMutation.isPending ? 'Saving...' : 'Apply'}
                 </button>
@@ -1343,11 +1403,11 @@ export function OdooListRenderer({
           )}
           <div
             ref={tableContainerRef}
-            className="overflow-x-auto rounded-lg border border-border-subtle"
+            className="overflow-x-auto min-h-0 flex-1 overflow-y-auto rounded-lg border border-border-subtle"
           >
             <table className="w-full" onKeyDown={handleTableKeyDown}>
               <thead>
-                <tr className="border-b border-border-subtle bg-surface/50">
+                <tr className="sticky top-0 z-10 border-b border-border-subtle bg-surface/95 backdrop-blur-sm">
                   <th className="w-10 px-2 py-2.5">
                     <input
                       type="checkbox"
@@ -1435,7 +1495,7 @@ export function OdooListRenderer({
                               <button
                                 type="submit"
                                 disabled={!newGroupName.trim() || createGroupMutation.isPending}
-                                className="rounded bg-accent px-2 py-0.5 text-[10px] text-white hover:bg-accent/90 disabled:opacity-50"
+                                className="rounded bg-accent px-2 py-0.5 text-[10px] text-on-accent hover:bg-accent/90 disabled:opacity-50"
                               >
                                 Add
                               </button>
@@ -1560,7 +1620,7 @@ export function OdooListRenderer({
                             return (
                               <td
                                 key={`d-${col.name}-${ci}`}
-                                className={`whitespace-nowrap px-1 py-0.5${hasError ? ' ring-1 ring-red-400 ring-inset' : ''}`}
+                                className={`whitespace-nowrap px-1 py-0.5${hasError ? ' ring-1 ring-danger ring-inset' : ''}`}
                                 title={hasError ? validationErrors[col.name] : undefined}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -1579,11 +1639,13 @@ export function OdooListRenderer({
                             <td
                               key={`d-${col.name}-${ci}`}
                               title={(() => {
-                                const t = renderCell(
-                                  record[col.name],
-                                  fields[col.name],
-                                  model,
-                                  record.id as number,
+                                const t = renderListCellContent(
+                                  renderCell(
+                                    record[col.name],
+                                    fields[col.name],
+                                    model,
+                                    record.id as number,
+                                  ),
                                 )
                                 if (typeof t !== 'string') return undefined
                                 return t.length > 30 ? t : undefined
@@ -1610,11 +1672,13 @@ export function OdooListRenderer({
                                   : undefined
                               }
                             >
-                              {renderCell(
-                                record[col.name],
-                                fields[col.name],
-                                model,
-                                record.id as number,
+                              {renderListCellContent(
+                                renderCell(
+                                  record[col.name],
+                                  fields[col.name],
+                                  model,
+                                  record.id as number,
+                                ),
                               )}
                             </td>
                           )
@@ -1628,7 +1692,7 @@ export function OdooListRenderer({
                               type="button"
                               onClick={handleInlineSave}
                               disabled={saveMutation.isPending}
-                              className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                              className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
                             >
                               {saveMutation.isPending ? '...' : 'Save'}
                             </button>
@@ -1658,7 +1722,7 @@ export function OdooListRenderer({
                                     onConfirm: () => deleteMutation.mutate(recordId),
                                   })
                                 }}
-                                className="text-xs text-text-muted hover:text-red-500"
+                                className="text-xs text-text-muted hover:text-danger"
                               >
                                 ×
                               </button>
@@ -1715,20 +1779,13 @@ export function OdooListRenderer({
             </table>
           </div>
 
-          {!groupByActive && totalCount != null && (
+          {!externalPager && !groupByActive && totalCount != null && (
             <Pagination
               offset={offset}
               total={totalCount}
               limit={limit}
-              onPageChange={(newOffset) => {
-                if (tableContainerRef.current)
-                  savedScrollTop.current = tableContainerRef.current.scrollTop
-                setOffset(newOffset)
-              }}
-              onLimitChange={(newLimit) => {
-                setLimit(newLimit)
-                setOffset(0)
-              }}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
             />
           )}
         </>
@@ -1773,7 +1830,7 @@ function InlineEditRow({
         return (
           <td
             key={`new-${col.name}-${ci}`}
-            className={`whitespace-nowrap px-1 py-0.5${hasError ? ' ring-1 ring-red-400 ring-inset' : ''}`}
+            className={`whitespace-nowrap px-1 py-0.5${hasError ? ' ring-1 ring-danger ring-inset' : ''}`}
             title={hasError ? validationErrors[col.name] : undefined}
           >
             {createElement(Widget, {
@@ -1791,7 +1848,7 @@ function InlineEditRow({
           type="button"
           onClick={onSave}
           disabled={isSaving}
-          className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+          className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
         >
           {isSaving ? '...' : 'Save'}
         </button>
@@ -1855,7 +1912,7 @@ function ListButtonCell({
       disabled={loading}
       className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
         btn.class?.includes('btn-primary')
-          ? 'bg-accent text-white hover:bg-accent/90'
+          ? 'bg-accent text-on-accent hover:bg-accent/90'
           : 'border border-border-default text-text-secondary hover:bg-hover hover:text-text-primary'
       } disabled:opacity-50`}
     >

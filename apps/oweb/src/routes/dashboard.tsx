@@ -21,7 +21,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     model: 'crm.lead',
     view: 'list',
     icon: 'oi oi-suitcase',
-    color: 'bg-blue-500/10 text-blue-500',
+    color: 'bg-info/10 text-info',
     domain: [['type', '=', 'opportunity']],
   },
   {
@@ -29,7 +29,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     model: 'crm.lead',
     view: 'list',
     icon: 'oi oi-plus',
-    color: 'bg-sky-500/10 text-sky-500',
+    color: 'bg-accent/10 text-accent',
     domain: [['type', '=', 'lead']],
   },
   {
@@ -37,21 +37,21 @@ const QUICK_ACTIONS: QuickAction[] = [
     model: 'sale.order',
     view: 'list',
     icon: 'oi oi-suitcase-plus',
-    color: 'bg-emerald-500/10 text-emerald-500',
+    color: 'bg-success/10 text-success',
   },
   {
     label: 'Inventory',
     model: 'stock.picking',
     view: 'list',
     icon: 'oi oi-transfer',
-    color: 'bg-amber-500/10 text-amber-500',
+    color: 'bg-warning/10 text-warning',
   },
   {
     label: 'Accounting',
     model: 'account.move',
     view: 'list',
     icon: 'oi oi-numpad',
-    color: 'bg-purple-500/10 text-purple-500',
+    color: 'bg-accent-bright/10 text-accent-bright',
   },
   {
     label: 'Pipeline',
@@ -238,7 +238,7 @@ function DashboardPage() {
           </p>
           <a
             href="/login"
-            className="inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white"
+            className="inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent"
           >
             Connect to Odoo
           </a>

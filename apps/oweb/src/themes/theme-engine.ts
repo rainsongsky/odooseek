@@ -30,10 +30,27 @@ function deriveFromAccent(accentHex: string, isDark: boolean): Record<string, st
   }
 }
 
+function deriveSemanticColors(isDark: boolean): Record<string, string> {
+  return isDark
+    ? {
+        'color-success': '#34d399',
+        'color-danger': '#f87171',
+        'color-warning': '#fbbf24',
+        'color-info': '#60a5fa',
+      }
+    : {
+        'color-success': '#059669',
+        'color-danger': '#dc2626',
+        'color-warning': '#d97706',
+        'color-info': '#2563eb',
+      }
+}
+
 function deriveFromPreset(preset: ThemePreset): Record<string, string> {
-  const { elevated, 'text-primary': textPrimary } = preset.colors
+  const { elevated, 'text-primary': textPrimary, root } = preset.colors
   return {
     'color-hover': `color-mix(in srgb, ${textPrimary} 6%, ${elevated})`,
+    'color-on-accent': root,
   }
 }
 
@@ -56,6 +73,10 @@ export function applyTheme(config: ThemeConfig): void {
 
   const derived = deriveFromAccent(accent.accent, preset.isDark)
   for (const [key, value] of Object.entries(derived)) {
+    style.setProperty(`--${key}`, value)
+  }
+
+  for (const [key, value] of Object.entries(deriveSemanticColors(preset.isDark))) {
     style.setProperty(`--${key}`, value)
   }
 

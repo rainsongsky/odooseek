@@ -16,7 +16,7 @@ export function SearchPanel({ model, searchPanel, domain, onCategoryChange }: Se
   const panelFields = searchPanel.fields
 
   return (
-    <div className="flex w-48 shrink-0 flex-col border-r border-border-subtle bg-surface/30 overflow-auto">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-auto border-r border-border-subtle bg-surface/30">
       {panelFields.map((f) => (
         <SearchPanelSection
           key={f.name}

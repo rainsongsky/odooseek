@@ -15,9 +15,17 @@ import { DataExportDialog } from '../components/DataExportDialog'
 import { type FormDialogItem, FormDialogOverlay } from '../components/FormDialog'
 import { ImportDialog } from '../components/ImportDialog'
 import { SearchPanel } from '../components/SearchPanel'
-import { KanbanSkeleton, ListSkeleton } from '../components/Skeleton'
+import {
+  CalendarSkeleton,
+  FormSkeleton,
+  GraphSkeleton,
+  KanbanSkeleton,
+  ListSkeleton,
+  PivotSkeleton,
+} from '../components/Skeleton'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
+import type { ListPagerInfo } from './list-pager'
 import { OdooListRenderer } from './OdooListRenderer'
 
 // Lazy-loaded views — only fetched when the user switches to that view type
@@ -118,9 +126,15 @@ export function OdooViewLoader({
   const [showImport, setShowImport] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [searchPanelDomain, setSearchPanelDomain] = useState<unknown[]>([])
+  const [mobileSearchPanelOpen, setMobileSearchPanelOpen] = useState(false)
+  const [listPager, setListPager] = useState<ListPagerInfo | null>(null)
   useEffect(() => {
     setRecordId(_recordId)
   }, [_recordId])
+
+  useEffect(() => {
+    if (viewType !== 'list') setListPager(null)
+  }, [viewType])
 
   const effectiveDomain = useMemo(
     () => [...initialDomain, ...domain, ...searchPanelDomain],
@@ -406,12 +420,17 @@ export function OdooViewLoader({
   )
 
   if (isLoading) {
-    return internalViewType === 'kanban' ? <KanbanSkeleton /> : <ListSkeleton />
+    if (internalViewType === 'kanban') return <KanbanSkeleton />
+    if (internalViewType === 'form') return <FormSkeleton />
+    if (internalViewType === 'pivot') return <PivotSkeleton />
+    if (internalViewType === 'graph') return <GraphSkeleton />
+    if (internalViewType === 'calendar') return <CalendarSkeleton />
+    return <ListSkeleton />
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-400">
+      <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
         Failed to load view: {error instanceof Error ? error.message : 'Unknown error'}
       </div>
     )
@@ -440,7 +459,7 @@ export function OdooViewLoader({
     internalViewType === 'calendar'
 
   const renderContent = () => (
-    <div className="flex flex-1 flex-col overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <ControlPanel
         breadcrumbs={{ model, viewType: internalViewType, viewTitle, recordName, onBackToList }}
         searchProps={
@@ -468,78 +487,113 @@ export function OdooViewLoader({
         onPrintAction={handlePrintAction}
         model={model}
         selectedIds={recordId ? [recordId] : []}
+        pagerProps={
+          viewType === 'list' && listPager
+            ? {
+                visible: true,
+                offset: listPager.offset,
+                total: listPager.total,
+                limit: listPager.limit,
+                onPageChange: listPager.onPageChange,
+                onLimitChange: listPager.onLimitChange,
+              }
+            : undefined
+        }
         onDuplicate={viewType === 'form' && recordId ? handleDuplicate : undefined}
         onArchive={viewType === 'form' && recordId ? handleArchive : undefined}
         onUnarchive={viewType === 'form' && recordId ? handleUnarchive : undefined}
         onDelete={viewType === 'form' && recordId ? handleDelete : undefined}
         hasActiveField={hasActiveField}
+        searchPanelToggle={
+          searchPanel
+            ? {
+                visible: true,
+                open: mobileSearchPanelOpen,
+                onToggle: () => setMobileSearchPanelOpen((open) => !open),
+              }
+            : undefined
+        }
       />
       {viewType === 'list' && (
-        <OdooListRenderer
-          model={model}
-          arch={activeView.arch}
-          fields={fields}
-          domain={effectiveDomain}
-          groupBy={groupBy}
-          onRowClick={onRowClick}
-        />
-      )}
-      {viewType === 'form' && (
-        <Suspense fallback={<ViewSkeleton />}>
-          <OdooFormRenderer
-            ref={formRef}
-            model={model}
-            arch={activeView.arch}
-            fields={fields}
-            recordId={recordId}
-            context={context}
-            onRecordCreated={onRecordCreated}
-            onDirtyChange={onDirtyChange}
-            onAction={handleFormAction}
-          />
-        </Suspense>
-      )}
-      {viewType === 'kanban' && (
-        <Suspense fallback={<ViewSkeleton />}>
-          <OdooKanbanRenderer
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <OdooListRenderer
             model={model}
             arch={activeView.arch}
             fields={fields}
             domain={effectiveDomain}
             groupBy={groupBy}
-            onRecordClick={onRowClick}
+            onRowClick={onRowClick}
+            externalPager
+            onPagerChange={setListPager}
           />
+        </div>
+      )}
+      {viewType === 'form' && (
+        <Suspense fallback={<FormSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooFormRenderer
+              ref={formRef}
+              model={model}
+              arch={activeView.arch}
+              fields={fields}
+              recordId={recordId}
+              context={context}
+              onRecordCreated={onRecordCreated}
+              onDirtyChange={onDirtyChange}
+              onAction={handleFormAction}
+            />
+          </div>
+        </Suspense>
+      )}
+      {viewType === 'kanban' && (
+        <Suspense fallback={<KanbanSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooKanbanRenderer
+              model={model}
+              arch={activeView.arch}
+              fields={fields}
+              domain={effectiveDomain}
+              groupBy={groupBy}
+              onRecordClick={onRowClick}
+            />
+          </div>
         </Suspense>
       )}
       {viewType === 'pivot' && (
-        <Suspense fallback={<ViewSkeleton />}>
-          <OdooPivotRenderer
-            model={model}
-            arch={activeView.arch}
-            fields={fields}
-            domain={effectiveDomain}
-          />
+        <Suspense fallback={<PivotSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooPivotRenderer
+              model={model}
+              arch={activeView.arch}
+              fields={fields}
+              domain={effectiveDomain}
+            />
+          </div>
         </Suspense>
       )}
       {viewType === 'graph' && (
-        <Suspense fallback={<ViewSkeleton />}>
-          <OdooGraphRenderer
-            model={model}
-            arch={activeView.arch}
-            fields={fields}
-            domain={effectiveDomain}
-          />
+        <Suspense fallback={<GraphSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooGraphRenderer
+              model={model}
+              arch={activeView.arch}
+              fields={fields}
+              domain={effectiveDomain}
+            />
+          </div>
         </Suspense>
       )}
       {viewType === 'calendar' && (
-        <Suspense fallback={<ViewSkeleton />}>
-          <OdooCalendarRenderer
-            model={model}
-            arch={activeView.arch}
-            fields={fields}
-            domain={effectiveDomain}
-            onRecordClick={onRowClick}
-          />
+        <Suspense fallback={<CalendarSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooCalendarRenderer
+              model={model}
+              arch={activeView.arch}
+              fields={fields}
+              domain={effectiveDomain}
+              onRecordClick={onRowClick}
+            />
+          </div>
         </Suspense>
       )}
     </div>
@@ -548,14 +602,33 @@ export function OdooViewLoader({
   return (
     <>
       {searchPanel && showSearch ? (
-        <div className="flex flex-1 overflow-auto">
-          <SearchPanel
-            model={model}
-            searchPanel={searchPanel}
-            domain={[...initialDomain, ...domain]}
-            onCategoryChange={setSearchPanelDomain}
-          />
-          {renderContent()}
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          {mobileSearchPanelOpen && (
+            <button
+              type="button"
+              className="fixed inset-0 z-40 bg-black/40 md:hidden"
+              aria-label="Close filters"
+              onClick={() => setMobileSearchPanelOpen(false)}
+            />
+          )}
+          <div
+            className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-surface shadow-lg transition-transform duration-200 md:static md:z-auto md:w-48 md:max-w-none md:translate-x-0 md:shadow-none ${
+              mobileSearchPanelOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            }`}
+          >
+            <SearchPanel
+              model={model}
+              searchPanel={searchPanel}
+              domain={[...initialDomain, ...domain]}
+              onCategoryChange={(nextDomain) => {
+                setSearchPanelDomain(nextDomain)
+                setMobileSearchPanelOpen(false)
+              }}
+            />
+          </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            {renderContent()}
+          </div>
         </div>
       ) : (
         renderContent()
@@ -564,13 +637,5 @@ export function OdooViewLoader({
       {showExport && <DataExportDialog model={model} onClose={() => setShowExport(false)} />}
       <FormDialogOverlay dialogs={formDialogs} onClose={closeFormDialog} parentModel={model} />
     </>
-  )
-}
-
-function ViewSkeleton() {
-  return (
-    <div className="flex items-center justify-center py-12">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-    </div>
   )
 }

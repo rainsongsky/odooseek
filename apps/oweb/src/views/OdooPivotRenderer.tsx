@@ -1,6 +1,7 @@
 import type { OdooFieldMeta, PivotField, ReadGroupResult } from '@odooseek/odoo-client'
 import { callKw, parsePivotXml } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
+import type { CSSProperties } from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { Download, FlipHorizontal } from '../lib/lucide-icons'
 
@@ -21,6 +22,31 @@ function measureAgg(field: string, op?: string): string {
 }
 
 type SortState = { field: string; dir: 'asc' | 'desc' } | null
+
+/** Fixed width per row-label column for multi-column sticky left offsets. */
+const ROW_LABEL_COL_WIDTH = 112
+
+function rowLabelStickyStyle(index: number): CSSProperties {
+  return {
+    position: 'sticky',
+    left: index * ROW_LABEL_COL_WIDTH,
+    minWidth: ROW_LABEL_COL_WIDTH,
+    maxWidth: ROW_LABEL_COL_WIDTH,
+  }
+}
+
+function rowLabelStickyClass(index: number, extra = ''): string {
+  const base =
+    index === 0
+      ? 'sticky z-[5] bg-surface group-hover:bg-hover/30'
+      : 'sticky z-[4] bg-surface group-hover:bg-hover/30'
+  return `${base} ${extra}`.trim()
+}
+
+function rowLabelHeaderClass(index: number): string {
+  const z = index === 0 ? 'z-20' : 'z-[19]'
+  return `sticky ${z} bg-surface/95 backdrop-blur-sm min-w-[7rem] max-w-[7rem]`
+}
 
 export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRendererProps) {
   const pivotView = useMemo(() => parsePivotXml(arch), [arch])
@@ -224,7 +250,7 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2">
         <h3 className="mr-auto text-sm font-semibold text-text-primary">{pivotView.string}</h3>
@@ -269,165 +295,164 @@ export function OdooPivotRenderer({ model, arch, fields, domain = [] }: PivotRen
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="overflow-auto rounded-lg border border-border-subtle">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border-subtle bg-surface/50">
-                {rowFields.map((rf) => (
+      <div className="min-h-0 flex-1 overflow-auto p-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="sticky top-0 z-10 border-b border-border-subtle bg-surface/95 backdrop-blur-sm">
+              {rowFields.map((rf, ri) => (
+                <th
+                  key={`rh-${rf.name}`}
+                  className={`whitespace-nowrap border-r border-border-subtle px-3 py-2 text-left text-xs font-semibold text-text-secondary ${rowLabelHeaderClass(ri)}`}
+                  style={rowLabelStickyStyle(ri)}
+                >
+                  {fieldLabels[fieldRef(rf)]}
+                </th>
+              ))}
+              {colKeys.map((colKey) => {
+                const parts = colKey.split('|||')
+                return visibleMeasures.map((m) => (
                   <th
-                    key={`rh-${rf.name}`}
-                    className="whitespace-nowrap border-r border-border-subtle px-3 py-2 text-left text-xs font-semibold text-text-secondary"
+                    key={`ch-${colKey}-${m.name}`}
+                    className="whitespace-nowrap border-r border-border-subtle px-3 py-2 text-right text-xs font-semibold text-text-secondary"
                   >
-                    {fieldLabels[fieldRef(rf)]}
-                  </th>
-                ))}
-                {colKeys.map((colKey) => {
-                  const parts = colKey.split('|||')
-                  return visibleMeasures.map((m) => (
-                    <th
-                      key={`ch-${colKey}-${m.name}`}
-                      className="whitespace-nowrap border-r border-border-subtle px-3 py-2 text-right text-xs font-semibold text-text-secondary"
-                    >
-                      {colFields
-                        .map((cf, i) => {
-                          const val = parts[i] ?? ''
-                          return fields[cf.name]?.selection?.find(([k]) => k === val)?.[1] ?? val
-                        })
-                        .join(' / ')}{' '}
-                      {fieldLabels[m.name]}
-                    </th>
-                  ))
-                })}
-                {/* Totals column */}
-                {visibleMeasures.map((m) => (
-                  <th
-                    key={`ch-total-${m.name}`}
-                    className="whitespace-nowrap border-l-2 border-border-subtle px-3 py-2 text-right text-xs font-bold text-text-secondary"
-                  >
-                    Total {fieldLabels[m.name]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rowKeys.map((rowKey) => {
-                const parts = rowKey.split('|||')
-                const isExpanded = expandedRows.has(rowKey)
-                // Row totals
-                const rowTotals = new Map<string, number>()
-                for (const m of visibleMeasures) {
-                  const fieldName = measureAgg(m.name, m.operator)
-                  let sum = 0
-                  for (const colKey of colKeys) {
-                    sum += Number(cellMap.get(`${rowKey}:::${colKey}`)?.[fieldName] ?? 0)
-                  }
-                  rowTotals.set(m.name, sum)
-                }
-
-                return (
-                  <tr
-                    key={rowKey}
-                    className="border-b border-border-subtle transition-colors hover:bg-hover/30"
-                  >
-                    {rowFields.map((rf, i) => {
-                      const val = parts[i] ?? ''
-                      const meta = fields[rf.name]
-                      const displayVal = meta?.selection?.find(([k]) => k === val)?.[1] ?? val
-                      return (
-                        <td
-                          key={`rd-${rf.name}-${rowKey}`}
-                          className="whitespace-nowrap border-r border-border-subtle px-3 py-1.5 text-xs text-text-primary"
-                          style={{ paddingLeft: `${i * 16 + 12}px` }}
-                        >
-                          {/* Expand button on first row field */}
-                          {i === 0 && (
-                            <button
-                              type="button"
-                              onClick={() => toggleRowExpand(rowKey)}
-                              className="mr-1 inline-block text-text-muted hover:text-text-primary"
-                              title={isExpanded ? 'Collapse' : 'Expand'}
-                            >
-                              {isExpanded ? '▼' : '▶'}
-                            </button>
-                          )}
-                          {displayVal || '—'}
-                        </td>
-                      )
-                    })}
-                    {colKeys.map((colKey) => {
-                      const cellKey = `${rowKey}:::${colKey}`
-                      const cell = cellMap.get(cellKey)
-                      return visibleMeasures.map((m) => {
-                        const fieldName = measureAgg(m.name, m.operator)
-                        const value = cell?.[fieldName]
-                        return (
-                          <td
-                            key={`cd-${rowKey}-${colKey}-${m.name}`}
-                            className={`whitespace-nowrap border-r border-border-subtle px-3 py-1.5 text-right text-xs ${
-                              sort?.field === m.name
-                                ? 'font-medium text-text-primary'
-                                : 'text-text-primary'
-                            }`}
-                          >
-                            {formatMeasure(value, m.name)}
-                          </td>
-                        )
+                    {colFields
+                      .map((cf, i) => {
+                        const val = parts[i] ?? ''
+                        return fields[cf.name]?.selection?.find(([k]) => k === val)?.[1] ?? val
                       })
-                    })}
-                    {/* Row totals */}
-                    {visibleMeasures.map((m) => (
-                      <td
-                        key={`ct-${rowKey}-${m.name}`}
-                        className="whitespace-nowrap border-l-2 border-border-subtle px-3 py-1.5 text-right text-xs font-medium text-text-primary"
-                      >
-                        {formatMeasure(rowTotals.get(m.name), m.name)}
-                      </td>
-                    ))}
-                  </tr>
-                )
+                      .join(' / ')}{' '}
+                    {fieldLabels[m.name]}
+                  </th>
+                ))
               })}
-              {/* Grand total row */}
-              <tr className="border-t-2 border-border-subtle bg-surface/50 font-medium">
-                {rowFields.map((rf, i) => (
-                  <td
-                    key={`gt-${rf.name}`}
-                    className="border-r border-border-subtle px-3 py-2 text-xs text-text-primary"
-                    style={{ paddingLeft: `${i * 16 + 12}px` }}
-                  >
-                    {i === 0 ? 'Total' : ''}
-                  </td>
-                ))}
-                {colKeys.map((colKey) =>
-                  visibleMeasures.map((m) => {
-                    const fieldName = measureAgg(m.name, m.operator)
-                    let sum = 0
-                    for (const rowKey of rowKeys) {
-                      sum += Number(cellMap.get(`${rowKey}:::${colKey}`)?.[fieldName] ?? 0)
-                    }
+              {/* Totals column */}
+              {visibleMeasures.map((m) => (
+                <th
+                  key={`ch-total-${m.name}`}
+                  className="whitespace-nowrap border-l-2 border-border-subtle px-3 py-2 text-right text-xs font-bold text-text-secondary"
+                >
+                  Total {fieldLabels[m.name]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rowKeys.map((rowKey) => {
+              const parts = rowKey.split('|||')
+              const isExpanded = expandedRows.has(rowKey)
+              // Row totals
+              const rowTotals = new Map<string, number>()
+              for (const m of visibleMeasures) {
+                const fieldName = measureAgg(m.name, m.operator)
+                let sum = 0
+                for (const colKey of colKeys) {
+                  sum += Number(cellMap.get(`${rowKey}:::${colKey}`)?.[fieldName] ?? 0)
+                }
+                rowTotals.set(m.name, sum)
+              }
+
+              return (
+                <tr
+                  key={rowKey}
+                  className="group border-b border-border-subtle transition-colors hover:bg-hover/30"
+                >
+                  {rowFields.map((rf, i) => {
+                    const val = parts[i] ?? ''
+                    const meta = fields[rf.name]
+                    const displayVal = meta?.selection?.find(([k]) => k === val)?.[1] ?? val
                     return (
                       <td
-                        key={`gc-${colKey}-${m.name}`}
-                        className="whitespace-nowrap border-r border-border-subtle px-3 py-2 text-right text-xs text-text-primary"
+                        key={`rd-${rf.name}-${rowKey}`}
+                        className={`whitespace-nowrap border-r border-border-subtle px-3 py-1.5 text-xs text-text-primary ${rowLabelStickyClass(i)}`}
+                        style={{ ...rowLabelStickyStyle(i), paddingLeft: `${i * 16 + 12}px` }}
                       >
-                        {formatMeasure(sum, m.name)}
+                        {/* Expand button on first row field */}
+                        {i === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleRowExpand(rowKey)}
+                            className="mr-1 inline-block text-text-muted hover:text-text-primary"
+                            title={isExpanded ? 'Collapse' : 'Expand'}
+                          >
+                            {isExpanded ? '▼' : '▶'}
+                          </button>
+                        )}
+                        {displayVal || '—'}
                       </td>
                     )
-                  }),
-                )}
-                {/* Grand total corner */}
-                {visibleMeasures.map((m) => (
-                  <td
-                    key={`gtc-${m.name}`}
-                    className="whitespace-nowrap border-l-2 border-border-subtle px-3 py-2 text-right text-xs font-bold text-text-primary"
-                  >
-                    {formatMeasure(totals.get(m.name), m.name)}
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  })}
+                  {colKeys.map((colKey) => {
+                    const cellKey = `${rowKey}:::${colKey}`
+                    const cell = cellMap.get(cellKey)
+                    return visibleMeasures.map((m) => {
+                      const fieldName = measureAgg(m.name, m.operator)
+                      const value = cell?.[fieldName]
+                      return (
+                        <td
+                          key={`cd-${rowKey}-${colKey}-${m.name}`}
+                          className={`whitespace-nowrap border-r border-border-subtle px-3 py-1.5 text-right text-xs ${
+                            sort?.field === m.name
+                              ? 'font-medium text-text-primary'
+                              : 'text-text-primary'
+                          }`}
+                        >
+                          {formatMeasure(value, m.name)}
+                        </td>
+                      )
+                    })
+                  })}
+                  {/* Row totals */}
+                  {visibleMeasures.map((m) => (
+                    <td
+                      key={`ct-${rowKey}-${m.name}`}
+                      className="whitespace-nowrap border-l-2 border-border-subtle px-3 py-1.5 text-right text-xs font-medium text-text-primary"
+                    >
+                      {formatMeasure(rowTotals.get(m.name), m.name)}
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
+            {/* Grand total row */}
+            <tr className="border-t-2 border-border-subtle bg-surface/50 font-medium">
+              {rowFields.map((rf, i) => (
+                <td
+                  key={`gt-${rf.name}`}
+                  className={`border-r border-border-subtle px-3 py-2 text-xs text-text-primary sticky z-[5] bg-surface/50`}
+                  style={{ ...rowLabelStickyStyle(i), paddingLeft: `${i * 16 + 12}px` }}
+                >
+                  {i === 0 ? 'Total' : ''}
+                </td>
+              ))}
+              {colKeys.map((colKey) =>
+                visibleMeasures.map((m) => {
+                  const fieldName = measureAgg(m.name, m.operator)
+                  let sum = 0
+                  for (const rowKey of rowKeys) {
+                    sum += Number(cellMap.get(`${rowKey}:::${colKey}`)?.[fieldName] ?? 0)
+                  }
+                  return (
+                    <td
+                      key={`gc-${colKey}-${m.name}`}
+                      className="whitespace-nowrap border-r border-border-subtle px-3 py-2 text-right text-xs text-text-primary"
+                    >
+                      {formatMeasure(sum, m.name)}
+                    </td>
+                  )
+                }),
+              )}
+              {/* Grand total corner */}
+              {visibleMeasures.map((m) => (
+                <td
+                  key={`gtc-${m.name}`}
+                  className="whitespace-nowrap border-l-2 border-border-subtle px-3 py-2 text-right text-xs font-bold text-text-primary"
+                >
+                  {formatMeasure(totals.get(m.name), m.name)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   )

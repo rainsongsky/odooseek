@@ -47,6 +47,7 @@ function parseFieldElement(el: Element): FieldElement {
     colspan: el.hasAttribute('colspan')
       ? parseInt(el.getAttribute('colspan') as string, 10)
       : undefined,
+    class: el.getAttribute('class') ?? undefined,
   }
 }
 
@@ -135,8 +136,18 @@ function parseFormElements(container: Element): FormElement[] {
       elements.push({ type: 'header', buttons })
     } else if (tag === 'button') {
       elements.push(parseButtonElement(child))
-    } else if (tag === 'div' && (child.getAttribute('class') ?? '').includes('oe_button_box')) {
-      elements.push(parseButtonBox(child))
+    } else if (tag === 'div') {
+      const cls = child.getAttribute('class') ?? ''
+      if (cls.includes('oe_button_box')) {
+        elements.push(parseButtonBox(child))
+      } else if (cls.includes('oe_title')) {
+        elements.push({
+          type: 'title_block',
+          elements: parseFormElements(child),
+        })
+      }
+    } else if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+      elements.push(...parseFormElements(child))
     } else if (tag === 'field') {
       const fieldEl = parseFieldElement(child)
 
