@@ -3,7 +3,19 @@
 export { callKw, searchRead, read, getViews, readGroup, nameSearch, fieldsGet, callButton, loadAction, resolveAction } from './api'
 export type { OdooAction } from './api'
 
-export { parseListXml, parseFormXml, parseKanbanXml, parseKanbanFields, parseKanbanTemplate, parseActivityXml, parseSearchXml, parsePivotXml, parseGraphXml, parseCalendarXml, parseSearchPanel } from './xml-parser'
+export {
+  parseListXml,
+  parseFormXml,
+  parseKanbanXml,
+  parseKanbanFields,
+  parseKanbanTemplate,
+  parseActivityXml,
+  parseSearchXml,
+  parsePivotXml,
+  parseGraphXml,
+  parseCalendarXml,
+  parseSearchPanel,
+} from './xml-parser'
 
 export { evalCondition, getValue, evalModifier, getDecorationClass, parseDomainString } from './expression-evaluator'
 

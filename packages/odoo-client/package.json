@@ -9,6 +9,10 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./xml-parser": {
+      "import": "./src/xml-parser.ts",
+      "types": "./src/xml-parser.ts"
     }
   },
   "files": ["src/"],

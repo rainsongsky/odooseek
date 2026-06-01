@@ -3,10 +3,7 @@ import { callKw } from '@odooseek/odoo-client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import React, { Suspense, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  ACTIVITY_DIALOG_WIZARD_MODELS,
-  parseActionContext,
-} from '../lib/activity-actions'
+import { ACTIVITY_DIALOG_WIZARD_MODELS, parseActionContext } from '../lib/activity-actions'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 
 interface FormDialogItem {

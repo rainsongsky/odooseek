@@ -3,9 +3,7 @@ import type { OdooAction } from '@odooseek/odoo-client'
 /** Transient models opened as dialogs must be created before the form loads. */
 export const ACTIVITY_DIALOG_WIZARD_MODELS = new Set(['mail.activity.schedule'])
 
-export function parseActionContext(
-  context: OdooAction['context'],
-): Record<string, unknown> {
+export function parseActionContext(context: OdooAction['context']): Record<string, unknown> {
   if (!context) return {}
   if (typeof context === 'object') return { ...context }
   if (typeof context === 'string') {
@@ -62,9 +60,7 @@ export function mailActivityScheduleAction(opts: {
   const multi = opts.resIds.length > 1
   return {
     type: 'ir.actions.act_window',
-    name:
-      opts.title ??
-      (multi ? 'Schedule Activity On Selected Records' : 'Schedule Activity'),
+    name: opts.title ?? (multi ? 'Schedule Activity On Selected Records' : 'Schedule Activity'),
     res_model: 'mail.activity.schedule',
     view_mode: 'form',
     views: [[false, 'form']],

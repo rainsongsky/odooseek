@@ -1,4 +1,4 @@
-import { parseActivityXml } from '@odooseek/odoo-client'
+import { parseActivityXml } from '@odooseek/odoo-client/xml-parser'
 import { describe, expect, test } from 'vitest'
 
 describe('OdooActivityRenderer helpers', () => {

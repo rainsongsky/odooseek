@@ -1,5 +1,5 @@
-import type { OdooAction } from '@odooseek/odoo-client'
 import type {
+  OdooAction,
   OdooActivityData,
   OdooActivityGroupCell,
   OdooActivityTypeInfo,
@@ -7,16 +7,14 @@ import type {
   ParsedActivityView,
   ViewField,
 } from '@odooseek/odoo-client'
-import { callKw, parseActivityXml, read } from '@odooseek/odoo-client'
+import { callKw, read } from '@odooseek/odoo-client'
+import { parseActivityXml } from '@odooseek/odoo-client/xml-parser'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Settings } from '@/lib/lucide-icons'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  mailActivityFormAction,
-  mailActivityScheduleAction,
-} from '../lib/activity-actions'
-import { resolveOdooImageFromRecord } from '../lib/odoo-image'
+import { Settings } from '@/lib/lucide-icons'
 import { useToast } from '../hooks/useToast'
+import { mailActivityFormAction, mailActivityScheduleAction } from '../lib/activity-actions'
+import { resolveOdooImageFromRecord } from '../lib/odoo-image'
 
 const ACTIVITY_RECORD_FILTER: unknown[] = ['activity_ids.active', 'in', [true, false]]
 
@@ -153,13 +151,7 @@ function ActivityRecordBox({
   )
 }
 
-function ActivityCell({
-  group,
-  onClick,
-}: {
-  group: OdooActivityGroupCell
-  onClick: () => void
-}) {
+function ActivityCell({ group, onClick }: { group: OdooActivityGroupCell; onClick: () => void }) {
   const state = group.state || 'planned'
   const cellClass = STATE_CELL_CLASS[state] ?? 'bg-surface text-text-primary'
   const count = activityCount(group)
@@ -355,13 +347,8 @@ export function OdooActivityRenderer({
   })
 
   const sendMailMutation = useMutation({
-    mutationFn: ({
-      resIds: ids,
-      templateId,
-    }: {
-      resIds: number[]
-      templateId: number
-    }) => callKw(model, 'activity_send_mail', [ids, templateId]),
+    mutationFn: ({ resIds: ids, templateId }: { resIds: number[]; templateId: number }) =>
+      callKw(model, 'activity_send_mail', [ids, templateId]),
     onSuccess: () => {
       toast.success('Email sent')
       queryClient.invalidateQueries({ queryKey: ['odoo', 'activity-data', model] })
