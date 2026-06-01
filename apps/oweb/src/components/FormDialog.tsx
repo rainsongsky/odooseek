@@ -1,8 +1,12 @@
 import type { OdooAction, OdooFieldMeta } from '@odooseek/odoo-client'
 import { callKw } from '@odooseek/odoo-client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import React, { Suspense, useCallback, useRef } from 'react'
+import React, { Suspense, useCallback, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  ACTIVITY_DIALOG_WIZARD_MODELS,
+  parseActionContext,
+} from '../lib/activity-actions'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 
 interface FormDialogItem {
@@ -50,11 +54,25 @@ function FormDialogBody({
   const formRef = useRef<OdooFormRendererRef>(null)
   const action = item.action
   const model = action.res_model ?? parentModel
+  const actionContext = useMemo(() => parseActionContext(action.context), [action.context])
   const viewId =
     action.views && action.views.length > 0 && action.views[0][0] ? action.views[0][0] : undefined
+  const needsWizardCreate = ACTIVITY_DIALOG_WIZARD_MODELS.has(model)
+
+  const { data: wizardRecordId, isLoading: isCreatingWizard } = useQuery({
+    queryKey: ['odoo', 'dialog', 'wizard-create', model, item.id, actionContext],
+    queryFn: () => callKw<number>(model, 'create', [{}], { context: actionContext }),
+    enabled: needsWizardCreate && !action.res_id,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  })
+
+  const dialogRecordId = action.res_id ?? wizardRecordId
+
+  const canLoadForm = !needsWizardCreate || dialogRecordId != null
 
   const { data: viewData, isLoading } = useQuery({
-    queryKey: ['odoo', 'dialog', 'get_views', model, item.id],
+    queryKey: ['odoo', 'dialog', 'get_views', model, item.id, dialogRecordId],
     queryFn: async () => {
       const data = await callKw<{
         views: Record<string, { arch: string; id: number }>
@@ -62,6 +80,7 @@ function FormDialogBody({
       }>(model, 'get_views', [[viewId ?? false, 'form']], { options: { toolbar: false } })
       return data
     },
+    enabled: canLoadForm,
     staleTime: 5 * 60_000,
   })
 
@@ -69,6 +88,9 @@ function FormDialogBody({
     onClose(item.id)
     queryClient.invalidateQueries({ queryKey: ['odoo', 'data', parentModel] })
     queryClient.invalidateQueries({ queryKey: ['odoo', 'search_read', parentModel] })
+    queryClient.invalidateQueries({ queryKey: ['odoo', 'activity-data', parentModel] })
+    queryClient.invalidateQueries({ queryKey: ['odoo', 'activity-records', parentModel] })
+    queryClient.invalidateQueries({ queryKey: ['odoo', 'activities', parentModel] })
   }, [item.id, onClose, queryClient, parentModel])
 
   const activeView = viewData?.views?.form
@@ -92,7 +114,7 @@ function FormDialogBody({
             </button>
           </div>
           <div className="flex-1 overflow-auto">
-            {isLoading ? (
+            {isLoading || (needsWizardCreate && !dialogRecordId && isCreatingWizard) ? (
               <div className="flex items-center justify-center py-12">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
               </div>
@@ -120,6 +142,8 @@ function FormDialogBody({
                   model={model}
                   arch={activeView.arch}
                   fields={fields}
+                  recordId={dialogRecordId}
+                  context={actionContext}
                   onClose={handleClose}
                 />
               </Suspense>
@@ -139,6 +163,8 @@ const FormDialogInner = React.lazy(() =>
         model: string
         arch: string
         fields: Record<string, OdooFieldMeta>
+        recordId?: number
+        context?: Record<string, unknown>
         onClose: () => void
       },
       ref: React.Ref<OdooFormRendererRef>,
@@ -155,6 +181,8 @@ const FormDialogInner = React.lazy(() =>
         model: props.model,
         arch: props.arch,
         fields: props.fields,
+        recordId: props.recordId,
+        context: props.context,
         onAction: handleAction,
         ref,
       })

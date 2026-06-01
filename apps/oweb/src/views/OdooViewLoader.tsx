@@ -659,6 +659,7 @@ export function OdooViewLoader({
               fields={fields}
               domain={effectiveDomain}
               onRecordClick={onRowClick}
+              onOpenFormDialog={openFormDialog}
             />
           </div>
         </Suspense>

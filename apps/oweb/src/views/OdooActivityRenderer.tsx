@@ -1,3 +1,4 @@
+import type { OdooAction } from '@odooseek/odoo-client'
 import type {
   OdooActivityData,
   OdooActivityGroupCell,
@@ -7,9 +8,15 @@ import type {
   ViewField,
 } from '@odooseek/odoo-client'
 import { callKw, parseActivityXml, read } from '@odooseek/odoo-client'
-import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Settings } from '@/lib/lucide-icons'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  mailActivityFormAction,
+  mailActivityScheduleAction,
+} from '../lib/activity-actions'
 import { resolveOdooImageFromRecord } from '../lib/odoo-image'
+import { useToast } from '../hooks/useToast'
 
 const ACTIVITY_RECORD_FILTER: unknown[] = ['activity_ids.active', 'in', [true, false]]
 
@@ -20,12 +27,32 @@ const STATE_CELL_CLASS: Record<string, string> = {
   done: 'bg-gray-400 text-gray-900',
 }
 
+function columnStorageKey(model: string): string {
+  return `oweb.activity.columns.${model}`
+}
+
+function loadHiddenColumnIds(model: string): Set<number> {
+  try {
+    const raw = sessionStorage.getItem(columnStorageKey(model))
+    if (!raw) return new Set()
+    const ids = JSON.parse(raw) as number[]
+    return new Set(ids)
+  } catch {
+    return new Set()
+  }
+}
+
+function saveHiddenColumnIds(model: string, hidden: Set<number>) {
+  sessionStorage.setItem(columnStorageKey(model), JSON.stringify([...hidden]))
+}
+
 interface ActivityRendererProps {
   model: string
   arch: string
   fields: Record<string, OdooFieldMeta>
   domain?: unknown[]
   onRecordClick?: (id: number) => void
+  onOpenFormDialog: (action: OdooAction) => void
 }
 
 function activityGroupFor(
@@ -50,6 +77,17 @@ function activityCount(group: OdooActivityGroupCell): number {
 function summaryText(group: OdooActivityGroupCell): string {
   const parts = (group.summaries ?? []).filter(Boolean)
   return parts.length > 0 ? parts.join(', ') : ''
+}
+
+function resIdsWithActivityForType(
+  grouped: OdooActivityData['grouped_activities'],
+  activityTypeId: number,
+  candidateResIds: number[],
+): number[] {
+  return candidateResIds.filter((resId) => {
+    const group = activityGroupFor(grouped, resId, activityTypeId)
+    return group && group.state
+  })
 }
 
 function ActivityRecordBox({
@@ -115,7 +153,13 @@ function ActivityRecordBox({
   )
 }
 
-function ActivityCell({ group }: { group: OdooActivityGroupCell }) {
+function ActivityCell({
+  group,
+  onClick,
+}: {
+  group: OdooActivityGroupCell
+  onClick: () => void
+}) {
   const state = group.state || 'planned'
   const cellClass = STATE_CELL_CLASS[state] ?? 'bg-surface text-text-primary'
   const count = activityCount(group)
@@ -123,8 +167,10 @@ function ActivityCell({ group }: { group: OdooActivityGroupCell }) {
   const dateLabel = formatReportingDate(group.reporting_date)
 
   return (
-    <div
-      className={`flex h-full min-h-[4.5rem] cursor-default flex-col justify-between p-2 text-xs ${cellClass}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex h-full min-h-[4.5rem] w-full cursor-pointer flex-col justify-between p-2 text-left text-xs ${cellClass}`}
       title={summary || undefined}
     >
       {summary ? (
@@ -138,14 +184,117 @@ function ActivityCell({ group }: { group: OdooActivityGroupCell }) {
           <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px]">{count}</span>
         ) : null}
       </div>
-    </div>
+    </button>
   )
 }
 
-function ActivityTypeHeader({ type }: { type: OdooActivityTypeInfo }) {
+function ActivityTypeHeader({
+  type,
+  onSendTemplate,
+  isSendingTemplate,
+}: {
+  type: OdooActivityTypeInfo
+  onSendTemplate: (templateId: number) => void
+  isSendingTemplate: boolean
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const templates = type.template_ids ?? []
+
   return (
-    <th className="min-w-[100px] border border-border-subtle bg-surface/50 p-3 text-left text-xs font-medium text-text-primary">
-      {type.name}
+    <th className="relative min-w-[100px] border border-border-subtle bg-surface/50 p-3 text-left text-xs font-medium text-text-primary">
+      <div className="flex items-start justify-between gap-1">
+        <span>{type.name}</span>
+        {templates.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              className="rounded p-0.5 text-text-muted hover:bg-hover hover:text-text-primary"
+              title="Email templates"
+              disabled={isSendingTemplate}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              ⋮
+            </button>
+            {menuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-10 cursor-default"
+                  aria-label="Close menu"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] rounded border border-border-subtle bg-surface py-1 shadow-lg">
+                  {templates.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      className="block w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-hover"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        onSendTemplate(tpl.id)
+                      }}
+                    >
+                      ✉ {tpl.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </th>
+  )
+}
+
+function ColumnSettingsMenu({
+  types,
+  hiddenIds,
+  onToggle,
+}: {
+  types: OdooActivityTypeInfo[]
+  hiddenIds: Set<number>
+  onToggle: (typeId: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <th className="w-10 border border-border-subtle bg-surface/50 p-2 align-middle">
+      <div className="relative flex justify-center">
+        <button
+          type="button"
+          className="rounded p-1 text-text-muted hover:bg-hover hover:text-text-primary"
+          title="Activity columns"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Settings className="h-4 w-4" />
+        </button>
+        {open && (
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-10 cursor-default"
+              aria-label="Close"
+              onClick={() => setOpen(false)}
+            />
+            <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded border border-border-subtle bg-surface py-2 shadow-lg">
+              <p className="px-3 pb-1 text-[10px] font-medium text-text-muted">Activity types</p>
+              {types.map((type) => (
+                <label
+                  key={type.id}
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1 text-xs text-text-primary hover:bg-hover"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!hiddenIds.has(type.id)}
+                    onChange={() => onToggle(type.id)}
+                  />
+                  {type.name}
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </th>
   )
 }
@@ -153,11 +302,21 @@ function ActivityTypeHeader({ type }: { type: OdooActivityTypeInfo }) {
 export function OdooActivityRenderer({
   model,
   arch,
-  fields,
+  fields: _fields,
   domain = [],
   onRecordClick,
+  onOpenFormDialog,
 }: ActivityRendererProps) {
   const parsed: ParsedActivityView = useMemo(() => parseActivityXml(arch), [arch])
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [hiddenColumnIds, setHiddenColumnIds] = useState<Set<number>>(() =>
+    loadHiddenColumnIds(model),
+  )
+
+  useEffect(() => {
+    saveHiddenColumnIds(model, hiddenColumnIds)
+  }, [model, hiddenColumnIds])
 
   const activityDomain = useMemo(() => [...domain, ...ACTIVITY_RECORD_FILTER], [domain])
 
@@ -195,8 +354,81 @@ export function OdooActivityRenderer({
     staleTime: 30_000,
   })
 
+  const sendMailMutation = useMutation({
+    mutationFn: ({
+      resIds: ids,
+      templateId,
+    }: {
+      resIds: number[]
+      templateId: number
+    }) => callKw(model, 'activity_send_mail', [ids, templateId]),
+    onSuccess: () => {
+      toast.success('Email sent')
+      queryClient.invalidateQueries({ queryKey: ['odoo', 'activity-data', model] })
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to send email')
+    },
+  })
+
   const activityTypes = activityData?.activity_types ?? []
+  const visibleTypes = activityTypes.filter((t) => !hiddenColumnIds.has(t.id))
   const grouped = activityData?.grouped_activities ?? {}
+
+  const toggleColumn = useCallback((typeId: number) => {
+    setHiddenColumnIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(typeId)) next.delete(typeId)
+      else next.add(typeId)
+      return next
+    })
+  }, [])
+
+  const openNewActivity = useCallback(
+    (resId: number, activityTypeId: number) => {
+      onOpenFormDialog(
+        mailActivityFormAction({
+          resModel: model,
+          resId,
+          activityTypeId,
+        }),
+      )
+    },
+    [model, onOpenFormDialog],
+  )
+
+  const openEditActivity = useCallback(
+    (resId: number, activityTypeId: number, group: OdooActivityGroupCell) => {
+      const activityId = group.ids?.[0]
+      onOpenFormDialog(
+        mailActivityFormAction({
+          resModel: model,
+          resId,
+          activityTypeId,
+          activityId,
+          title: 'Activity',
+        }),
+      )
+    },
+    [model, onOpenFormDialog],
+  )
+
+  const scheduleForRecords = useCallback(
+    (targetResIds: number[], activityTypeId?: number) => {
+      if (targetResIds.length === 0) {
+        toast.info('No records to schedule activities for')
+        return
+      }
+      onOpenFormDialog(
+        mailActivityScheduleAction({
+          resModel: model,
+          resIds: targetResIds,
+          activityTypeId,
+        }),
+      )
+    },
+    [model, onOpenFormDialog, toast],
+  )
 
   if (loadingActivity || loadingRecords) {
     return (
@@ -214,10 +446,19 @@ export function OdooActivityRenderer({
     )
   }
 
+  const allResIds = records?.map((r) => r.id as number) ?? resIds
+
   if (!records?.length) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center p-8 text-sm text-text-muted">
-        No records with activities match the current filters.
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-sm text-text-muted">
+        <p>No records with activities match the current filters.</p>
+        <button
+          type="button"
+          className="rounded bg-accent px-3 py-1.5 text-xs text-on-accent"
+          onClick={() => scheduleForRecords(resIds)}
+        >
+          Schedule activity
+        </button>
       </div>
     )
   }
@@ -228,9 +469,26 @@ export function OdooActivityRenderer({
         <thead>
           <tr>
             <th className="min-w-[240px] border border-border-subtle bg-surface/50 p-3" />
-            {activityTypes.map((type) => (
-              <ActivityTypeHeader key={type.id} type={type} />
+            {visibleTypes.map((type) => (
+              <ActivityTypeHeader
+                key={type.id}
+                type={type}
+                onSendTemplate={(templateId) => {
+                  const ids = resIdsWithActivityForType(grouped, type.id, allResIds)
+                  if (ids.length === 0) {
+                    toast.info('No activities in this column to email')
+                    return
+                  }
+                  sendMailMutation.mutate({ resIds: ids, templateId })
+                }}
+                isSendingTemplate={sendMailMutation.isPending}
+              />
             ))}
+            <ColumnSettingsMenu
+              types={activityTypes}
+              hiddenIds={hiddenColumnIds}
+              onToggle={toggleColumn}
+            />
           </tr>
         </thead>
         <tbody>
@@ -243,11 +501,10 @@ export function OdooActivityRenderer({
                     model={model}
                     record={record}
                     boxFields={parsed.boxFields}
-                    fields={fields}
                     onClick={() => onRecordClick?.(resId)}
                   />
                 </td>
-                {activityTypes.map((type) => {
+                {visibleTypes.map((type) => {
                   const group = activityGroupFor(grouped, resId, type.id)
                   return (
                     <td
@@ -255,25 +512,40 @@ export function OdooActivityRenderer({
                       className="h-px border border-border-subtle p-0 align-stretch"
                     >
                       {group?.state ? (
-                        <ActivityCell group={group} />
+                        <ActivityCell
+                          group={group}
+                          onClick={() => openEditActivity(resId, type.id, group)}
+                        />
                       ) : (
-                        <div className="flex h-full min-h-[4.5rem] items-center justify-center text-text-muted hover:bg-hover">
-                          <span className="text-lg opacity-0 transition-opacity hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => openNewActivity(resId, type.id)}
+                          className="flex h-full min-h-[4.5rem] w-full cursor-pointer items-center justify-center text-text-muted hover:bg-hover"
+                          title="Schedule activity"
+                        >
+                          <span className="text-lg opacity-40 transition-opacity hover:opacity-100">
                             +
                           </span>
-                        </div>
+                        </button>
                       )}
                     </td>
                   )
                 })}
+                <td className="border border-border-subtle bg-surface/30" />
               </tr>
             )
           })}
         </tbody>
         <tfoot>
           <tr className="bg-surface/80">
-            <td colSpan={activityTypes.length + 1} className="border border-border-subtle p-3">
-              <span className="text-xs text-text-muted">+ Schedule activity (coming soon)</span>
+            <td colSpan={visibleTypes.length + 2} className="border border-border-subtle p-3">
+              <button
+                type="button"
+                onClick={() => scheduleForRecords(allResIds)}
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                + Schedule activity
+              </button>
             </td>
           </tr>
         </tfoot>
