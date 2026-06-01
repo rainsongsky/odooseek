@@ -56,13 +56,11 @@ function ActivityRecordBox({
   model,
   record,
   boxFields,
-  fields,
   onClick,
 }: {
   model: string
   record: Record<string, unknown>
   boxFields: ViewField[]
-  fields: Record<string, OdooFieldMeta>
   onClick?: () => void
 }) {
   const recordId = record.id as number
@@ -72,7 +70,6 @@ function ActivityRecordBox({
     boxFields.length > 0
       ? boxFields.map((f) => {
           const raw = record[f.name]
-          const meta = fields[f.name]
           let text = ''
           if (Array.isArray(raw) && raw.length === 2) text = String(raw[1] ?? '')
           else if (raw != null && raw !== false) text = String(raw)
@@ -257,7 +254,7 @@ export function OdooActivityRenderer({
                       key={type.id}
                       className="h-px border border-border-subtle p-0 align-stretch"
                     >
-                      {group && group.state ? (
+                      {group?.state ? (
                         <ActivityCell group={group} />
                       ) : (
                         <div className="flex h-full min-h-[4.5rem] items-center justify-center text-text-muted hover:bg-hover">

@@ -52,7 +52,7 @@ export function OdooKanbanRenderer({
   // Ensure groupBy + name + template fields (e.g. image_1024 in HR kanban aside)
   const searchFields = useMemo(() => {
     const names = new Set(kanbanView.fields)
-    collectKanbanFieldNames(templateNodes).forEach((n) => names.add(n))
+    for (const n of collectKanbanFieldNames(templateNodes)) names.add(n)
     return [...names]
   }, [kanbanView.fields, templateNodes])
   if (groupBy && !searchFields.includes(groupBy)) searchFields.push(groupBy)

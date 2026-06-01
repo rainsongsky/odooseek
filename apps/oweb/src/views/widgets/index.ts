@@ -1,4 +1,5 @@
 import type { FieldElement } from '@odooseek/odoo-client'
+import { BackgroundImageWidget } from './BackgroundImage'
 import { BadgeWidget } from './BadgeWidget'
 import {
   BooleanToggleWidget,
@@ -14,7 +15,6 @@ import {
   PercentageWidget,
   TextWidget,
 } from './basic'
-import { BackgroundImageWidget } from './BackgroundImage'
 import { BinaryWidget, ImageFieldWidget } from './media'
 import { OrgChartWidget } from './OrgChart'
 import { PresenceIcon } from './PresenceIcon'
