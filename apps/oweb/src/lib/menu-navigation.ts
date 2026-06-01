@@ -13,9 +13,9 @@ import type { MenusData, OdooMenuEntry } from '@odooseek/odoo-client'
 import {
   MODEL_MODULE_ROUTES,
   MODULE_ACTION_PATH_ROUTES,
-  RECORD_PREFIX_BY_LIST_PATH,
   modulePrefixFromXmlid,
   moduleRouteFromModel,
+  RECORD_PREFIX_BY_LIST_PATH,
   technicalModelFromActionPath,
 } from './module-routes'
 
@@ -49,45 +49,56 @@ export type MenuRouteTarget =
 export type MenuNavigateContext = 'menu-leaf' | 'app-root' | 'command'
 
 /** xmlid fragment → dedicated route (order: longer / more specific fragments first). */
-const XMLID_ROUTE_RULES: ReadonlyArray<{ fragment: string; to: string; recordPrefix?: string }> =
-  [
-    // HR
-    { fragment: 'menu_hr_employee_payroll', to: '/hr/employees', recordPrefix: '/hr/employee' },
-    { fragment: 'menu_hr_department_kanban', to: '/hr/departments', recordPrefix: '/hr/department' },
-    { fragment: 'menu_hr_department', to: '/hr/departments', recordPrefix: '/hr/department' },
-    { fragment: 'menu_hr_employee', to: '/hr/directory', recordPrefix: '/hr/employee' },
-    { fragment: 'menu_hr_root', to: '/hr/employees', recordPrefix: '/hr/employee' },
-    { fragment: 'menu_hr_main', to: '/hr/employees', recordPrefix: '/hr/employee' },
-    // CRM
-    { fragment: 'menu_crm_opportunities', to: '/crm/pipeline', recordPrefix: '/crm/lead' },
-    { fragment: 'crm_opportunity_report_menu_lead', to: '/crm/leads', recordPrefix: '/crm/lead' },
-    { fragment: 'menu_crm_leads', to: '/crm/leads', recordPrefix: '/crm/lead' },
-    // Sale
-    { fragment: 'menu_sale_order', to: '/sale/orders', recordPrefix: '/sale/order' },
-    { fragment: 'menu_sale_quotations', to: '/sale/orders', recordPrefix: '/sale/order' },
-    // Inventory (stock addon xmlids)
-    { fragment: 'menu_stock_picking', to: '/inventory/pickings', recordPrefix: '/inventory/picking' },
-    { fragment: 'stock_picking_type_menu', to: '/inventory/pickings', recordPrefix: '/inventory/picking' },
-    { fragment: 'menu_action_picking_tree', to: '/inventory/pickings', recordPrefix: '/inventory/picking' },
-    // Accounting
-    {
-      fragment: 'menu_action_move_out_invoice_type',
-      to: '/accounting/moves',
-      recordPrefix: '/accounting/move',
-    },
-    {
-      fragment: 'menu_action_move_in_invoice_type',
-      to: '/accounting/moves',
-      recordPrefix: '/accounting/move',
-    },
-    { fragment: 'menu_action_account_moves', to: '/accounting/moves', recordPrefix: '/accounting/move' },
-    // Contacts
-    {
-      fragment: 'res_partner_menu_contacts',
-      to: '/contacts/partners',
-      recordPrefix: '/contacts/partner',
-    },
-  ]
+const XMLID_ROUTE_RULES: ReadonlyArray<{ fragment: string; to: string; recordPrefix?: string }> = [
+  // HR
+  { fragment: 'menu_hr_employee_payroll', to: '/hr/employees', recordPrefix: '/hr/employee' },
+  { fragment: 'menu_hr_department_kanban', to: '/hr/departments', recordPrefix: '/hr/department' },
+  { fragment: 'menu_hr_department', to: '/hr/departments', recordPrefix: '/hr/department' },
+  { fragment: 'menu_hr_employee', to: '/hr/directory', recordPrefix: '/hr/employee' },
+  { fragment: 'menu_hr_root', to: '/hr/employees', recordPrefix: '/hr/employee' },
+  { fragment: 'menu_hr_main', to: '/hr/employees', recordPrefix: '/hr/employee' },
+  // CRM
+  { fragment: 'menu_crm_opportunities', to: '/crm/pipeline', recordPrefix: '/crm/lead' },
+  { fragment: 'crm_opportunity_report_menu_lead', to: '/crm/leads', recordPrefix: '/crm/lead' },
+  { fragment: 'menu_crm_leads', to: '/crm/leads', recordPrefix: '/crm/lead' },
+  // Sale
+  { fragment: 'menu_sale_order', to: '/sale/orders', recordPrefix: '/sale/order' },
+  { fragment: 'menu_sale_quotations', to: '/sale/orders', recordPrefix: '/sale/order' },
+  // Inventory (stock addon xmlids)
+  { fragment: 'menu_stock_picking', to: '/inventory/pickings', recordPrefix: '/inventory/picking' },
+  {
+    fragment: 'stock_picking_type_menu',
+    to: '/inventory/pickings',
+    recordPrefix: '/inventory/picking',
+  },
+  {
+    fragment: 'menu_action_picking_tree',
+    to: '/inventory/pickings',
+    recordPrefix: '/inventory/picking',
+  },
+  // Accounting
+  {
+    fragment: 'menu_action_move_out_invoice_type',
+    to: '/accounting/moves',
+    recordPrefix: '/accounting/move',
+  },
+  {
+    fragment: 'menu_action_move_in_invoice_type',
+    to: '/accounting/moves',
+    recordPrefix: '/accounting/move',
+  },
+  {
+    fragment: 'menu_action_account_moves',
+    to: '/accounting/moves',
+    recordPrefix: '/accounting/move',
+  },
+  // Contacts
+  {
+    fragment: 'res_partner_menu_contacts',
+    to: '/contacts/partners',
+    recordPrefix: '/contacts/partner',
+  },
+]
 
 export { modulePrefixFromXmlid } from './module-routes'
 
@@ -99,7 +110,9 @@ function moduleTarget(listPath: string): MenuRouteTarget {
   }
 }
 
-export function effectiveResModel(entry: Pick<MenuNavigateEntry, 'resModel' | 'actionPath'>): string | undefined {
+export function effectiveResModel(
+  entry: Pick<MenuNavigateEntry, 'resModel' | 'actionPath'>,
+): string | undefined {
   if (entry.resModel && typeof entry.resModel === 'string') return entry.resModel
   return technicalModelFromActionPath(entry.actionPath)
 }
@@ -168,8 +181,7 @@ export function buildActionRouteIndex(menus: MenusData): Map<number, MenuRouteTa
     const id = Number(menu.actionID)
     if (!Number.isFinite(id)) continue
     const entry = menuEntryFromOdoo(menu)
-    const target =
-      resolveMenuEntryTarget(entry) ?? ({ kind: 'web', action: id } as const)
+    const target = resolveMenuEntryTarget(entry) ?? ({ kind: 'web', action: id } as const)
     index.set(id, target)
   }
   cachedActionIndex = index
@@ -215,11 +227,7 @@ export function isMenuEntryActive(
     if (pathname === target.to) return true
     if (target.recordPrefix && pathname.startsWith(`${target.recordPrefix}/`)) return true
     // Dual URL: dedicated route and `/web?action=` for the same menu remain equivalent for highlight.
-    if (
-      pathname === '/web' &&
-      entry.actionID &&
-      search.action === Number(entry.actionID)
-    ) {
+    if (pathname === '/web' && entry.actionID && search.action === Number(entry.actionID)) {
       return true
     }
     return false

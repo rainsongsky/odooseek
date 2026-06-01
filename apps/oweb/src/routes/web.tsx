@@ -5,7 +5,7 @@ import { createFileRoute, useBlocker, useSearch } from '@tanstack/react-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
-import { type WebSearch, parseWebSearch } from '../lib/web-search'
+import { parseWebSearch, type WebSearch } from '../lib/web-search'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
 import { OdooViewLoader } from '../views/OdooViewLoader'
 

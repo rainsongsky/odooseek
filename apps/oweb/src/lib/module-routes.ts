@@ -22,27 +22,26 @@ export const MODEL_MODULE_ROUTES: Readonly<Record<string, ModuleRouteSpec>> = {
 }
 
 /** Odoo 19 `actionPath` slug per module prefix (when actionPath is not a technical model name). */
-export const MODULE_ACTION_PATH_ROUTES: Readonly<
-  Record<string, Readonly<Record<string, string>>>
-> = {
-  hr: {
-    employees: '/hr/employees',
-    departments: '/hr/departments',
-  },
-  crm: {
-    crm: '/crm/pipeline',
-  },
-  sale: {
-    orders: '/sale/orders',
-    sales: '/sale/orders',
-  },
-  stock: {
-    inventory: '/inventory/pickings',
-  },
-  contacts: {
-    contacts: '/contacts/partners',
-  },
-}
+export const MODULE_ACTION_PATH_ROUTES: Readonly<Record<string, Readonly<Record<string, string>>>> =
+  {
+    hr: {
+      employees: '/hr/employees',
+      departments: '/hr/departments',
+    },
+    crm: {
+      crm: '/crm/pipeline',
+    },
+    sale: {
+      orders: '/sale/orders',
+      sales: '/sale/orders',
+    },
+    stock: {
+      inventory: '/inventory/pickings',
+    },
+    contacts: {
+      contacts: '/contacts/partners',
+    },
+  }
 
 export function listPathForModel(model: string | undefined | false): string | undefined {
   if (!model || typeof model !== 'string') return undefined

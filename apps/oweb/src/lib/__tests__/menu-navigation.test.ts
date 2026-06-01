@@ -79,7 +79,10 @@ describe('resolveMenuRoute', () => {
       },
     } as MenusData
 
-    const payroll = resolveMenuRoute({ name: '员工', xmlid: 'hr.menu_hr_employee_payroll', actionID: 472 }, menus)
+    const payroll = resolveMenuRoute(
+      { name: '员工', xmlid: 'hr.menu_hr_employee_payroll', actionID: 472 },
+      menus,
+    )
     expect(payroll).toMatchObject({ kind: 'module', to: '/hr/employees' })
 
     const idx = buildActionRouteIndex(menus)

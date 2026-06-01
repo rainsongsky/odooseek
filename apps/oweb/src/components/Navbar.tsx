@@ -224,10 +224,14 @@ export function Navbar() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                navigateMenuEntry(navigate, menuEntryFromOdoo(sub, sub.children.length), {
-                                  context: 'menu-leaf',
-                                  menus,
-                                })
+                                navigateMenuEntry(
+                                  navigate,
+                                  menuEntryFromOdoo(sub, sub.children.length),
+                                  {
+                                    context: 'menu-leaf',
+                                    menus,
+                                  },
+                                )
                                 setOpenSubmenu(null)
                               }}
                               className="flex w-full items-center px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-hover/50"

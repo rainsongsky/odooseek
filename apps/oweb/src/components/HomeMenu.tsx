@@ -127,10 +127,14 @@ export function HomeMenuOverlay() {
         const sections = getAppSections(menus, app.id as number)
         const firstWithAction = sections.find((s) => s.actionID)
         if (firstWithAction?.actionID) {
-          navigateMenuEntry(navigate, menuEntryFromOdoo(firstWithAction, firstWithAction.children.length), {
-            context: 'menu-leaf',
-            menus,
-          })
+          navigateMenuEntry(
+            navigate,
+            menuEntryFromOdoo(firstWithAction, firstWithAction.children.length),
+            {
+              context: 'menu-leaf',
+              menus,
+            },
+          )
         }
       }
     },
