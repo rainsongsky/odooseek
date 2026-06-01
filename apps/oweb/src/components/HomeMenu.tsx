@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom'
 import { GripVertical, Search, X } from '@/lib/lucide-icons'
 import { useHomeMenu } from '../hooks/useHomeMenu'
 import { useAuth } from '../lib/auth'
+import { navigateHrOrAction } from '../lib/hr'
 import '../styles/odoo-icons.css'
 
 const ICON_FALLBACK: Record<string, string> = {
@@ -28,6 +29,8 @@ const ICON_FALLBACK: Record<string, string> = {
   Calendar: 'oi oi-schedule-today',
   Settings: 'oi oi-settings-adjust',
   Apps: 'oi oi-apps',
+  Employees: 'oi oi-user-profile',
+  'Human Resources': 'oi oi-user-profile',
 }
 
 function getAppIconClass(app: OdooMenuEntry): string | null {
@@ -112,9 +115,12 @@ export function HomeMenuOverlay() {
   const handleAppClick = useCallback(
     (app: OdooMenuEntry) => {
       close()
-      if (app.actionID) {
-        navigate({ to: '/web', search: { action: app.actionID } })
-      } else if (menus && app.children.length > 0) {
+      if (
+        navigateHrOrAction(navigate, { name: app.name, xmlid: app.xmlid, actionID: app.actionID })
+      ) {
+        return
+      }
+      if (menus && app.children.length > 0) {
         const sections = getAppSections(menus, app.id as number)
         const firstWithAction = sections.find((s) => s.actionID)
         if (firstWithAction?.actionID) {

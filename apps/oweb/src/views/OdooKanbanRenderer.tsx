@@ -15,8 +15,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import React, { useCallback, useMemo, useState } from 'react'
 import { useConfirmDialog } from '../components/ConfirmDialog'
+import { HR_EMPLOYEE_MODEL } from '../lib/hr'
 import { ODOO_INDEXED_COLORS } from '../lib/odoo-colors'
 import { getFieldWidget, NOOP } from './widgets'
+import { PresenceIconOverlay } from './widgets/PresenceIcon'
 
 interface KanbanRendererProps {
   model: string
@@ -476,6 +478,9 @@ function KanbanCard({
       ? ODOO_INDEXED_COLORS[Math.min(colorIdx, ODOO_INDEXED_COLORS.length - 1)]
       : undefined
   const recordId = record.id as number
+  const showPresence =
+    model === HR_EMPLOYEE_MODEL &&
+    (record.hr_presence_state != null || record.hr_icon_display != null)
 
   let mainNodes = templateNodes
   let asideNode: KanbanTemplateNode | undefined
@@ -532,6 +537,11 @@ function KanbanCard({
       className="group relative cursor-pointer rounded-lg border border-border-subtle bg-surface p-3 transition-colors hover:border-border-default"
       style={borderColor ? { borderLeftWidth: 3, borderLeftColor: borderColor } : undefined}
     >
+      {showPresence && (
+        <div className="absolute right-2 top-8 z-[1]">
+          <PresenceIconOverlay record={record} />
+        </div>
+      )}
       <CardActions recordId={recordId} onEdit={onClick} onDelete={onDelete} onArchive={onArchive} />
       {asideNode ? (
         <div className="flex flex-row gap-3">

@@ -1,8 +1,5 @@
 import type { FieldElement } from '@odooseek/odoo-client'
-
-/** Stable no-op callback — avoids creating new function references on every render. */
-export const NOOP = () => {}
-
+import { BadgeWidget } from './BadgeWidget'
 import {
   BooleanToggleWidget,
   BooleanWidget,
@@ -18,6 +15,8 @@ import {
   TextWidget,
 } from './basic'
 import { BinaryWidget, ImageFieldWidget } from './media'
+import { OrgChartWidget } from './OrgChart'
+import { PresenceIcon } from './PresenceIcon'
 import {
   AttachmentImageWidget,
   Many2ManyCheckboxesWidget,
@@ -55,6 +54,10 @@ import {
   UrlWidget,
   WebRibbonWidget,
 } from './utility'
+import { VersionTimeline } from './VersionTimeline'
+
+/** Stable no-op callback — avoids creating new function references on every render. */
+export const NOOP = () => {}
 
 export interface FieldWidgetProps {
   field: FieldElement
@@ -75,6 +78,7 @@ export const FIELD_INPUT_CLASS =
 export {
   AttachmentImageWidget,
   BadgeSelectionWidget,
+  BadgeWidget,
   BinaryWidget,
   BooleanFavoriteWidget,
   BooleanIconWidget,
@@ -102,9 +106,11 @@ export {
   Many2OneWidget,
   MonetaryWidget,
   One2ManyWidget,
+  OrgChartWidget,
   PercentageWidget,
   PercentPieWidget,
   PhoneWidget,
+  PresenceIcon,
   PriorityWidget,
   ProgressbarWidget,
   RadioWidget,
@@ -115,6 +121,7 @@ export {
   StatusbarWidget,
   TextWidget,
   UrlWidget,
+  VersionTimeline,
 }
 
 // ── Widget Registry ─────────────────────────────────────────────────
@@ -163,6 +170,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   float_time: FloatTimeWidget,
   percentage: PercentageWidget,
   selection_badge: BadgeSelectionWidget,
+  BadgeWidget,
   label_selection: LabelSelectionWidget,
   state_selection: StateSelectionWidget,
   // Phase 26
@@ -176,16 +184,37 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   web_ribbon: WebRibbonWidget,
   kanban_activity: KanbanActivityWidget,
   rotting: RottingWidget,
+  // HR
+  presence_icon: PresenceIcon,
+  org_chart: OrgChartWidget,
+  version_timeline: VersionTimeline,
+  badge_print: BadgeWidget,
+}
+
+const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
+  hr_presence_status: 'presence_icon',
+  hr_icon_display: 'presence_icon',
+  hr_org_chart: 'org_chart',
+  hr_department_chart: 'org_chart',
+  hr_version_timeline: 'version_timeline',
+  employee_badge: 'badge_print',
+  hr_employee_badge: 'badge_print',
+}
+
+function resolveWidgetOverride(widget?: string) {
+  if (!widget) return undefined
+  if (WIDGET_OVERRIDES[widget]) return WIDGET_OVERRIDES[widget]
+  const alias = WIDGET_ALIASES[widget]
+  if (alias) return WIDGET_OVERRIDES[alias]
+  return undefined
 }
 
 export function getFieldWidget(
   field: FieldElement,
   type: string,
 ): React.ComponentType<FieldWidgetProps> {
-  // widget attribute from XML arch overrides type-based selection
-  if (field.widget && WIDGET_OVERRIDES[field.widget]) {
-    return WIDGET_OVERRIDES[field.widget]
-  }
+  const override = resolveWidgetOverride(field.widget)
+  if (override) return override
   if (field.widget && TYPE_WIDGETS[field.widget]) {
     return TYPE_WIDGETS[field.widget]
   }

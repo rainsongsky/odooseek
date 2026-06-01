@@ -8,7 +8,7 @@ import {
   parseSearchXml,
   setCachedViews,
 } from '@odooseek/odoo-client'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
 import { DataExportDialog } from '../components/DataExportDialog'
@@ -23,8 +23,12 @@ import {
   ListSkeleton,
   PivotSkeleton,
 } from '../components/Skeleton'
+import { WizardDialog } from '../components/WizardDialog'
+import { HrVersionProvider } from '../hooks/HrVersionProvider'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
+import { HR_EMPLOYEE_MODEL } from '../lib/hr'
+import { HR_WIZARD_STEPS } from '../lib/hr-wizards'
 import type { ListPagerInfo } from './list-pager'
 import { OdooListRenderer } from './OdooListRenderer'
 
@@ -123,6 +127,11 @@ export function OdooViewLoader({
   const [recordId, setRecordId] = useState<number | undefined>(_recordId)
   const [formDialogs, setFormDialogs] = useState<FormDialogItem[]>([])
   const formDialogIdRef = useRef(0)
+  const [wizardDialog, setWizardDialog] = useState<{
+    model: string
+    context: Record<string, unknown>
+  } | null>(null)
+  const queryClient = useQueryClient()
   const [showImport, setShowImport] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [searchPanelDomain, setSearchPanelDomain] = useState<unknown[]>([])
@@ -156,6 +165,19 @@ export function OdooViewLoader({
     (action: OdooAction) => {
       if (action.type === 'ir.actions.act_window') {
         if (action.target === 'new') {
+          const resModel = action.res_model as string | undefined
+          if (resModel && HR_WIZARD_STEPS[resModel]) {
+            setWizardDialog({
+              model: resModel,
+              context: {
+                ...(typeof action.context === 'object' && action.context ? action.context : {}),
+                active_model: model,
+                active_id: recordId,
+                active_ids: recordId ? [recordId] : [],
+              },
+            })
+            return
+          }
           openFormDialog(action)
           return
         }
@@ -182,7 +204,17 @@ export function OdooViewLoader({
         onBackToList?.()
       }
     },
-    [model, viewType, recordId, onRowClick, onSwitchView, onBackToList, toast, openFormDialog],
+    [
+      model,
+      viewType,
+      recordId,
+      onRowClick,
+      onSwitchView,
+      onBackToList,
+      toast,
+      openFormDialog,
+      queryClient,
+    ],
   )
 
   type ViewData = {
@@ -531,17 +563,33 @@ export function OdooViewLoader({
       {viewType === 'form' && (
         <Suspense fallback={<FormSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-            <OdooFormRenderer
-              ref={formRef}
-              model={model}
-              arch={activeView.arch}
-              fields={fields}
-              recordId={recordId}
-              context={context}
-              onRecordCreated={onRecordCreated}
-              onDirtyChange={onDirtyChange}
-              onAction={handleFormAction}
-            />
+            {model === HR_EMPLOYEE_MODEL && recordId ? (
+              <HrVersionProvider employeeId={recordId}>
+                <OdooFormRenderer
+                  ref={formRef}
+                  model={model}
+                  arch={activeView.arch}
+                  fields={fields}
+                  recordId={recordId}
+                  context={context}
+                  onRecordCreated={onRecordCreated}
+                  onDirtyChange={onDirtyChange}
+                  onAction={handleFormAction}
+                />
+              </HrVersionProvider>
+            ) : (
+              <OdooFormRenderer
+                ref={formRef}
+                model={model}
+                arch={activeView.arch}
+                fields={fields}
+                recordId={recordId}
+                context={context}
+                onRecordCreated={onRecordCreated}
+                onDirtyChange={onDirtyChange}
+                onAction={handleFormAction}
+              />
+            )}
           </div>
         </Suspense>
       )}
@@ -636,6 +684,19 @@ export function OdooViewLoader({
       {showImport && <ImportDialog model={model} onClose={() => setShowImport(false)} />}
       {showExport && <DataExportDialog model={model} onClose={() => setShowExport(false)} />}
       <FormDialogOverlay dialogs={formDialogs} onClose={closeFormDialog} parentModel={model} />
+      {wizardDialog && HR_WIZARD_STEPS[wizardDialog.model] && (
+        <WizardDialog
+          open
+          model={wizardDialog.model}
+          context={wizardDialog.context}
+          steps={HR_WIZARD_STEPS[wizardDialog.model]}
+          onDone={() => {
+            setWizardDialog(null)
+            queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model] })
+          }}
+          onCancel={() => setWizardDialog(null)}
+        />
+      )}
     </>
   )
 }

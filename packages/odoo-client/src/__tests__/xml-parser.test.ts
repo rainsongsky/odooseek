@@ -161,6 +161,32 @@ describe('parseFormXml', () => {
     expect(header.buttons[1].name).toBe('action_set_lost')
   })
 
+  test('parses groups attribute on field, button, and group', () => {
+    const xml = `<form>
+      <header>
+        <button name="hr_only" type="object" string="HR" groups="hr.group_hr_user"/>
+      </header>
+      <group groups="base.group_system">
+        <field name="salary" groups="hr.group_hr_manager,hr.group_hr_user"/>
+      </group>
+    </form>`
+
+    const result = parseFormXml(xml)
+    const header = result.elements[0] as {
+      type: 'header'
+      buttons: { groups?: string }[]
+    }
+    expect(header.buttons[0].groups).toBe('hr.group_hr_user')
+
+    const group = result.elements[1] as {
+      type: 'group'
+      groups?: string
+      elements: { type: 'field'; groups?: string }[]
+    }
+    expect(group.groups).toBe('base.group_system')
+    expect(group.elements[0].groups).toBe('hr.group_hr_manager,hr.group_hr_user')
+  })
+
   test('parses button with states and confirm attributes', () => {
     const xml = `<form>
       <header>
