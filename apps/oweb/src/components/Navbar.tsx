@@ -253,6 +253,8 @@ export function Navbar() {
       <div className="flex items-center gap-1">
         <Link
           to="/settings"
+          aria-label={t('nav.settings')}
+          data-testid="nav-settings"
           className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             settingsActive
               ? 'bg-accent/15 text-accent'

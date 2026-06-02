@@ -1403,6 +1403,7 @@ export function OdooListRenderer({
           )}
           <div
             ref={tableContainerRef}
+            data-testid="odoo-list-view"
             className="overflow-x-auto min-h-0 flex-1 overflow-y-auto rounded-lg border border-border-subtle"
           >
             <table className="w-full" onKeyDown={handleTableKeyDown}>
@@ -1516,6 +1517,8 @@ export function OdooListRenderer({
                     return (
                       <tr
                         key={recordId}
+                        data-testid="list-row"
+                        data-record-id={String(recordId)}
                         draggable={hasHandle && !isEditing}
                         onDragStart={
                           hasHandle

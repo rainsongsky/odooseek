@@ -1,3 +1,4 @@
+import { isNotFound, isRedirect } from '@tanstack/react-router'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 
 interface Props {
@@ -10,14 +11,21 @@ interface State {
   error: Error | null
 }
 
+function isRouterControlFlow(error: unknown): boolean {
+  return isRedirect(error) || isNotFound(error) || error instanceof Promise || error == null
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: unknown): State | null {
+    if (isRouterControlFlow(error)) throw error
+    if (error instanceof Error) return { hasError: true, error }
+    return { hasError: true, error: new Error(String(error)) }
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    if (isRouterControlFlow(error)) return
     console.error('ErrorBoundary caught:', error, info.componentStack)
   }
 

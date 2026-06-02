@@ -173,7 +173,32 @@ bun run test           # 单次运行
 bun run test:watch     # 监听模式
 ```
 
-## 开发规范
+### E2E（Playwright）
+
+覆盖 **login → 应用菜单 → list → form** 主链路（MVAM smoke）。需 **Odoo + BFF** 已运行；前端 dev server 可由 Playwright 自动启动。
+
+```bash
+# 1. 启动 Odoo（见 docker/README.md）
+bun run docker:up
+
+# 2. 启动 BFF（:3000）
+bun run dev
+
+# 3. 配置凭据并运行 E2E（Playwright 会读 e2e/.env.local，并自动起 Vite :5173）
+cd apps/oweb
+cp e2e/.env.example e2e/.env.local   # 首次：填入 E2E_DB / E2E_LOGIN / E2E_PASSWORD
+bun run e2e:install                  # 首次安装 Chromium
+# WSL/Linux 缺 libnspr4 等系统库（sudo 默认找不到 bunx，需保留 PATH 或用绝对路径）：
+sudo env "PATH=$PATH" bunx playwright install-deps chromium
+# 若仍失败，用 bun 绝对路径：sudo env "PATH=$HOME/.bun/bin:$PATH" bunx playwright install-deps chromium
+bun run e2e
+
+# 若已手动启动 oweb（:5173），可跳过 Playwright 的 webServer：
+# E2E_SKIP_WEBSERVER=1 bun run e2e
+```
+
+CI：GitHub Actions **workflow_dispatch** 工作流 `E2E`（需配置 `E2E_DB`、`E2E_LOGIN`、`E2E_PASSWORD` secrets，并指向可访问的 Odoo 实例）。
+
 
 详见 [CLAUDE.md](./CLAUDE.md)，核心要点：
 

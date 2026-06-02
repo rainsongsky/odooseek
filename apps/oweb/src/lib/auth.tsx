@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { redirect } from '@tanstack/react-router'
+import { isRedirect, redirect } from '@tanstack/react-router'
 import { createContext, type ReactNode, useContext } from 'react'
 import { parseSessionGroups, type SessionGroups, userHasGroup } from './groups'
 
@@ -96,7 +96,7 @@ export async function requireAuth(): Promise<void> {
     const data = await res.json()
     if (!data.authenticated) throw redirect({ to: '/login' })
   } catch (e) {
-    if (e instanceof Response || (e as { message?: string }).message?.includes('Redirect')) throw e
+    if (isRedirect(e)) throw e
     throw redirect({ to: '/login' })
   }
 }

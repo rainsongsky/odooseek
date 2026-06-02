@@ -152,6 +152,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={loading}
+            data-testid="login-submit"
             className="w-full cursor-pointer rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Signing in...' : t('login.submit')}
