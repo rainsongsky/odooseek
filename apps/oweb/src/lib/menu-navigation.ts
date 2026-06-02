@@ -57,6 +57,10 @@ const XMLID_ROUTE_RULES: ReadonlyArray<{ fragment: string; to: string; recordPre
   { fragment: 'menu_hr_employee', to: '/hr/directory', recordPrefix: '/hr/employee' },
   { fragment: 'menu_hr_root', to: '/hr/employees', recordPrefix: '/hr/employee' },
   { fragment: 'menu_hr_main', to: '/hr/employees', recordPrefix: '/hr/employee' },
+  { fragment: 'menu_view_hr_job', to: '/hr/jobs' },
+  { fragment: 'menu_hr_work_location_tree', to: '/hr/work-locations' },
+  { fragment: 'menu_config_plan_plan', to: '/hr/plans' },
+  { fragment: 'mail_activity_plan_action', to: '/hr/plans' },
   // CRM
   { fragment: 'menu_crm_opportunities', to: '/crm/pipeline', recordPrefix: '/crm/lead' },
   { fragment: 'crm_opportunity_report_menu_lead', to: '/crm/leads', recordPrefix: '/crm/lead' },

@@ -17,7 +17,17 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Subpath before package root (root must not point at index.ts or `/xml-parser` breaks)
+      '@odooseek/odoo-client/xml-parser': path.resolve(
+        __dirname,
+        '../../packages/odoo-client/src/xml-parser.ts',
+      ),
+      '@odooseek/odoo-client': path.resolve(__dirname, '../../packages/odoo-client/src'),
+      '@odooseek/odoo-types': path.resolve(__dirname, '../../packages/odoo-types/src'),
     },
+  },
+  optimizeDeps: {
+    exclude: ['@odooseek/odoo-client', '@odooseek/odoo-types'],
   },
   build: {
     target: 'esnext',

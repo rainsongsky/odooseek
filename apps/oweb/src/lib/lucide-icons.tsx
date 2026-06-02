@@ -6,6 +6,7 @@ export {
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  ClipboardList,
   Columns3,
   Download,
   Filter,

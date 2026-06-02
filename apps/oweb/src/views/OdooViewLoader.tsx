@@ -48,6 +48,9 @@ const OdooGraphRenderer = lazy(() =>
 const OdooCalendarRenderer = lazy(() =>
   import('./OdooCalendarRenderer').then((m) => ({ default: m.OdooCalendarRenderer })),
 )
+const OdooActivityRenderer = lazy(() =>
+  import('./OdooActivityRenderer').then((m) => ({ default: m.OdooActivityRenderer })),
+)
 
 type OdooFormRendererRef = React.ComponentRef<typeof OdooFormRenderer>
 
@@ -58,6 +61,7 @@ const viewPrefetchers: Record<string, () => Promise<unknown>> = {
   pivot: () => import('./OdooPivotRenderer'),
   graph: () => import('./OdooGraphRenderer'),
   calendar: () => import('./OdooCalendarRenderer'),
+  activity: () => import('./OdooActivityRenderer'),
 }
 
 export function prefetchView(type: string) {
@@ -457,6 +461,7 @@ export function OdooViewLoader({
     if (internalViewType === 'pivot') return <PivotSkeleton />
     if (internalViewType === 'graph') return <GraphSkeleton />
     if (internalViewType === 'calendar') return <CalendarSkeleton />
+    if (internalViewType === 'activity') return <ListSkeleton />
     return <ListSkeleton />
   }
 
@@ -488,7 +493,8 @@ export function OdooViewLoader({
     internalViewType === 'kanban' ||
     internalViewType === 'pivot' ||
     internalViewType === 'graph' ||
-    internalViewType === 'calendar'
+    internalViewType === 'calendar' ||
+    internalViewType === 'activity'
 
   const renderContent = () => (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -631,7 +637,7 @@ export function OdooViewLoader({
           </div>
         </Suspense>
       )}
-      {viewType === 'calendar' && (
+      {internalViewType === 'calendar' && (
         <Suspense fallback={<CalendarSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             <OdooCalendarRenderer
@@ -640,6 +646,20 @@ export function OdooViewLoader({
               fields={fields}
               domain={effectiveDomain}
               onRecordClick={onRowClick}
+            />
+          </div>
+        </Suspense>
+      )}
+      {internalViewType === 'activity' && (
+        <Suspense fallback={<ListSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooActivityRenderer
+              model={model}
+              arch={activeView.arch}
+              fields={fields}
+              domain={effectiveDomain}
+              onRecordClick={onRowClick}
+              onOpenFormDialog={openFormDialog}
             />
           </div>
         </Suspense>

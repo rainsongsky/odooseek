@@ -10,6 +10,7 @@ function HrEmployees() {
       defaultView="kanban"
       listPath="/hr/employees"
       recordPath={(id) => `/hr/employee/${id}`}
+      availableViews={['kanban', 'list', 'activity', 'graph', 'pivot']}
     />
   )
 }

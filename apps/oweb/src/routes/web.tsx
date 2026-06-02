@@ -34,7 +34,9 @@ function WebPage() {
     return actionViewModes
       .split(',')
       .map((v) => v.trim() as ViewType)
-      .filter((v) => ['list', 'form', 'kanban', 'pivot', 'graph', 'calendar'].includes(v))
+      .filter((v) =>
+        ['list', 'form', 'kanban', 'pivot', 'graph', 'calendar', 'activity'].includes(v),
+      )
   }, [actionViewModes])
 
   const defaultView = availableViews?.[0] ?? 'list'

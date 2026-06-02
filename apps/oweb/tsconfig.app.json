@@ -18,7 +18,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@odooseek/odoo-client": ["../../packages/odoo-client/src/index.ts"]
+      "@odooseek/odoo-client": ["../../packages/odoo-client/src/index.ts"],
+      "@odooseek/odoo-client/xml-parser": ["../../packages/odoo-client/src/xml-parser.ts"]
     }
   },
   "include": ["src"]

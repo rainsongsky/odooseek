@@ -2,6 +2,7 @@ import type { ViewType } from '@odooseek/odoo-client'
 import {
   BarChart3,
   CalendarDays,
+  ClipboardList,
   Columns3,
   LayoutList,
   Table,
@@ -21,6 +22,7 @@ const VIEWS: {
   label: string
 }[] = [
   { type: 'list', icon: Table, label: 'List' },
+  { type: 'activity', icon: ClipboardList, label: 'Activity' },
   { type: 'calendar', icon: CalendarDays, label: 'Calendar' },
   { type: 'pivot', icon: BarChart3, label: 'Pivot' },
   { type: 'graph', icon: TrendingUp, label: 'Graph' },

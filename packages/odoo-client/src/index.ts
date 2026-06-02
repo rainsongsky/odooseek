@@ -3,7 +3,19 @@
 export { callKw, searchRead, read, getViews, readGroup, nameSearch, fieldsGet, callButton, loadAction, resolveAction } from './api'
 export type { OdooAction } from './api'
 
-export { parseListXml, parseFormXml, parseKanbanXml, parseKanbanFields, parseKanbanTemplate, parseSearchXml, parsePivotXml, parseGraphXml, parseCalendarXml, parseSearchPanel } from './xml-parser'
+export {
+  parseListXml,
+  parseFormXml,
+  parseKanbanXml,
+  parseKanbanFields,
+  parseKanbanTemplate,
+  parseActivityXml,
+  parseSearchXml,
+  parsePivotXml,
+  parseGraphXml,
+  parseCalendarXml,
+  parseSearchPanel,
+} from './xml-parser'
 
 export { evalCondition, getValue, evalModifier, getDecorationClass, parseDomainString } from './expression-evaluator'
 
@@ -30,12 +42,14 @@ export { generateReport } from './report'
 
 export type {
   ViewType, OdooFieldMeta, ViewField,
-  ParsedListView, ParsedFormView, ParsedKanbanView, ParsedSearchView, ParsedPivotView, ParsedGraphView, ParsedCalendarView,
+  ParsedListView, ParsedFormView, ParsedKanbanView, ParsedActivityView, ParsedSearchView, ParsedPivotView, ParsedGraphView, ParsedCalendarView,
+  OdooActivityData, OdooActivityTypeInfo, OdooActivityGroupCell,
   FormElement, FieldElement, ButtonElement, HeaderElement, GroupElement, NotebookElement,
   KanbanTemplateNode, SearchFilter, SearchGroupBy, PivotField, PivotMeasure, GraphField, GraphMeasure, ListColumn,
   ToolbarAction, ViewToolbar, IrFilterRecord, SearchPanelField, SearchPanelCategory, ParsedSearchPanel,
   ReadGroupResult, O2mCommand, O2mSubView, O2mFormSubView, KanbanProgressbar,
   ControlButton, ButtonBoxElement, StatButtonElement, StatButtonContent,
   SeparatorElement, NewlineElement, LabelElement, SheetElement, TitleBlockElement,
+  LayoutRowElement, LayoutColumnElement,
   ListButtonElement, ListButtonGroup,
 } from './types'

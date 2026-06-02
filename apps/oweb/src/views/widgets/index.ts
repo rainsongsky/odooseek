@@ -1,4 +1,5 @@
 import type { FieldElement } from '@odooseek/odoo-client'
+import { BackgroundImageWidget } from './BackgroundImage'
 import { BadgeWidget } from './BadgeWidget'
 import {
   BooleanToggleWidget,
@@ -185,6 +186,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   kanban_activity: KanbanActivityWidget,
   rotting: RottingWidget,
   // HR
+  background_image: BackgroundImageWidget,
   presence_icon: PresenceIcon,
   org_chart: OrgChartWidget,
   version_timeline: VersionTimeline,

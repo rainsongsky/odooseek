@@ -14,6 +14,8 @@ interface ModuleRouteProps {
   recordPath?: (id: number) => string
   /** Navigate here when leaving form view (optional). */
   listPath?: string
+  /** View modes shown in the switcher (from Odoo action `view_mode`). */
+  availableViews?: ViewType[]
 }
 
 export function ModuleRoute({
@@ -23,6 +25,7 @@ export function ModuleRoute({
   recordId: initialRecordId,
   recordPath,
   listPath,
+  availableViews,
 }: ModuleRouteProps) {
   const navigate = useNavigate()
   const [viewType, setViewType] = useState<ViewType>(defaultView)
@@ -104,6 +107,7 @@ export function ModuleRoute({
       onRecordCreated={handleRecordCreated}
       onDirtyChange={setIsFormDirty}
       formRef={formRef}
+      availableViews={availableViews}
     />
   )
 }
