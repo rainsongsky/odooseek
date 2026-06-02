@@ -7,6 +7,7 @@ pub mod cache;
 pub mod error;
 pub mod helpers;
 pub mod menu;
+pub mod menu_enrich;
 pub mod proxy;
 pub mod report;
 pub mod session;

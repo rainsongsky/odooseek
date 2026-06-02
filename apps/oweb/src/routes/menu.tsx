@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Search } from '@/lib/lucide-icons'
+import { menuEntryFromOdoo, navigateMenuEntry } from '../lib/menu-navigation'
 
 function MenuPage() {
   const navigate = useNavigate()
@@ -23,9 +24,10 @@ function MenuPage() {
   }, [menus, searchQuery])
 
   const handleAppClick = (app: OdooMenuEntry) => {
-    if (app.actionID) {
-      navigate({ to: '/web', search: { action: app.actionID } })
-    }
+    navigateMenuEntry(navigate, menuEntryFromOdoo(app, app.children.length), {
+      context: 'app-root',
+      menus,
+    })
   }
 
   return (
