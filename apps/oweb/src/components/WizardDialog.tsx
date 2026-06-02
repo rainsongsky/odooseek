@@ -1,6 +1,12 @@
-import { callKw } from '@odooseek/odoo-client'
+import { callKw, nameSearch } from '@odooseek/odoo-client'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
+import { useToast } from '../hooks/useToast'
+import {
+  enrichWizardContext,
+  recordToWizardValues,
+  wizardValuesToWrite,
+} from '../lib/wizard-context'
 
 interface WizardField {
   name: string
@@ -34,6 +40,141 @@ interface WizardDialogProps {
   onCancel: () => void
 }
 
+function WizardMany2oneInput({
+  fieldName,
+  fieldDef,
+  value,
+  onChange,
+}: {
+  fieldName: string
+  fieldDef: WizardField
+  value: unknown
+  onChange: (field: string, value: unknown) => void
+}) {
+  const relation = fieldDef.relation
+  const { data: options = [] } = useQuery({
+    queryKey: ['odoo', 'wizard', 'many2one', relation, fieldName],
+    queryFn: () =>
+      nameSearch(relation!, '', 50).then((rows) => rows.map(([id, label]) => ({ id, label }))),
+    enabled: !!relation,
+    staleTime: 60_000,
+  })
+
+  return (
+    <select
+      value={value === '' || value == null ? '' : String(value)}
+      onChange={(e) => onChange(fieldName, e.target.value ? Number(e.target.value) : '')}
+      className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+      required={fieldDef.required}
+    >
+      <option value="" />
+      {options.map((opt) => (
+        <option key={opt.id} value={opt.id}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function WizardFieldInput({
+  fieldName,
+  fieldDef,
+  value,
+  onChange,
+}: {
+  fieldName: string
+  fieldDef?: WizardField
+  value: unknown
+  onChange: (field: string, value: unknown) => void
+}) {
+  if (!fieldDef) {
+    return (
+      <input
+        type="text"
+        value={String(value ?? '')}
+        onChange={(e) => onChange(fieldName, e.target.value)}
+        className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+      />
+    )
+  }
+
+  if (fieldDef.type === 'boolean') {
+    return (
+      <input
+        type="checkbox"
+        checked={Boolean(value)}
+        onChange={(e) => onChange(fieldName, e.target.checked)}
+        className="h-4 w-4 rounded border-border-default"
+      />
+    )
+  }
+
+  if (fieldDef.type === 'date') {
+    return (
+      <input
+        type="date"
+        value={String(value ?? '')}
+        onChange={(e) => onChange(fieldName, e.target.value)}
+        className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+        required={fieldDef.required}
+      />
+    )
+  }
+
+  if (fieldDef.type === 'many2one' && fieldDef.relation) {
+    return (
+      <WizardMany2oneInput
+        fieldName={fieldName}
+        fieldDef={fieldDef}
+        value={value}
+        onChange={onChange}
+      />
+    )
+  }
+
+  if (fieldDef.type === 'selection' && fieldDef.selection) {
+    return (
+      <select
+        value={String(value ?? '')}
+        onChange={(e) => onChange(fieldName, e.target.value)}
+        className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+        required={fieldDef.required}
+      >
+        <option value="" />
+        {fieldDef.selection.map((entry) => (
+          <option key={entry[0]} value={entry[0]}>
+            {entry[1]}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  const multiline = fieldDef.type === 'text' || fieldName.includes('description')
+  if (multiline) {
+    return (
+      <textarea
+        value={String(value ?? '')}
+        onChange={(e) => onChange(fieldName, e.target.value)}
+        rows={3}
+        className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+        required={fieldDef.required}
+      />
+    )
+  }
+
+  return (
+    <input
+      type="text"
+      value={String(value ?? '')}
+      onChange={(e) => onChange(fieldName, e.target.value)}
+      className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+      required={fieldDef.required}
+    />
+  )
+}
+
 export function WizardDialog({
   open,
   model,
@@ -42,9 +183,13 @@ export function WizardDialog({
   onDone,
   onCancel,
 }: WizardDialogProps) {
+  const toast = useToast()
+  const wizardContext = enrichWizardContext(context)
   const [stepIndex, setStepIndex] = useState(0)
   const [values, setValues] = useState<Record<string, unknown>>({})
   const [wizardId, setWizardId] = useState<number | null>(null)
+
+  const step = steps[stepIndex]
 
   useEffect(() => {
     if (!open) {
@@ -54,10 +199,10 @@ export function WizardDialog({
     }
   }, [open])
 
-  const { isPending: isCreating } = useQuery({
-    queryKey: ['odoo', 'wizard', model, 'create', open],
+  const { isPending: isCreating, error: createQueryError } = useQuery({
+    queryKey: ['odoo', 'wizard', model, 'create', open, wizardContext.active_id],
     queryFn: async () => {
-      const id = await callKw<number>(model, 'create', [{ ...context }], { context })
+      const id = await callKw<number>(model, 'create', [{}], { context: wizardContext })
       setWizardId(id)
       return id
     },
@@ -66,7 +211,8 @@ export function WizardDialog({
     retry: false,
   })
 
-  const step = steps[stepIndex]
+  const createError = createQueryError?.message ?? null
+
   const { data: fieldDefs, isLoading: isLoadingFields } = useQuery({
     queryKey: ['odoo', 'wizard', model, 'fields_get'],
     queryFn: () =>
@@ -75,6 +221,24 @@ export function WizardDialog({
       ),
     enabled: open && !!wizardId,
     staleTime: 5 * 60_000,
+  })
+
+  useQuery({
+    queryKey: ['odoo', 'wizard', model, wizardId, 'initial', step.fields],
+    queryFn: async () => {
+      if (!wizardId || step.fields.length === 0) return null
+      const rows = await callKw<Array<Record<string, unknown>>>(
+        model,
+        'read',
+        [[wizardId], step.fields],
+        { context: wizardContext },
+      )
+      const initial = recordToWizardValues(rows[0] ?? {}, step.fields)
+      setValues((prev) => ({ ...initial, ...prev }))
+      return rows[0]
+    },
+    enabled: open && wizardId !== null && step.fields.length > 0,
+    staleTime: Number.POSITIVE_INFINITY,
   })
 
   const stepMutation = useMutation({
@@ -86,14 +250,12 @@ export function WizardDialog({
       stepValues: Record<string, unknown>
     }) => {
       if (!wizardId) return
-      const writeVals = Object.fromEntries(
-        Object.entries(stepValues).filter(([, v]) => v !== '' && v !== undefined),
-      )
+      const writeVals = wizardValuesToWrite(stepValues, fieldDefs ?? {})
       if (Object.keys(writeVals).length > 0) {
-        await callKw(model, 'write', [[wizardId], writeVals], { context })
+        await callKw(model, 'write', [[wizardId], writeVals], { context: wizardContext })
       }
       if (button.special === 'cancel' || button.special === 'close') return
-      return callKw(model, button.name, [[wizardId]], { context })
+      return callKw(model, button.name, [[wizardId]], { context: wizardContext })
     },
     onSuccess: (_, { button }) => {
       if (button.special === 'cancel' || button.special === 'close') {
@@ -105,6 +267,9 @@ export function WizardDialog({
       } else {
         onDone()
       }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message.replace(/^Odoo Error:\s*/, ''))
     },
   })
 
@@ -129,44 +294,32 @@ export function WizardDialog({
         </div>
 
         <div className="px-5 py-4">
-          {isCreating || isLoadingFields || !wizardId ? (
+          {createError ? (
+            <p className="text-sm text-danger">{createError}</p>
+          ) : isCreating || isLoadingFields || !wizardId ? (
             <div className="flex items-center justify-center py-8">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
             </div>
           ) : (
             <div className="space-y-3">
+              {step.fields.length === 0 ? (
+                <p className="text-sm text-text-secondary">
+                  Confirm to continue with the current record context.
+                </p>
+              ) : null}
               {step.fields.map((fieldName) => {
                 const fieldDef = fieldDefs?.[fieldName]
-                const value = values[fieldName] ?? ''
-                const isSelection = fieldDef?.type === 'selection'
-
                 return (
                   <label key={fieldName} className="flex flex-col gap-1">
                     <span className="text-xs font-medium text-text-secondary">
                       {fieldDef?.string || fieldName}
                     </span>
-                    {isSelection && fieldDef?.selection ? (
-                      <select
-                        value={String(value)}
-                        onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                        className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
-                      >
-                        <option value="" />
-                        {fieldDef.selection.map((entry: [string, string]) => (
-                          <option key={entry[0]} value={entry[0]}>
-                            {entry[1]}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={String(value)}
-                        onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                        className="rounded-md border border-border-default bg-root px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
-                        required={fieldDef?.required}
-                      />
-                    )}
+                    <WizardFieldInput
+                      fieldName={fieldName}
+                      fieldDef={fieldDef}
+                      value={values[fieldName] ?? ''}
+                      onChange={handleFieldChange}
+                    />
                   </label>
                 )
               })}
@@ -192,7 +345,7 @@ export function WizardDialog({
                 key={btn.name}
                 type="button"
                 onClick={() => stepMutation.mutate({ button: btn, stepValues: values })}
-                disabled={stepMutation.isPending || !wizardId}
+                disabled={stepMutation.isPending || !wizardId || !!createError}
                 className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
                   btn.special === 'cancel'
                     ? 'border border-border-default text-text-secondary hover:bg-hover'
