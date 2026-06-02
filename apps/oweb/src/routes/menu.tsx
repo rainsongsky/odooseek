@@ -31,7 +31,7 @@ function MenuPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden" data-testid="app-menu">
       <div className="px-8 py-4">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
@@ -55,6 +55,8 @@ function MenuPage() {
             {apps.map((app) => (
               <div
                 key={String(app.id)}
+                data-testid="app-tile"
+                data-app-name={app.name}
                 onClick={() => handleAppClick(app)}
                 className="group flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface/50 p-6 transition-all hover:border-border-default hover:bg-surface"
               >

@@ -43,6 +43,7 @@ export function OdooViewSwitcher({ currentView, onSwitch, availableViews }: View
           <button
             key={v.type}
             type="button"
+            data-testid={`view-switch-${v.type}`}
             onClick={() => onSwitch(v.type)}
             onMouseEnter={() => prefetchView(v.type)}
             className={`flex cursor-pointer items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition-colors ${

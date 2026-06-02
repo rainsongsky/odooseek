@@ -1,5 +1,5 @@
 import type { ViewType } from '@odooseek/odoo-client'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAutosaveGuard } from '../hooks/useAutosaveGuard'
 import type { OdooFormRendererRef } from '../views/OdooFormRenderer'
@@ -28,6 +28,7 @@ export function ModuleRoute({
   availableViews,
 }: ModuleRouteProps) {
   const navigate = useNavigate()
+  const router = useRouter()
   const [viewType, setViewType] = useState<ViewType>(defaultView)
   const [recordId, setRecordId] = useState<number | undefined>(initialRecordId)
   const [isFormDirty, setIsFormDirty] = useState(false)
@@ -39,15 +40,17 @@ export function ModuleRoute({
   }, [initialRecordId])
 
   const handleRowClick = useCallback(
-    (id: number) => {
+    async (id: number) => {
       if (recordPath) {
-        navigate({ to: recordPath(id) })
+        const to = recordPath(id)
+        await router.preloadRoute({ to })
+        navigate({ to })
         return
       }
       setRecordId(id)
       setViewType('form')
     },
-    [navigate, recordPath],
+    [navigate, recordPath, router],
   )
 
   const handleSwitchView = useCallback(

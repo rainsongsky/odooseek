@@ -3,7 +3,6 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { DialogContainer } from './components/Dialog'
-import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastContainer } from './components/Toast'
 import { DialogProvider } from './hooks/useDialog'
 import { HomeMenuProvider } from './hooks/useHomeMenu'
@@ -37,7 +36,10 @@ const queryClient = new QueryClient({
   },
 })
 
-const router = createRouter({ routeTree })
+const router = createRouter({
+  routeTree,
+  defaultPendingComponent: () => null,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -47,25 +49,23 @@ declare module '@tanstack/react-router' {
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <I18nProvider>
-              <HomeMenuProvider>
-                <DialogProvider>
-                  <ToastProvider>
-                    <RouterProvider router={router} />
-                    <ToastContainer />
-                  </ToastProvider>
-                  <DialogContainer />
-                </DialogProvider>
-              </HomeMenuProvider>
-            </I18nProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <I18nProvider>
+            <HomeMenuProvider>
+              <DialogProvider>
+                <ToastProvider>
+                  <RouterProvider router={router} />
+                  <ToastContainer />
+                </ToastProvider>
+                <DialogContainer />
+              </DialogProvider>
+            </HomeMenuProvider>
+          </I18nProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>,
 )
 

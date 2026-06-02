@@ -391,7 +391,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     return <div className="p-6 text-sm text-text-muted">Failed to parse form XML</div>
 
   const formBody = (
-    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <div
+      className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+      data-testid="odoo-form-view"
+    >
       <HeaderBar
         headerElement={headerElement}
         stateField={fields.state}
