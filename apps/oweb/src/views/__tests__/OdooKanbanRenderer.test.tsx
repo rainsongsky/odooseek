@@ -160,10 +160,9 @@ describe('OdooKanbanRenderer', () => {
 
     mockCallKw.mockResolvedValue([{ id: 1, name: 'Alice', image_1024: false }])
 
-    render(
-      <OdooKanbanRenderer model="hr.employee" arch={hrKanbanArch} fields={hrFields} />,
-      { wrapper },
-    )
+    render(<OdooKanbanRenderer model="hr.employee" arch={hrKanbanArch} fields={hrFields} />, {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Alice')).toBeInTheDocument()
