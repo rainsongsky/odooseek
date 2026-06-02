@@ -197,6 +197,7 @@ const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
   hr_org_chart: 'org_chart',
   hr_department_chart: 'org_chart',
   hr_version_timeline: 'version_timeline',
+  versions_timeline: 'version_timeline',
   employee_badge: 'badge_print',
   hr_employee_badge: 'badge_print',
 }

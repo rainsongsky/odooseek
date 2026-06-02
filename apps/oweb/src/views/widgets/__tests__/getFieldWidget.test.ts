@@ -17,6 +17,7 @@ describe('getFieldWidget', () => {
     expect(getFieldWidget(field('hr_org_chart'), 'char')).toBe(OrgChartWidget)
     expect(getFieldWidget(field('hr_presence_status'), 'char')).toBe(PresenceIcon)
     expect(getFieldWidget(field('hr_version_timeline'), 'char')).toBe(VersionTimeline)
+    expect(getFieldWidget(field('versions_timeline'), 'char')).toBe(VersionTimeline)
     expect(getFieldWidget(field('employee_badge'), 'char')).toBe(BadgeWidget)
   })
 
