@@ -24,6 +24,24 @@ describe('parseKanbanTemplate', () => {
     expect(nodes[1]).toMatchObject({ type: 'field', name: 'expected_revenue', widget: 'monetary' })
   })
 
+  test('parses aside and main layout wrappers', () => {
+    const xml = `<templates>
+      <t t-name="card">
+        <aside>
+          <field name="image_1024" widget="background_image"/>
+        </aside>
+        <main>
+          <field name="name"/>
+        </main>
+      </t>
+    </templates>`
+
+    const nodes = parseKanbanTemplate(xml)
+    expect(nodes).toHaveLength(2)
+    expect(nodes[0]).toMatchObject({ type: 'html', tag: 'aside' })
+    expect(nodes[1]).toMatchObject({ type: 'html', tag: 'main' })
+  })
+
   test('parses t-if condition', () => {
     const xml = `<template>
       <field name="name"/>

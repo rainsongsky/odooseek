@@ -528,6 +528,8 @@ const HTML_TAGS = new Set([
   'li',
   'section',
   'header',
+  'aside',
+  'main',
   'table',
   'tr',
   'td',
