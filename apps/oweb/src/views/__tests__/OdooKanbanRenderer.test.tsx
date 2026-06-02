@@ -128,4 +128,53 @@ describe('OdooKanbanRenderer', () => {
 
     expect(document.querySelector('.animate-spin')).toBeInTheDocument()
   })
+
+  test('renders aside background_image and requests template fields in search_read', async () => {
+    const hrKanbanArch = `<kanban>
+  <field name="image_1024"/>
+  <templates>
+    <t t-name="card">
+      <aside>
+        <field name="image_1024" widget="background_image" options="{'preview_image': 'image_128'}"/>
+      </aside>
+      <main>
+        <field name="name" class="fw-bold"/>
+      </main>
+    </t>
+  </templates>
+</kanban>`
+
+    const hrFields: Record<string, OdooFieldMeta> = {
+      ...kanbanFields,
+      image_1024: {
+        name: 'image_1024',
+        type: 'binary',
+        string: 'Image',
+        required: false,
+        readonly: false,
+        store: true,
+        searchable: false,
+        sortable: false,
+      },
+    }
+
+    mockCallKw.mockResolvedValue([{ id: 1, name: 'Alice', image_1024: false }])
+
+    render(
+      <OdooKanbanRenderer model="hr.employee" arch={hrKanbanArch} fields={hrFields} />,
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice')).toBeInTheDocument()
+    })
+
+    const searchReadCall = mockCallKw.mock.calls.find((c) => c[1] === 'search_read')
+    expect(searchReadCall).toBeTruthy()
+    const requestedFields = searchReadCall?.[2]?.[1] as string[]
+    expect(requestedFields).toContain('image_1024')
+
+    expect(document.querySelector('aside')).toBeTruthy()
+    expect(document.querySelector('.flex.flex-row')).toBeTruthy()
+  })
 })
