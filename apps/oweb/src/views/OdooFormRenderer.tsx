@@ -291,6 +291,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     onSuccess: (result) => {
       if (!newRecordId && typeof result === 'number') {
         onRecordCreated?.(result)
+        setEditMode(false)
       } else {
         baselineRef.current = { ...formValues }
         const invalidateKey = newRecordId
