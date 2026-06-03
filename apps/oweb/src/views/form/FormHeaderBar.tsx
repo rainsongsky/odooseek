@@ -206,6 +206,11 @@ export function HeaderBar({
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
+          {visibleButtons.length > 0 && (
+            <HeaderButtonGroup buttons={visibleButtons} onAction={onAction} />
+          )}
+        </div>
+        <div className="flex items-center gap-3">
           {stateSelection.length > 1 && (
             <div className="flex items-center gap-0.5">
               {stateSelection.map(([key, label], i) => {
@@ -264,22 +269,19 @@ export function HeaderBar({
               })}
             </div>
           )}
-          {visibleButtons.length > 0 && (
-            <HeaderButtonGroup buttons={visibleButtons} onAction={onAction} />
+          {!hideActionButtons && (
+            <FormEditActions
+              editMode={editMode}
+              isDirty={isDirty}
+              justSaved={justSaved}
+              saveError={saveError}
+              onEdit={onEdit}
+              onSave={onSave}
+              onCancel={onCancel}
+              isSaving={isSaving}
+            />
           )}
         </div>
-        {!hideActionButtons && (
-          <FormEditActions
-            editMode={editMode}
-            isDirty={isDirty}
-            justSaved={justSaved}
-            saveError={saveError}
-            onEdit={onEdit}
-            onSave={onSave}
-            onCancel={onCancel}
-            isSaving={isSaving}
-          />
-        )}
       </div>
     </div>
   )
