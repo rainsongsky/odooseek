@@ -1,7 +1,8 @@
 //! Shared helper functions for request/response processing.
 
 use axum::http::HeaderMap;
-use axum::response::Response;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use odoo_core::types::SessionInfo;
 
 /// Build SessionInfo from Odoo's JSON-RPC result object.
@@ -80,11 +81,9 @@ pub fn json_response_with_cookies<T: serde::Serialize>(
     builder
         .header("Content-Type", "application/json")
         .body(axum::body::Body::from(to_json_bytes(data)))
-        .unwrap_or_else(|_| {
-            Response::builder()
-                .status(500)
-                .body(axum::body::Body::from("Internal error"))
-                .unwrap()
+        .unwrap_or_else(|e| {
+            tracing::error!("Failed to build response: {e}");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
         })
 }
 
@@ -94,11 +93,9 @@ pub fn json_response_with_cookies_bytes(data: &[u8], resp_headers: &HeaderMap) -
     builder
         .header("Content-Type", "application/json")
         .body(axum::body::Body::from(data.to_vec()))
-        .unwrap_or_else(|_| {
-            Response::builder()
-                .status(500)
-                .body(axum::body::Body::from("Internal error"))
-                .unwrap()
+        .unwrap_or_else(|e| {
+            tracing::error!("Failed to build response: {e}");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response()
         })
 }
 

@@ -59,7 +59,7 @@ async fn fetch_load_menus(state: &AppState, headers: &HeaderMap) -> Result<Value
         .map_err(|e| OdooError::Unreachable(format!("load_menus fetch failed: {e}")))?;
 
     let status = response.status();
-    if status == reqwest::StatusCode::FOUND || status == reqwest::StatusCode::MOVED_PERMANENTLY {
+    if status.is_redirection() {
         return Err(AppError(OdooError::Api {
             code: 401,
             message: "Not authenticated".into(),

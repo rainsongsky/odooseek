@@ -34,18 +34,34 @@ impl IntoResponse for AppError {
                 message,
                 data,
             } => {
-                // Session expired → 401 so frontend redirects to login
                 let status = if *code == 100 {
                     StatusCode::UNAUTHORIZED
                 } else {
                     StatusCode::OK
                 };
+                // Strip debug/traceback info from Odoo error data before forwarding
+                let safe_data = data.as_ref().map(|d| {
+                    let mut clean = d.clone();
+                    if let Some(obj) = clean.as_object_mut() {
+                        obj.remove("debug");
+                        if let Some(msg) = obj.get("message").and_then(|v| v.as_str()) {
+                            // Truncate long messages (may contain SQL stack traces)
+                            if msg.len() > 1024 {
+                                obj.insert(
+                                    "message".into(),
+                                    serde_json::Value::String(format!("{}...", &msg[..1024])),
+                                );
+                            }
+                        }
+                    }
+                    clean
+                });
                 let body = serde_json::json!({
                     "jsonrpc": "2.0",
                     "error": {
                         "code": code,
                         "message": message,
-                        "data": data,
+                        "data": safe_data,
                     },
                     "id": serde_json::Value::Null,
                 });

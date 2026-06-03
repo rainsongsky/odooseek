@@ -235,7 +235,10 @@ pub async fn get_languages(state: AppState) -> Result<Json<Vec<[String; 2]>>, Ap
     let langs: Vec<[String; 2]> = json_body
         .get("result")
         .and_then(|r| serde_json::from_value(r.clone()).ok())
-        .unwrap_or_default();
+        .unwrap_or_else(|| {
+            tracing::warn!("Failed to parse Odoo language list");
+            vec![]
+        });
 
     Ok(Json(langs))
 }
@@ -269,7 +272,10 @@ pub async fn get_modules(
     let modules: Vec<String> = json_body
         .get("result")
         .and_then(|r| serde_json::from_value(r.clone()).ok())
-        .unwrap_or_default();
+        .unwrap_or_else(|| {
+            tracing::warn!("Failed to parse Odoo module list");
+            vec![]
+        });
 
     Ok(Json(modules))
 }
