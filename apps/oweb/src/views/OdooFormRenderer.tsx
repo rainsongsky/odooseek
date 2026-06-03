@@ -39,6 +39,7 @@ import { FormTimestamps } from './form/FormTimestamps'
 import {
   isWizardModel,
   normalizeOnchangeValue,
+  normalizeValuesForRpc,
   validateAllFields,
   wizardBtn,
 } from './form/formUtils'
@@ -201,13 +202,18 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           const meta = fields[k]
           fieldsSpec[k] = meta?.onChange ? { onChange: true } : {}
         }
-        const result = await callKw<{
+        const result = await         callKw<{
           value?: Record<string, unknown>
           warning?: { title: string; message: string; type: string }
         }>(
           model,
           'onchange',
-          [newRecordId ? [newRecordId] : [], values, fieldNames, fieldsSpec],
+          [
+            newRecordId ? [newRecordId] : [],
+            normalizeValuesForRpc(values, fields),
+            fieldNames,
+            fieldsSpec,
+          ],
           {},
         )
         if (result?.value) {
@@ -285,11 +291,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
 
   const saveMutation = useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
-      // Normalize many2one/many2many values to plain IDs before sending to Odoo
-      const normalized: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(values)) {
-        normalized[k] = normalizeOnchangeValue(v, fields[k]?.type)
-      }
+      const normalized = normalizeValuesForRpc(values, fields)
       return newRecordId
         ? callKw(model, 'write', [[newRecordId], normalized])
         : callKw(model, 'create', [normalized])

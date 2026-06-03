@@ -32,6 +32,17 @@ export function wizardBtn(model: string) {
   return { label: 'Confirm', name: 'action_apply' }
 }
 
+export function normalizeValuesForRpc(
+  values: Record<string, unknown>,
+  fields: Record<string, OdooFieldMeta>,
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(values)) {
+    normalized[k] = normalizeOnchangeValue(v, fields[k]?.type)
+  }
+  return normalized
+}
+
 export function validateAllFields(
   fields: Record<string, OdooFieldMeta>,
   values: Record<string, unknown>,
