@@ -228,8 +228,7 @@ mod tests {
 
     #[test]
     fn build_ws_url_trailing_slash() {
-        let url = build_ws_url("http://localhost:8069/");
-        // Note: trim_end_matches('/') is called before build_ws_url
+        // trim_end_matches('/') is called in poll_odoo_bus before build_ws_url
         let base = "http://localhost:8069/".trim_end_matches('/');
         let url = build_ws_url(base);
         assert_eq!(url, "ws://localhost:8069/websocket");
