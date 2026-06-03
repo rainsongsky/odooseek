@@ -156,14 +156,27 @@ pub async fn proxy_image(
 // ── Helpers ─────────────────────────────────────────────────
 
 fn build_odoo_url(odoo_base: &str, path: &str) -> Result<String, AppError> {
-    if path.contains("..") || path.contains('\0') {
-        return Err(AppError(OdooError::Api {
-            code: 400,
-            message: "Invalid path".into(),
-            data: None,
-        }));
+    let decoded = percent_encoding::percent_decode_str(path)
+        .decode_utf8()
+        .map_err(|_| {
+            AppError(OdooError::Api {
+                code: 400,
+                message: "Invalid path encoding".into(),
+                data: None,
+            })
+        })?;
+
+    for component in std::path::Path::new(decoded.as_ref()).components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            return Err(AppError(OdooError::Api {
+                code: 400,
+                message: "Invalid path".into(),
+                data: None,
+            }));
+        }
     }
-    Ok(format!("{}/{}", odoo_base, path))
+
+    Ok(format!("{}/{}", odoo_base, decoded))
 }
 
 fn get_cookie_header(headers: &HeaderMap) -> Option<String> {
