@@ -42,6 +42,7 @@ describe('Many2OneWidget domain filtering', () => {
 
     const input = container.querySelector('input')
     if (!input) return
+    fireEvent.focus(input)
     fireEvent.change(input, { target: { value: 'Acme' } })
 
     await new Promise((r) => setTimeout(r, 500))
