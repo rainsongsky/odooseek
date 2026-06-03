@@ -69,6 +69,7 @@ impl Default for ResponseCache {
     }
 }
 
+/// Build a deterministic cache key from model, method, and args hash.
 pub fn cache_key(model: &str, method: &str, args: &Value) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};

@@ -46,7 +46,7 @@ pub struct LoginRequest {
     pub db: String,
     pub login: String,
     #[serde(skip_serializing)]
-    pub(crate) password: String,
+    password: String,
 }
 
 impl LoginRequest {

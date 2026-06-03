@@ -23,7 +23,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import type React from 'react'
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
-import { ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, Settings } from '@/lib/lucide-icons'
+import { ArrowUpDown, ChevronDown, ChevronUp, Settings } from '@/lib/lucide-icons'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { ExportDialog } from '../components/ExportDialog'
 import { Pagination } from '../components/Pagination'

@@ -121,10 +121,13 @@ pub async fn proxy_odoo_http(
     let mut request = match method {
         Method::GET | Method::HEAD => state.http_client.get(&url),
         Method::POST => state.http_client.post(&url),
-        Method::PUT => state.http_client.put(&url),
-        Method::DELETE => state.http_client.delete(&url),
-        Method::PATCH => state.http_client.patch(&url),
-        _ => state.http_client.get(&url),
+        _ => {
+            return Err(AppError(OdooError::Api {
+                code: 405,
+                message: "Method not allowed".into(),
+                data: None,
+            }));
+        }
     };
 
     if !body.is_empty() {

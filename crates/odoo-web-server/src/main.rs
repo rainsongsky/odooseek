@@ -72,7 +72,6 @@ async fn main() -> anyhow::Result<()> {
         odoo_url: cli.odoo_url.clone(),
         odoo_db: cli.odoo_db.clone(),
         frontend_dir: cli.frontend_dir.clone(),
-        log_level: "info".into(),
         allowed_origins: cli
             .allowed_origins
             .split(',')
