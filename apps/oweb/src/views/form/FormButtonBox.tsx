@@ -99,8 +99,12 @@ export function ButtonBoxRenderer({
 }) {
   const [overflowOpen, setOverflowOpen] = useState(false)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>()
-  const primary = buttons.slice(0, MAX_BUTTON_BOX)
-  const overflow = buttons.slice(MAX_BUTTON_BOX)
+  const primary = buttons
+    .slice(0, MAX_BUTTON_BOX)
+    .filter((btn, i, arr) => arr.findIndex((b) => b.name === btn.name) === i)
+  const overflow = buttons
+    .slice(MAX_BUTTON_BOX)
+    .filter((btn, i, arr) => arr.findIndex((b) => b.name === btn.name) === i)
 
   const openMenu = () => {
     clearTimeout(closeTimer.current)
