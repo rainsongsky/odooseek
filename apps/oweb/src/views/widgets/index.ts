@@ -77,6 +77,7 @@ import {
   WebRibbonWidget,
 } from './utility'
 import { VersionTimeline } from './VersionTimeline'
+import { WebsiteRedirectWidget } from './website-redirect'
 
 /** Stable no-op callback — avoids creating new function references on every render. */
 export const NOOP = () => {}
@@ -169,6 +170,7 @@ export {
   UpgradeBooleanWidget,
   UrlWidget,
   VersionTimeline,
+  WebsiteRedirectWidget,
 }
 
 // ── Widget Registry ─────────────────────────────────────────────────
@@ -259,6 +261,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   dynamic_selection: DynamicSelectionWidget,
   project_task_state_selection: ProjectTaskStateWidget,
   analytic_distribution: AnalyticDistributionWidget,
+  website_redirect_button: WebsiteRedirectWidget,
   field_selector: FieldSelectorWidget,
   json: JsonWidget,
   json_checkboxes: JsonCheckboxesWidget,
@@ -307,6 +310,10 @@ const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
   // CRM
   many2one_avatar_leader_user: 'many2one_avatar',
   badge_rotting: 'selection_badge',
+  // Phase F
+  timesheet_uom_no_toggle: 'timesheet_uom',
+  many2many_avatar_employee: 'many2many_avatar_user',
+  website_redirect: 'website_redirect_button',
 }
 
 function resolveWidgetOverride(widget?: string) {
