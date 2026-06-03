@@ -52,10 +52,12 @@ async function fetchSession(): Promise<AuthState> {
 
 const AuthContext = createContext<{
   isAuthenticated: boolean
+  isLoading: boolean
   session: AuthState
   refetch: () => void
 }>({
   isAuthenticated: false,
+  isLoading: true,
   session: ANONYMOUS,
   refetch: () => {},
 })
@@ -63,7 +65,7 @@ const AuthContext = createContext<{
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: session = ANONYMOUS } = useQuery({
+  const { data: session = ANONYMOUS, isLoading } = useQuery({
     queryKey: ['auth', 'session'],
     queryFn: fetchSession,
     staleTime: 60_000,
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         isAuthenticated: session.authenticated,
+        isLoading,
         session,
         refetch: () => {
           queryClient.invalidateQueries({ queryKey: ['auth', 'session'] })

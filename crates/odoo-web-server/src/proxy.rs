@@ -218,9 +218,11 @@ async fn proxy_send(
     request: reqwest::RequestBuilder,
 ) -> Result<Response, AppError> {
     let request = request.build().map_err(|e| {
-        AppError(OdooError::InvalidResponse(format!(
-            "Failed to build request: {e}"
-        )))
+        AppError(OdooError::Api {
+            code: 500,
+            message: format!("Failed to build proxy request: {e}"),
+            data: None,
+        })
     })?;
     let url = request.url().to_string();
 
@@ -247,9 +249,11 @@ async fn proxy_send_streaming(
     request: reqwest::RequestBuilder,
 ) -> Result<Response, AppError> {
     let request = request.build().map_err(|e| {
-        AppError(OdooError::InvalidResponse(format!(
-            "Failed to build request: {e}"
-        )))
+        AppError(OdooError::Api {
+            code: 500,
+            message: format!("Failed to build proxy request: {e}"),
+            data: None,
+        })
     })?;
     let url = request.url().to_string();
 
@@ -270,7 +274,27 @@ async fn proxy_send_streaming(
 }
 
 fn matches_proxy_header(name: &str) -> bool {
-    matches_proxy_header_bytes(name.as_bytes())
+    matches_proxy_header_ignore_case(name)
+}
+
+/// Headers allowed to be forwarded from Odoo response to the browser.
+static PROXY_HEADERS: &[&str] = &[
+    "set-cookie",
+    "content-type",
+    "content-length",
+    "content-disposition",
+    "cache-control",
+    "etag",
+    "last-modified",
+    "x-content-type-options",
+    "x-frame-options",
+    "content-security-policy",
+    "strict-transport-security",
+    "location",
+];
+
+fn matches_proxy_header_ignore_case(name: &str) -> bool {
+    PROXY_HEADERS.iter().any(|h| name.eq_ignore_ascii_case(h))
 }
 
 /// Build axum Response from Odoo response status + headers + body.
@@ -298,37 +322,6 @@ fn build_proxy_response(
             "Failed to build response: {e}"
         )))
     })
-}
-
-fn matches_proxy_header_bytes(name: &[u8]) -> bool {
-    matches!(
-        name,
-        b"Set-Cookie"
-            | b"set-cookie"
-            | b"SET-COOKIE"
-            | b"Content-Type"
-            | b"content-type"
-            | b"Content-Length"
-            | b"content-length"
-            | b"Content-Disposition"
-            | b"content-disposition"
-            | b"Cache-Control"
-            | b"cache-control"
-            | b"ETag"
-            | b"etag"
-            | b"Last-Modified"
-            | b"last-modified"
-            | b"X-Content-Type-Options"
-            | b"x-content-type-options"
-            | b"X-Frame-Options"
-            | b"x-frame-options"
-            | b"Content-Security-Policy"
-            | b"content-security-policy"
-            | b"Strict-Transport-Security"
-            | b"strict-transport-security"
-            | b"Location"
-            | b"location"
-    )
 }
 
 fn try_build_cache_key(body: &axum::body::Bytes) -> Result<String, ()> {
