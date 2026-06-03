@@ -178,13 +178,26 @@ describe('parseFormXml', () => {
     const result = parseFormXml(xml)
     const sheet = result.elements[0] as {
       type: 'sheet'
-      elements: { type: 'field'; name: string; readonly: string | boolean; invisible: string }[]
+      elements: { type: 'field'; name: string; readonly: boolean | undefined; invisible: string }[]
     }
     const field = sheet.elements[0]
     expect(field.type).toBe('field')
     expect(field.name).toBe('state')
-    expect(field.readonly).toBe('1')
+    expect(field.readonly).toBe(true)
     expect(field.invisible).toBe('0')
+  })
+
+  test('parses readonly="False" and required="0" as false', () => {
+    const xml = `<form><sheet><field name="x" readonly="False" required="0"/></sheet></form>`
+
+    const result = parseFormXml(xml)
+    const sheet = result.elements[0] as {
+      type: 'sheet'
+      elements: { type: 'field'; name: string; readonly: boolean | undefined; required: boolean | undefined }[]
+    }
+    const field = sheet.elements[0]
+    expect(field.readonly).toBe(false)
+    expect(field.required).toBe(false)
   })
 
   test('parses group with col attribute', () => {

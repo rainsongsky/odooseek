@@ -1,4 +1,5 @@
 import { parseDomainString } from './expression-evaluator.js'
+import { pythonLiteralToJson } from './python-literal.js'
 import type {
   ButtonBoxElement,
   ButtonElement,
@@ -38,8 +39,8 @@ function parseFieldElement(el: Element): FieldElement {
     widget: el.getAttribute('widget') ?? undefined,
     string: el.getAttribute('string') ?? undefined,
     invisible: el.getAttribute('invisible') ?? undefined,
-    required: el.hasAttribute('required') ? el.getAttribute('required') || true : undefined,
-    readonly: el.hasAttribute('readonly') ? el.getAttribute('readonly') || true : undefined,
+    required: parseBoolAttr(el, 'required'),
+    readonly: parseBoolAttr(el, 'readonly'),
     nolabel: el.hasAttribute('nolabel'),
     placeholder: el.getAttribute('placeholder') ?? undefined,
     options: el.getAttribute('options')
@@ -54,9 +55,18 @@ function parseFieldElement(el: Element): FieldElement {
   }
 }
 
+function parseBoolAttr(el: Element, name: string): boolean | undefined {
+  if (!el.hasAttribute(name)) return undefined
+  const val = el.getAttribute(name)
+  if (val === null || val === '') return true
+  const lower = val.toLowerCase()
+  if (lower === '0' || lower === 'false') return false
+  return true
+}
+
 function parseOptions(attrs: string): Record<string, unknown> {
   try {
-    return JSON.parse(attrs.replace(/'/g, '"'))
+    return JSON.parse(pythonLiteralToJson(attrs))
   } catch {
     return {}
   }
@@ -296,8 +306,8 @@ function parseFieldAttrs(el: Element): ViewField {
     min: el.getAttribute('min') ?? undefined,
     max: el.getAttribute('max') ?? undefined,
     class: el.getAttribute('class') ?? undefined,
-    readonly: el.hasAttribute('readonly'),
-    required: el.hasAttribute('required'),
+    readonly: parseBoolAttr(el, 'readonly') ?? false,
+    required: parseBoolAttr(el, 'required') ?? false,
     ...parseDecorations(el),
   }
 }
@@ -432,7 +442,7 @@ export function parseKanbanXml(xml: string): ParsedKanbanView {
     const colorsRaw = progressbarEl.getAttribute('colors') || '{}'
     let colors: Record<string, string> = {}
     try {
-      const normalized = colorsRaw.replace(/'/g, '"')
+      const normalized = pythonLiteralToJson(colorsRaw)
       colors = JSON.parse(normalized)
     } catch {
       /* skip */
@@ -563,7 +573,7 @@ function parseNode(node: ChildNode): KanbanTemplateNode | null {
     let parsedOptions: Record<string, unknown> | undefined
     if (rawOptions) {
       try {
-        parsedOptions = JSON.parse(rawOptions.replace(/'/g, '"'))
+        parsedOptions = JSON.parse(pythonLiteralToJson(rawOptions))
       } catch {
         // ignore malformed options
       }
