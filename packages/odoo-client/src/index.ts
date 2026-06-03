@@ -1,6 +1,6 @@
 // @odooseek/odoo-client — Framework-agnostic Odoo 19 CE JSON-RPC client
 
-export { callKw, searchRead, read, getViews, readGroup, nameSearch, fieldsGet, callButton, loadAction, resolveAction } from './api'
+export { callKw, searchRead, read, getViews, readGroup, nameSearch, fieldsGet, callButton, loadAction, resolveAction, SessionExpiredError } from './api'
 export type { OdooAction } from './api'
 
 export {
