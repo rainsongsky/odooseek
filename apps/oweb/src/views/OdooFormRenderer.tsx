@@ -202,7 +202,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           const meta = fields[k]
           fieldsSpec[k] = meta?.onChange ? { onChange: true } : {}
         }
-        const result = await         callKw<{
+        const result = await callKw<{
           value?: Record<string, unknown>
           warning?: { title: string; message: string; type: string }
         }>(

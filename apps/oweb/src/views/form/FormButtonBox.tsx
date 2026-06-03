@@ -102,12 +102,19 @@ export function ButtonBoxRenderer({
   const primary = buttons.slice(0, MAX_BUTTON_BOX)
   const overflow = buttons.slice(MAX_BUTTON_BOX)
 
-  const handleEnter = () => {
+  const openMenu = () => {
     clearTimeout(closeTimer.current)
     setOverflowOpen(true)
   }
-  const handleLeave = () => {
-    closeTimer.current = setTimeout(() => setOverflowOpen(false), 150)
+  const closeMenu = () => {
+    closeTimer.current = setTimeout(() => setOverflowOpen(false), 200)
+  }
+  const toggleMenu = () => {
+    if (overflowOpen) {
+      setOverflowOpen(false)
+    } else {
+      openMenu()
+    }
   }
 
   return (
@@ -122,22 +129,19 @@ export function ButtonBoxRenderer({
         <StatButton key={bi} button={btn} record={record} model={model} recordId={recordId} />
       ))}
       {overflow.length > 0 && (
-        <div
-          className="relative"
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
-        >
+        <div className="relative" onMouseEnter={openMenu} onMouseLeave={closeMenu}>
           <button
             type="button"
+            onClick={toggleMenu}
             className="flex items-center gap-1 rounded px-3 py-1.5 text-xs text-text-secondary hover:bg-hover"
           >
             More ▾
           </button>
           {overflowOpen && (
             <div
-              className="absolute left-0 top-full z-10 min-w-[140px] rounded-lg border border-border-subtle bg-surface shadow-lg"
-              onMouseEnter={handleEnter}
-              onMouseLeave={handleLeave}
+              className="absolute left-0 top-full z-50 min-w-[180px] rounded-lg border border-border-subtle bg-surface shadow-xl"
+              onMouseEnter={openMenu}
+              onMouseLeave={closeMenu}
             >
               {overflow.map((btn, bi) => (
                 <div key={bi} className="px-2 py-1">

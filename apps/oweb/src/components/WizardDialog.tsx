@@ -372,36 +372,36 @@ export function WizardDialog({
         </div>
 
         {!createError && (
-        <div className="flex justify-between border-t border-border-subtle px-5 py-3">
-          <div>
-            {stepIndex > 0 && (
-              <button
-                type="button"
-                onClick={() => setStepIndex((i) => i - 1)}
-                className="rounded-md px-3 py-1.5 text-xs text-text-secondary hover:bg-hover hover:text-text-primary"
-              >
-                ← Back
-              </button>
-            )}
+          <div className="flex justify-between border-t border-border-subtle px-5 py-3">
+            <div>
+              {stepIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStepIndex((i) => i - 1)}
+                  className="rounded-md px-3 py-1.5 text-xs text-text-secondary hover:bg-hover hover:text-text-primary"
+                >
+                  ← Back
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {step.buttons.map((btn) => (
+                <button
+                  key={btn.name}
+                  type="button"
+                  onClick={() => stepMutation.mutate({ button: btn, stepValues: values })}
+                  disabled={stepMutation.isPending || !wizardId}
+                  className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
+                    btn.special === 'cancel'
+                      ? 'border border-border-default text-text-secondary hover:bg-hover'
+                      : 'bg-accent text-white hover:bg-accent/90'
+                  }`}
+                >
+                  {stepMutation.isPending ? '...' : btn.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {step.buttons.map((btn) => (
-              <button
-                key={btn.name}
-                type="button"
-                onClick={() => stepMutation.mutate({ button: btn, stepValues: values })}
-                disabled={stepMutation.isPending || !wizardId}
-                className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
-                  btn.special === 'cancel'
-                    ? 'border border-border-default text-text-secondary hover:bg-hover'
-                    : 'bg-accent text-white hover:bg-accent/90'
-                }`}
-              >
-                {stepMutation.isPending ? '...' : btn.label}
-              </button>
-            ))}
-          </div>
-        </div>
         )}
       </div>
     </div>

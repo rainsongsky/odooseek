@@ -18,7 +18,15 @@ describe('normalizeOnchangeValue', () => {
   })
 
   test('extracts ids from many2many tuples', () => {
-    expect(normalizeOnchangeValue([[1, 'A'], [2, 'B']], 'many2many')).toEqual([1, 2])
+    expect(
+      normalizeOnchangeValue(
+        [
+          [1, 'A'],
+          [2, 'B'],
+        ],
+        'many2many',
+      ),
+    ).toEqual([1, 2])
   })
 
   test('passes through other values', () => {
