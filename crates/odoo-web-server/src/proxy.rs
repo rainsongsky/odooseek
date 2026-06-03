@@ -294,9 +294,7 @@ static PROXY_HEADERS: &[&str] = &[
 ];
 
 fn matches_proxy_header_ignore_case(name: &str) -> bool {
-    PROXY_HEADERS
-        .iter()
-        .any(|h| name.eq_ignore_ascii_case(h))
+    PROXY_HEADERS.iter().any(|h| name.eq_ignore_ascii_case(h))
 }
 
 /// Build axum Response from Odoo response status + headers + body.
