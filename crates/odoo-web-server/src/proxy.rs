@@ -373,7 +373,6 @@ static WRITE_METHODS: [&str; 12] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use odoo_core::error::OdooError;
 
     #[test]
     fn build_url_simple_path() {
