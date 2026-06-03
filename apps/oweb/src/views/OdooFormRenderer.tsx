@@ -357,14 +357,13 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   const handleSave = useCallback(async (): Promise<void> => {
     if (effectiveMissingFields.size > 0 || effectiveFieldErrors.size > 0) {
       const parts: string[] = []
-      if (effectiveMissingFields.size > 0) {
-        const labels = Array.from(effectiveMissingFields).map((name) => fieldLabelMap[name] || name)
-        parts.push(`Required: ${labels.join(', ')}`)
+      for (const name of effectiveMissingFields) {
+        parts.push(`• ${fieldLabelMap[name] || name} is required`)
       }
       for (const [name, msg] of effectiveFieldErrors) {
-        parts.push(`${fieldLabelMap[name] || name}: ${msg}`)
+        parts.push(`• ${fieldLabelMap[name] || name}: ${msg}`)
       }
-      setSaveError(parts.join('; '))
+      setSaveError(parts.join('\n'))
       scrollToFirstError()
       return
     }
@@ -661,7 +660,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       />
 
       {saveError && (
-        <div className="o_form_sheet_bg mt-1 w-full rounded border border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger">
+        <div className="o_form_sheet_bg mt-1 w-full rounded border border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger whitespace-pre-line">
           {saveError}
         </div>
       )}
