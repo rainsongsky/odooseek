@@ -17,6 +17,8 @@ export {
   parseSearchPanel,
 } from './xml-parser'
 
+export { pythonLiteralToJson } from './python-literal.js'
+
 export { evalCondition, getValue, evalModifier, getDecorationClass, parseDomainString } from './expression-evaluator'
 
 export { fetchMenus, getApps, getMenu, getMenuAsTree, getAppSections, flattenMenuItems, searchMenus } from './menu-service'

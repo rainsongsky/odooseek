@@ -1,5 +1,7 @@
 /** Safe client-side QWeb expression evaluator for kanban templates */
 
+import { pythonLiteralToJson } from './python-literal.js'
+
 function resolveValue(expr: string, record: Record<string, unknown>): unknown {
   const m = expr.match(/^(?:record|parent)\.(\w+)(?:\[(\d+)\])?$/)
   if (m) {
@@ -118,14 +120,7 @@ export function evalModifier(
 }
 
 function evaluateModifierDomain(expr: string, record: Record<string, unknown>): boolean {
-  // Normalize: replace ( ) → [ ], and standardize quoting
-  const normalized = expr
-    .replace(/'/g, '"')
-    .replace(/\bFalse\b/g, 'false')
-    .replace(/\bTrue\b/g, 'true')
-    .replace(/\bNone\b/g, 'null')
-    .replace(/\(/g, '[')
-    .replace(/\)/g, ']')
+  const normalized = pythonLiteralToJson(expr)
 
   let parsed: unknown[]
   try {
@@ -143,7 +138,7 @@ function evaluateModifierDomain(expr: string, record: Record<string, unknown>): 
   }
 
   // Single domain list: [[field, op, value], ...]
-  return evaluateDomainList(normalized ? (JSON.parse(normalized) as unknown[]) : [], record)
+  return evaluateDomainList(parsed, record)
 }
 
 function evaluateDomainAnd(items: unknown[], record: Record<string, unknown>): boolean {
@@ -262,16 +257,8 @@ export function parseDomainString(raw: string | null): unknown[] | null {
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
 
-  const normalized = decoded
-    .replace(/'/g, '"')
-    .replace(/\bFalse\b/g, 'false')
-    .replace(/\bTrue\b/g, 'true')
-    .replace(/\bNone\b/g, 'null')
-    .replace(/\(/g, '[')
-    .replace(/\)/g, ']')
-
   try {
-    return JSON.parse(normalized)
+    return JSON.parse(pythonLiteralToJson(decoded))
   } catch {
     return null
   }
