@@ -36,6 +36,7 @@ import {
 import { OrgChartWidget } from './OrgChart'
 import { PresenceIcon } from './PresenceIcon'
 import { DynamicSelectionWidget, ProjectTaskStateWidget } from './phaseB-widgets'
+import { PlsTooltipWidget } from './pls-tooltip'
 import { PropertiesWidget } from './properties'
 import {
   AttachmentImageWidget,
@@ -151,6 +152,7 @@ export {
   PercentageWidget,
   PercentPieWidget,
   PhoneWidget,
+  PlsTooltipWidget,
   PresenceIcon,
   PriorityWidget,
   ProgressbarWidget,
@@ -262,6 +264,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   project_task_state_selection: ProjectTaskStateWidget,
   analytic_distribution: AnalyticDistributionWidget,
   website_redirect_button: WebsiteRedirectWidget,
+  pls_tooltip_button: PlsTooltipWidget,
   field_selector: FieldSelectorWidget,
   json: JsonWidget,
   json_checkboxes: JsonCheckboxesWidget,
