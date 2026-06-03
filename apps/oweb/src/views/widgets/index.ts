@@ -22,6 +22,7 @@ import { DomainWidget } from './domain'
 import { FilterableSelectionWidget } from './filterable-selection'
 import { FloatFactorWidget } from './float-factor'
 import { GaugeWidget, StatInfoWidget } from './gauge-statinfo'
+import { Many2ManyBinaryWidget } from './many2many-binary'
 import { BinaryWidget, ImageFieldWidget } from './media'
 import { OrgChartWidget } from './OrgChart'
 import { PresenceIcon } from './PresenceIcon'
@@ -116,6 +117,7 @@ export {
   IntegerWidget,
   KanbanActivityWidget,
   LabelSelectionWidget,
+  Many2ManyBinaryWidget,
   Many2ManyCheckboxesWidget,
   Many2ManyTagsAvatarWidget,
   Many2ManyTagsWidget,
@@ -224,6 +226,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   domain: DomainWidget,
   ace: CodeEditorWidget,
   code: CodeEditorWidget,
+  many2many_binary: Many2ManyBinaryWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
