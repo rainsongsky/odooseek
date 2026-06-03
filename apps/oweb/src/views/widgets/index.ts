@@ -32,6 +32,7 @@ import {
 } from './misc-widgets'
 import { OrgChartWidget } from './OrgChart'
 import { PresenceIcon } from './PresenceIcon'
+import { DynamicSelectionWidget, ProjectTaskStateWidget } from './phaseB-widgets'
 import { PropertiesWidget } from './properties'
 import {
   AttachmentImageWidget,
@@ -112,6 +113,7 @@ export {
   DatetimeWidget,
   DateWidget,
   DomainWidget,
+  DynamicSelectionWidget,
   EmailWidget,
   FilterableSelectionWidget,
   FloatFactorWidget,
@@ -144,6 +146,7 @@ export {
   PresenceIcon,
   PriorityWidget,
   ProgressbarWidget,
+  ProjectTaskStateWidget,
   PropertiesWidget,
   RadioWidget,
   RemainingDaysWidget,
@@ -246,6 +249,8 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   many2one_uom: Many2OneUomWidget,
   upgrade_boolean: UpgradeBooleanWidget,
   activity_exception: ActivityExceptionWidget,
+  dynamic_selection: DynamicSelectionWidget,
+  project_task_state_selection: ProjectTaskStateWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
