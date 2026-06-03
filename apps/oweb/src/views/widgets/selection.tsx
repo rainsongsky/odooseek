@@ -123,7 +123,29 @@ function useStages(relation: string | undefined): StageInfo[] {
   return data ?? []
 }
 
-export function StatusbarWidget({ value, onChange, readOnly, field, meta }: FieldWidgetProps) {
+function formatStageDuration(dateStr: string | undefined): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr.replace(' ', 'T'))
+  const diff = Date.now() - date.getTime()
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(mins / 60)
+  const days = Math.floor(hours / 24)
+  const months = Math.floor(days / 30)
+  if (months > 0) return `${months}个月`
+  if (days > 0) return `${days}天`
+  if (hours > 0) return `${hours}小时`
+  if (mins > 0) return `${mins}分钟`
+  return ''
+}
+
+export function StatusbarWidget({
+  value,
+  onChange,
+  readOnly,
+  field,
+  meta,
+  record,
+}: FieldWidgetProps) {
   // Many2one stage field — always call hook (enabled guards internally)
   const stageRelation = meta?.relation
   const stages = useStages(stageRelation)
@@ -134,6 +156,8 @@ export function StatusbarWidget({ value, onChange, readOnly, field, meta }: Fiel
 
   if (stages.length > 0) {
     const currentIdx = stages.findIndex((s) => s.id === stageId)
+    const updatedDate = record?.date_last_stage_update as string | undefined
+    const duration = formatStageDuration(updatedDate)
 
     return (
       <div className="flex items-center gap-0.5">
@@ -145,7 +169,7 @@ export function StatusbarWidget({ value, onChange, readOnly, field, meta }: Fiel
               key={stage.id}
               type="button"
               disabled={readOnly || isCurrent}
-              title={stage.name}
+              title={isCurrent && duration ? `当前阶段: ${duration}` : stage.name}
               onClick={() => onChange([stage.id, stage.name])}
               className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${
                 isCurrent
@@ -155,7 +179,7 @@ export function StatusbarWidget({ value, onChange, readOnly, field, meta }: Fiel
                     : 'bg-elevated text-text-muted hover:bg-hover'
               }`}
             >
-              {stage.name}
+              {isCurrent && duration ? `${stage.name} · ${duration}` : stage.name}
             </button>
           )
         })}
