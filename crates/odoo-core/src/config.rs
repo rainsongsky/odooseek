@@ -15,6 +15,8 @@ pub struct ServerConfig {
     pub frontend_dir: String,
     /// Log level filter (e.g. info, debug)
     pub log_level: String,
+    /// Comma-separated list of allowed CORS origins
+    pub allowed_origins: Vec<String>,
 }
 
 impl Default for ServerConfig {
@@ -26,6 +28,12 @@ impl Default for ServerConfig {
             odoo_db: None,
             frontend_dir: "../apps/oweb/dist".into(),
             log_level: "info".into(),
+            allowed_origins: vec![
+                "http://localhost:5173".into(),
+                "http://localhost:3000".into(),
+                "http://127.0.0.1:5173".into(),
+                "http://127.0.0.1:3000".into(),
+            ],
         }
     }
 }
@@ -41,6 +49,14 @@ impl ServerConfig {
             odoo_db: env_opt("ODOO_DB"),
             frontend_dir: env_or("FRONTEND_DIR", "../apps/oweb/dist"),
             log_level: env_or("RUST_LOG", "info"),
+            allowed_origins: env_or(
+                "ALLOWED_ORIGINS",
+                "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000",
+            )
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
         })
     }
 }
