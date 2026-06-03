@@ -16,6 +16,9 @@ import {
   TextWidget,
 } from './basic'
 import { DaterangeWidget } from './daterange'
+import { FilterableSelectionWidget } from './filterable-selection'
+import { FloatFactorWidget } from './float-factor'
+import { GaugeWidget, StatInfoWidget } from './gauge-statinfo'
 import { BinaryWidget, ImageFieldWidget } from './media'
 import { OrgChartWidget } from './OrgChart'
 import { PresenceIcon } from './PresenceIcon'
@@ -95,8 +98,11 @@ export {
   DatetimeWidget,
   DateWidget,
   EmailWidget,
+  FilterableSelectionWidget,
+  FloatFactorWidget,
   FloatTimeWidget,
   FloatWidget,
+  GaugeWidget,
   HandleWidget,
   HtmlWidget,
   ImageFieldWidget,
@@ -127,6 +133,7 @@ export {
   SignatureWidget,
   StateBadgeWidget,
   StateSelectionWidget,
+  StatInfoWidget,
   StatusbarWidget,
   TextWidget,
   UrlWidget,
@@ -202,6 +209,11 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   org_chart: OrgChartWidget,
   version_timeline: VersionTimeline,
   badge_print: BadgeWidget,
+  // New widgets (issue #243-#245)
+  filterable_selection: FilterableSelectionWidget,
+  float_factor: FloatFactorWidget,
+  gauge: GaugeWidget,
+  statinfo: StatInfoWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
