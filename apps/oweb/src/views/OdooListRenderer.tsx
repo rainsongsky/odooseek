@@ -1,12 +1,4 @@
-import type {
-  FieldElement,
-  ListButtonElement,
-  ListButtonGroup,
-  ListColumn,
-  OdooFieldMeta,
-  ReadGroupResult,
-  ViewField,
-} from '@odooseek/odoo-client'
+import type { FieldElement, OdooFieldMeta, ReadGroupResult } from '@odooseek/odoo-client'
 import {
   callKw,
   DEFAULT_COL_WIDTH,
@@ -30,7 +22,17 @@ import { Pagination } from '../components/Pagination'
 import { useDialog } from '../hooks/useDialog'
 import { useRecordActions } from '../hooks/useRecordActions'
 import { GroupNode } from './list/GroupNode'
+import { InlineEditRow } from './list/InlineEditRow'
+import { ListButtonCell } from './list/ListButtonCell'
 import { computeAggregates } from './list/listAggregates'
+import {
+  defaultForType,
+  isButtonGroup,
+  isListButton,
+  isNonField,
+  isViewField,
+  viewFieldToFieldElement,
+} from './list/listUtils'
 import { useColumnPrefs } from './list/useColumnPrefs'
 import { getFieldWidget } from './widgets'
 
@@ -64,33 +66,6 @@ interface InlineEditState {
   mode: 'idle' | 'editing' | 'creating'
   recordId?: number
   values: Record<string, unknown>
-}
-
-function viewFieldToFieldElement(vf: ViewField): FieldElement {
-  return {
-    type: 'field',
-    name: vf.name,
-    widget: vf.widget,
-    string: vf.string,
-    readonly: vf.readonly,
-    required: vf.required,
-  }
-}
-
-function isListButton(col: ListColumn): col is ListButtonElement {
-  return 'buttonType' in col
-}
-
-function isButtonGroup(col: ListColumn): col is ListButtonGroup {
-  return col.type === 'button_group'
-}
-
-function isNonField(col: ListColumn): col is ListButtonElement | ListButtonGroup {
-  return isListButton(col) || isButtonGroup(col)
-}
-
-function isViewField(col: ListColumn): col is ViewField {
-  return !isListButton(col) && !isButtonGroup(col)
 }
 
 export function OdooListRenderer({
@@ -1494,139 +1469,5 @@ export function OdooListRenderer({
         </>
       ) : null}
     </div>
-  )
-}
-
-function InlineEditRow({
-  columns,
-  fieldElements,
-  fields,
-  values,
-  onChange,
-  onSave,
-  onCancel,
-  isSaving,
-  validationErrors = {},
-}: {
-  columns: ListColumn[]
-  fieldElements: (FieldElement | null)[]
-  fields: Record<string, OdooFieldMeta>
-  values: Record<string, unknown>
-  onChange: (name: string, value: unknown) => void
-  onSave: () => void
-  onCancel: () => void
-  isSaving: boolean
-  validationErrors?: Record<string, string>
-}) {
-  return (
-    <tr className="border-b border-border-subtle bg-accent/5">
-      <td className="w-10 px-2 py-2" />
-      {columns.map((col, ci) => {
-        if (isNonField(col)) {
-          return <td key={`new-${ci}`} className="px-2 py-2" />
-        }
-        const meta = fields[col.name]
-        const isReadonly = meta?.readonly || col.readonly
-        const fe = fieldElements[ci] as FieldElement
-        const Widget = getFieldWidget(fe, meta?.type ?? 'char')
-        const errMsg = validationErrors[col.name]
-        const hasRequiredErr = errMsg === 'Required'
-        const hasTypeErr = !!errMsg && !hasRequiredErr
-        const errRing = hasRequiredErr
-          ? ' ring-1 ring-danger ring-inset'
-          : hasTypeErr
-            ? ' ring-1 ring-warning ring-inset'
-            : ''
-        return (
-          <td
-            key={`new-${col.name}-${ci}`}
-            className={`whitespace-nowrap px-1 py-0.5${errRing}`}
-            title={errMsg ?? undefined}
-          >
-            {createElement(Widget, {
-              field: fe,
-              value: values[col.name],
-              onChange: (v: unknown) => onChange(col.name, v),
-              readOnly: isReadonly,
-              meta,
-            })}
-          </td>
-        )
-      })}
-      <td className="flex items-center gap-1 px-2 py-1">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={isSaving}
-          className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
-        >
-          {isSaving ? '...' : 'Save'}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
-        >
-          Cancel
-        </button>
-      </td>
-    </tr>
-  )
-}
-
-function defaultForType(type: string): unknown {
-  if (type === 'boolean') return false
-  if (type === 'integer' || type === 'float' || type === 'monetary') return 0
-  return false
-}
-
-function ListButtonCell({
-  btn,
-  record,
-  model,
-  onDone,
-}: {
-  btn: ListButtonElement
-  record: Record<string, unknown>
-  model: string
-  onDone: () => void
-}) {
-  const [loading, setLoading] = useState(false)
-
-  // states filter: e.g. states="draft,sent" → only show when state is in list
-  if (btn.states) {
-    const allowed = btn.states.split(',').map((s) => s.trim())
-    const currentState = String(record.state ?? '')
-    if (!allowed.includes(currentState)) return null
-  }
-
-  const handleClick = async () => {
-    if (btn.confirm && !window.confirm(btn.confirm)) return
-    setLoading(true)
-    try {
-      if (btn.buttonType === 'object') {
-        await callKw(model, btn.name, [[record.id as number]])
-      } else if (btn.buttonType === 'action') {
-        await callKw(model, 'button_execute', [[record.id as number]], { action_name: btn.name })
-      }
-      onDone()
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
-        btn.class?.includes('btn-primary')
-          ? 'bg-accent text-on-accent hover:bg-accent/90'
-          : 'border border-border-default text-text-secondary hover:bg-hover hover:text-text-primary'
-      } disabled:opacity-50`}
-    >
-      {loading ? '...' : btn.string || btn.name}
-    </button>
   )
 }
