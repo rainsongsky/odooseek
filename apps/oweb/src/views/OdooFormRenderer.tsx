@@ -311,6 +311,9 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       setJustSaved(true)
       setTimeout(() => setJustSaved(false), 2000)
     },
+    onError: (err) => {
+      setSaveError(err instanceof Error ? err.message : 'Save failed')
+    },
   })
 
   const handleChange = useCallback(
@@ -368,7 +371,11 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       return
     }
     setSaveError(null)
-    await saveMutation.mutateAsync(formValues)
+    try {
+      await saveMutation.mutateAsync(formValues)
+    } catch {
+      // onError already handled by useMutation
+    }
   }, [
     effectiveMissingFields,
     effectiveFieldErrors,
