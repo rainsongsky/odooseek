@@ -28,6 +28,8 @@ pub struct AppState {
     pub event_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
     pub cache: ResponseCache,
     pub rate_limiter: std::sync::Arc<RateLimiter>,
+    pub report_rate_limiter: std::sync::Arc<RateLimiter>,
+    pub menu_rate_limiter: std::sync::Arc<RateLimiter>,
 }
 
 impl AppState {
@@ -42,6 +44,8 @@ impl AppState {
             event_tx: tx,
             cache: ResponseCache::new(),
             rate_limiter: std::sync::Arc::new(RateLimiter::new(30, 60)), // 30 login attempts per 60s
+            report_rate_limiter: std::sync::Arc::new(RateLimiter::new(10, 60)), // 10 reports per 60s
+            menu_rate_limiter: std::sync::Arc::new(RateLimiter::new(30, 60)), // 30 menu fetches per 60s
         }
     }
 }
