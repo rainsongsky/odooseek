@@ -577,10 +577,11 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   const handleStatusChange = useCallback(
     async (value: string) => {
       if (!recordId) return
-      const stateField = fields.state
+      const stateField = fields.stage_id ?? fields.state
       if (!stateField) return
+      const fieldName = fields.stage_id ? 'stage_id' : 'state'
       const writeVal = stateField.type === 'many2one' ? Number(value) : value
-      await callKw(model, 'write', [[recordId], { state: writeVal }])
+      await callKw(model, 'write', [[recordId], { [fieldName]: writeVal }])
       queryClient.invalidateQueries({ queryKey: ['odoo', 'read', model, recordId] })
     },
     [model, recordId, fields.state, queryClient],
@@ -658,7 +659,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     >
       <HeaderBar
         headerElement={headerElement}
-        stateField={fields.state}
+        stateField={fields.stage_id ?? fields.state}
         currentRecord={currentRecord}
         session={session}
         onAction={handleActionButton}

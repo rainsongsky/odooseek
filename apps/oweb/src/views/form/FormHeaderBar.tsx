@@ -4,7 +4,8 @@ import type {
   OdooFieldMeta,
   StatButtonElement,
 } from '@odooseek/odoo-client'
-import { evalModifier } from '@odooseek/odoo-client'
+import { evalModifier, searchRead } from '@odooseek/odoo-client'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { FormEditActions } from '../../components/FormEditActions'
 import type { GroupCheckSession } from '../../lib/auth'
@@ -142,12 +143,41 @@ export function HeaderBar({
   const stateValue = currentRecord?.state as string | undefined
   const stateIdx = stateSelection.findIndex(([k]) => k === stateValue)
 
+  // Fetch stages for many2one state fields (CRM pipeline stages)
+  const isMany2oneState = stateField?.type === 'many2one'
+  const stageValue = isMany2oneState
+    ? Array.isArray(currentRecord?.stage_id)
+      ? (currentRecord?.stage_id as [number, string])[0]
+      : null
+    : null
+  const { data: stages = [] } = useQuery({
+    queryKey: ['odoo', 'stages', stateField?.relation],
+    queryFn: () =>
+      stateField?.relation
+        ? searchRead<Array<{ id: number; name: string }>>(
+            stateField.relation,
+            [],
+            ['name'],
+            0,
+            100,
+            'sequence',
+          )
+        : [],
+    enabled: isMany2oneState && !!stateField?.relation,
+    staleTime: 5 * 60_000,
+  })
+  const stageIdx = stages.findIndex((s) => s.id === stageValue)
+  const hasStages = isMany2oneState && stages.length > 1
+
   const visibleButtons = headerElement
     ? headerElement.buttons.filter((btn) => isButtonVisible(btn, currentRecord, session))
     : []
 
   const hasContent =
-    stateSelection.length > 1 || visibleButtons.length > 0 || (editMode && !hideActionButtons)
+    stateSelection.length > 1 ||
+    hasStages ||
+    visibleButtons.length > 0 ||
+    (editMode && !hideActionButtons)
 
   if (!hasContent) {
     if (hideActionButtons) return null
@@ -200,6 +230,35 @@ export function HeaderBar({
                     className={`${baseClass} ${colorClass} ${roundedClass} ${cursorClass}`}
                   >
                     {label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {hasStages && (
+            <div className="flex items-center gap-0.5">
+              {stages.map((stage, i) => {
+                const isCurrent = stage.id === stageValue
+                const isPast = stageIdx >= 0 && i < stageIdx
+                const isFirst = i === 0
+                const isLast = i === stages.length - 1
+                return (
+                  <button
+                    key={stage.id}
+                    type="button"
+                    disabled={editMode || isCurrent}
+                    onClick={() => onStatusChange?.(String(stage.id))}
+                    className={`px-3 py-1 text-[11px] font-medium transition-colors ${
+                      isFirst ? 'rounded-l' : ''
+                    } ${isLast ? 'rounded-r' : ''} ${
+                      isCurrent
+                        ? 'bg-accent text-on-accent'
+                        : isPast
+                          ? 'bg-success/20 text-success hover:bg-success/30'
+                          : 'bg-elevated text-text-muted hover:bg-hover cursor-pointer'
+                    } ${isCurrent || editMode ? 'cursor-default' : ''}`}
+                  >
+                    {stage.name}
                   </button>
                 )
               })}
