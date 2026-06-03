@@ -37,32 +37,51 @@ pub async fn get_session_info(state: AppState, headers: HeaderMap) -> Result<Res
     let resp_headers = response.headers().clone();
     let json_body: serde_json::Value = response.json().await?;
 
-    let mut info = match json_body.get("result") {
+    let info = match json_body.get("result") {
         Some(result) => session_info_from_json(result),
         None => SessionInfo::anonymous(),
     };
 
-    // Enrich with cached menus and apps if authenticated
-    if info.authenticated
-        && let Ok(enriched) = enrich_with_menus(&state).await
-    {
-        info.menus = Some(enriched);
+    // Enrich menus asynchronously so it doesn't block the session response
+    if info.authenticated {
+        let state_clone = state.clone();
+        tokio::spawn(async move {
+            match enrich_with_menus(&state_clone).await {
+                Ok(enriched) => {
+                    state_clone
+                        .cache
+                        .set("session:menus", enriched, "load_menus")
+                        .await;
+                }
+                Err(e) => {
+                    tracing::warn!("Background menu enrichment failed: {e}");
+                }
+            }
+        });
     }
 
     Ok(json_response_with_cookies(&info, &resp_headers))
 }
 
-/// Fetch menus once, cache in state for session enrichment
-async fn enrich_with_menus(state: &AppState) -> Result<serde_json::Value, ()> {
+/// Fetch and cache menus. Called in background; errors are logged but not surfaced.
+async fn enrich_with_menus(state: &AppState) -> Result<serde_json::Value, String> {
     let cache_key = "session:menus";
     if let Some(cached) = state.cache.get(cache_key).await {
         return Ok(cached);
     }
 
     let url = format!("{}/web/webclient/load_menus?unique=1", state.odoo_url);
-    let resp = state.http_client.get(&url).send().await.map_err(|_| ())?;
+    let resp = state
+        .http_client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Menu load HTTP error: {e}"))?;
 
-    let body: serde_json::Value = resp.json().await.map_err(|_| ())?;
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("Menu parse JSON error: {e}"))?;
 
     state.cache.set(cache_key, body.clone(), "load_menus").await;
 
@@ -141,6 +160,24 @@ pub async fn login(state: AppState, body: LoginRequest) -> Result<Response, AppE
     };
     info.username = Some(body.login);
     info.db = Some(body.db);
+
+    // Warm menu cache in background after successful login
+    if info.authenticated {
+        let state_clone = state.clone();
+        tokio::spawn(async move {
+            match enrich_with_menus(&state_clone).await {
+                Ok(enriched) => {
+                    state_clone
+                        .cache
+                        .set("session:menus", enriched, "load_menus")
+                        .await;
+                }
+                Err(e) => {
+                    tracing::warn!("Login menu cache warming failed: {e}");
+                }
+            }
+        });
+    }
 
     Ok(json_response_with_cookies(&info, &resp_headers))
 }
