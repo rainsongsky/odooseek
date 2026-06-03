@@ -120,7 +120,7 @@ export function IntegerWidget({ field: _field, value, onChange, readOnly }: Fiel
     <input
       type="number"
       value={value != null ? Number(value) : ''}
-      onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+      onChange={(e) => onChange(e.target.value !== '' ? Number(e.target.value) : null)}
       className={FIELD_INPUT_CLASS}
     />
   )
@@ -134,7 +134,7 @@ export function FloatWidget({ field: _field, value, onChange, readOnly }: FieldW
       type="number"
       step="0.01"
       value={value != null ? Number(value) : ''}
-      onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+      onChange={(e) => onChange(e.target.value !== '' ? Number(e.target.value) : null)}
       className={FIELD_INPUT_CLASS}
     />
   )
@@ -171,7 +171,7 @@ export function MonetaryWidget({ field, value, onChange, readOnly, record }: Fie
         type="number"
         step={String(10 ** -decimals)}
         value={value != null ? Number(value) : ''}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+        onChange={(e) => onChange(e.target.value !== '' ? Number(e.target.value) : null)}
         className={FIELD_INPUT_CLASS}
       />
     </div>
@@ -281,7 +281,7 @@ export function PercentageWidget({ value, onChange, readOnly }: FieldWidgetProps
       <input
         type="number"
         value={value != null ? (Number(value) * 100).toFixed(2) : ''}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) / 100 : null)}
+        onChange={(e) => onChange(e.target.value !== '' ? Number(e.target.value) / 100 : null)}
         className={FIELD_INPUT_CLASS}
       />
       <span className="ml-1 text-sm text-text-muted">%</span>
