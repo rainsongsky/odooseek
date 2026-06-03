@@ -200,3 +200,28 @@ pub async fn get_menu(State(state): State<AppState>) -> Result<Response, AppErro
 
     Ok(Json(menu_items).into_response())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn menu_cache_key_is_deterministic() {
+        let k1 = menu_cache_key("session_id=abc123");
+        let k2 = menu_cache_key("session_id=abc123");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn menu_cache_key_differs_for_different_cookies() {
+        let k1 = menu_cache_key("session_id=abc123");
+        let k2 = menu_cache_key("session_id=xyz789");
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn menu_cache_key_handles_empty_string() {
+        let k = menu_cache_key("");
+        assert!(!k.is_empty());
+    }
+}
