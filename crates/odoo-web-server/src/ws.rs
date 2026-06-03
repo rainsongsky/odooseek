@@ -75,16 +75,32 @@ pub async fn poll_odoo_bus(
                 "Broadcasting {} Odoo Bus notification(s)",
                 notifications.len()
             );
-            last = notifications
-                .iter()
-                .filter_map(|n| n.get("id").and_then(|id| id.as_i64()))
-                .max()
-                .unwrap_or(last);
+            last = max_notification_id(notifications).unwrap_or(last);
             for n in notifications {
                 let _ = event_tx.send(n.clone());
             }
         }
     }
+}
+
+/// Build WebSocket URL from an HTTP base URL.
+fn build_ws_url(base: &str) -> String {
+    let ws = if base.starts_with("https://") {
+        base.replace("https://", "wss://")
+    } else if base.starts_with("http://") {
+        base.replace("http://", "ws://")
+    } else {
+        format!("ws://{}", base)
+    };
+    format!("{}/websocket", ws)
+}
+
+/// Extract the max notification ID from a batch of notifications.
+fn max_notification_id(notifications: &[serde_json::Value]) -> Option<i64> {
+    notifications
+        .iter()
+        .filter_map(|n| n.get("id").and_then(|id| id.as_i64()))
+        .max()
 }
 
 /// Attempt to connect to Odoo's `/websocket` endpoint using tokio-tungstenite.
@@ -93,15 +109,7 @@ async fn connect_odoo_ws(
     base: &str,
     event_tx: broadcast::Sender<serde_json::Value>,
 ) -> Result<(), String> {
-    // Build WS URL: ws://host:8069/websocket or wss://host/websocket
-    let ws_url = if base.starts_with("https://") {
-        base.replace("https://", "wss://")
-    } else if base.starts_with("http://") {
-        base.replace("http://", "ws://")
-    } else {
-        format!("ws://{}", base)
-    };
-    let ws_url = format!("{}/websocket", ws_url);
+    let ws_url = build_ws_url(base);
     info!("Connecting to Odoo WebSocket at {ws_url}");
 
     // Build WebSocket request with proper upgrade headers, then add Origin
@@ -192,5 +200,69 @@ pub async fn handle_ws(mut socket: WebSocket, mut rx: broadcast::Receiver<serde_
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn build_ws_url_from_http() {
+        let url = build_ws_url("http://localhost:8069");
+        assert_eq!(url, "ws://localhost:8069/websocket");
+    }
+
+    #[test]
+    fn build_ws_url_from_https() {
+        let url = build_ws_url("https://example.com");
+        assert_eq!(url, "wss://example.com/websocket");
+    }
+
+    #[test]
+    fn build_ws_url_no_scheme() {
+        let url = build_ws_url("odoo:8069");
+        assert_eq!(url, "ws://odoo:8069/websocket");
+    }
+
+    #[test]
+    fn build_ws_url_trailing_slash() {
+        // trim_end_matches('/') is called in poll_odoo_bus before build_ws_url
+        let base = "http://localhost:8069/".trim_end_matches('/');
+        let url = build_ws_url(base);
+        assert_eq!(url, "ws://localhost:8069/websocket");
+    }
+
+    #[test]
+    fn max_notification_id_finds_max() {
+        let notifications = vec![
+            json!({"id": 5, "message": "a"}),
+            json!({"id": 10, "message": "b"}),
+            json!({"id": 3, "message": "c"}),
+        ];
+        assert_eq!(max_notification_id(&notifications), Some(10));
+    }
+
+    #[test]
+    fn max_notification_id_missing_id_field() {
+        let notifications = vec![
+            json!({"id": 1}),
+            json!({"message": "no id"}),
+            json!({"id": 2}),
+        ];
+        assert_eq!(max_notification_id(&notifications), Some(2));
+    }
+
+    #[test]
+    fn max_notification_id_empty_array() {
+        let notifications: Vec<serde_json::Value> = vec![];
+        assert_eq!(max_notification_id(&notifications), None);
+    }
+
+    #[test]
+    fn max_notification_id_null_ids() {
+        let notifications = vec![json!({"id": null}), json!({"id": 7})];
+        assert_eq!(max_notification_id(&notifications), Some(7));
     }
 }
