@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::AppState;
 
 pub async fn health_check(state: AppState, params: HashMap<String, String>) -> impl IntoResponse {
-    if params.get("deep").map_or(false, |v| v == "true") {
+    if params.get("deep").is_some_and(|v| v == "true") {
         let url = format!("{}/web/session/get_session_info", state.odoo_url);
         let result = state
             .http_client
