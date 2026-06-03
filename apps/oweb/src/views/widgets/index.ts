@@ -1,4 +1,5 @@
 import type { FieldElement } from '@odooseek/odoo-client'
+import { AnalyticDistributionWidget } from './analytic-distribution'
 import { BackgroundImageWidget } from './BackgroundImage'
 import { BadgeWidget } from './BadgeWidget'
 import { BadgeSelectionFilterWidget } from './badge-selection-filter'
@@ -98,6 +99,7 @@ export const FIELD_INPUT_CLASS =
 // Re-export all widget components for direct use
 export {
   ActivityExceptionWidget,
+  AnalyticDistributionWidget,
   AttachmentImageWidget,
   BadgeSelectionFilterWidget,
   BadgeSelectionWidget,
@@ -256,6 +258,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   activity_exception: ActivityExceptionWidget,
   dynamic_selection: DynamicSelectionWidget,
   project_task_state_selection: ProjectTaskStateWidget,
+  analytic_distribution: AnalyticDistributionWidget,
   field_selector: FieldSelectorWidget,
   json: JsonWidget,
   json_checkboxes: JsonCheckboxesWidget,
