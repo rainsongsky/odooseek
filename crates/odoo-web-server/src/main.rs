@@ -23,8 +23,8 @@ use tracing::info;
 
 use odoo_web_server::AppState;
 use odoo_web_server::error::AppError;
-use odoo_web_server::{menu, proxy, report, session, ws};
 use odoo_web_server::health;
+use odoo_web_server::{menu, proxy, report, session, ws};
 
 #[derive(Parser, Debug)]
 #[command(name = "odoo-web-server")]

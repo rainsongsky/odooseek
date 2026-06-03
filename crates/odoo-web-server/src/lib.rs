@@ -4,8 +4,8 @@
 //! with the binary entry point in main.rs.
 
 pub mod cache;
-pub mod health;
 pub mod error;
+pub mod health;
 pub mod helpers;
 pub mod menu;
 pub mod menu_enrich;
