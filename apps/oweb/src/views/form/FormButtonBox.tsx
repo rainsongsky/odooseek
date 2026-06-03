@@ -1,7 +1,7 @@
 import type { StatButtonElement } from '@odooseek/odoo-client'
 import { callKw } from '@odooseek/odoo-client'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 const MAX_BUTTON_BOX = 4
 
@@ -98,8 +98,17 @@ export function ButtonBoxRenderer({
   inline?: boolean
 }) {
   const [overflowOpen, setOverflowOpen] = useState(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>()
   const primary = buttons.slice(0, MAX_BUTTON_BOX)
   const overflow = buttons.slice(MAX_BUTTON_BOX)
+
+  const handleEnter = () => {
+    clearTimeout(closeTimer.current)
+    setOverflowOpen(true)
+  }
+  const handleLeave = () => {
+    closeTimer.current = setTimeout(() => setOverflowOpen(false), 150)
+  }
 
   return (
     <div
@@ -115,8 +124,8 @@ export function ButtonBoxRenderer({
       {overflow.length > 0 && (
         <div
           className="relative"
-          onMouseEnter={() => setOverflowOpen(true)}
-          onMouseLeave={() => setOverflowOpen(false)}
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
         >
           <button
             type="button"
@@ -125,7 +134,11 @@ export function ButtonBoxRenderer({
             More ▾
           </button>
           {overflowOpen && (
-            <div className="absolute left-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-border-subtle bg-surface shadow-lg">
+            <div
+              className="absolute left-0 top-full z-10 min-w-[140px] rounded-lg border border-border-subtle bg-surface shadow-lg"
+              onMouseEnter={handleEnter}
+              onMouseLeave={handleLeave}
+            >
               {overflow.map((btn, bi) => (
                 <div key={bi} className="px-2 py-1">
                   <StatButton button={btn} record={record} model={model} recordId={recordId} />
