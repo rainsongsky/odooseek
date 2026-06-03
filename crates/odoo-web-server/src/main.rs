@@ -8,6 +8,7 @@
 use axum::extract::{ConnectInfo, Path, Query, State, WebSocketUpgrade};
 use axum::http::HeaderMap;
 use axum::http::Method;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Json, Router, middleware, routing::get, routing::post};
 use clap::Parser;
@@ -393,9 +394,20 @@ async fn proxy_barcode(
 
 async fn ws_events_handler(
     State(state): State<AppState>,
+    headers: HeaderMap,
     ws: WebSocketUpgrade,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| ws::handle_ws(socket, state.event_tx.subscribe()))
+) -> Result<impl IntoResponse, StatusCode> {
+    let cookie = headers
+        .get("cookie")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    if !ws::verify_session(&state, cookie).await.unwrap_or(false) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let state_for_socket = state.clone();
+    Ok(ws.on_upgrade(move |socket| ws::handle_ws(socket, state_for_socket.event_tx.subscribe())))
 }
 
 // ── Health check ────────────────────────────────────────────────────

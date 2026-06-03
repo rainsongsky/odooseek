@@ -787,3 +787,55 @@ mod health_tests {
         assert_eq!(body["status"], "degraded");
     }
 }
+
+// ── WebSocket authentication tests ──────────────────────────────────
+
+mod ws_auth_tests {
+    use super::*;
+    use odoo_web_server::ws;
+
+    #[tokio::test]
+    async fn verify_session_valid_cookie() {
+        let mock = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/web/session/check"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": { "uid": 1, "is_admin": false }
+            })))
+            .mount(&mock)
+            .await;
+
+        let state = test_state(&mock);
+        let result = ws::verify_session(&state, "session_id=abc123").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn verify_session_invalid_cookie() {
+        let mock = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/web/session/check"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock)
+            .await;
+
+        let state = test_state(&mock);
+        let result = ws::verify_session(&state, "session_id=invalid").await;
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn verify_session_missing_mock_returns_non_success() {
+        let mock = MockServer::start().await;
+        // No mock mounted — wiremock returns 404 by default
+        let state = test_state(&mock);
+        let result = ws::verify_session(&state, "session_id=abc").await;
+        // Odoo unreachable: wiremock returns 404, which is not success
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+}

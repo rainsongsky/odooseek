@@ -5,6 +5,7 @@
 
 use axum::extract::ws::{Message, WebSocket};
 use futures::{SinkExt, StreamExt};
+use odoo_core::error::OdooError;
 use tokio::sync::broadcast;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{debug, info, warn};
@@ -165,6 +166,33 @@ async fn connect_odoo_ws(
     keepalive.abort();
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     Err("Disconnected - will retry".into())
+}
+
+/// Verify session cookie before allowing WebSocket upgrade.
+pub async fn verify_session(
+    state: &crate::AppState,
+    cookie: &str,
+) -> Result<bool, crate::error::AppError> {
+    let odoo_url = format!("{}/web/session/check", state.odoo_url);
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "call",
+        "params": {},
+        "id": 1,
+    });
+
+    let resp = state
+        .http_client
+        .post(&odoo_url)
+        .json(&request)
+        .header("cookie", cookie)
+        .send()
+        .await
+        .map_err(|e| {
+            crate::error::AppError(OdooError::Unreachable(format!("Session check failed: {e}")))
+        })?;
+
+    Ok(resp.status().is_success())
 }
 
 /// WebSocket handler — subscribes to event broadcast and pushes to browser
