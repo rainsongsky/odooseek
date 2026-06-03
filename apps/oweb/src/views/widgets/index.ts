@@ -19,9 +19,11 @@ import {
 import { CodeEditorWidget } from './code-editor'
 import { DaterangeWidget } from './daterange'
 import { DomainWidget } from './domain'
+import { FieldSelectorWidget } from './field-selector'
 import { FilterableSelectionWidget } from './filterable-selection'
 import { FloatFactorWidget } from './float-factor'
 import { GaugeWidget, StatInfoWidget } from './gauge-statinfo'
+import { JsonCheckboxesWidget, JsonWidget } from './json-widgets'
 import { Many2ManyBinaryWidget } from './many2many-binary'
 import { BinaryWidget, ImageFieldWidget } from './media'
 import { OrgChartWidget } from './OrgChart'
@@ -105,6 +107,7 @@ export {
   DateWidget,
   DomainWidget,
   EmailWidget,
+  FieldSelectorWidget,
   FilterableSelectionWidget,
   FloatFactorWidget,
   FloatTimeWidget,
@@ -115,6 +118,8 @@ export {
   ImageFieldWidget,
   ImageUrlWidget,
   IntegerWidget,
+  JsonCheckboxesWidget,
+  JsonWidget,
   KanbanActivityWidget,
   LabelSelectionWidget,
   Many2ManyBinaryWidget,
@@ -227,6 +232,10 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   ace: CodeEditorWidget,
   code: CodeEditorWidget,
   many2many_binary: Many2ManyBinaryWidget,
+  field_selector: FieldSelectorWidget,
+  json: JsonWidget,
+  json_checkboxes: JsonCheckboxesWidget,
+  account_json_checkboxes: JsonCheckboxesWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
