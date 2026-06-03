@@ -181,7 +181,7 @@ export function ColorPickerWidget({ value, onChange, readOnly, record, model }: 
   const pickColor = useCallback(
     async (idx: number) => {
       onChange(idx)
-      if (model && record?.id) {
+      if (model && record?.id && String(model)) {
         // Optimistic update: immediately show the new color
         const rid = record.id as number
         queryClient.setQueriesData<Record<string, unknown>[]>(
@@ -301,13 +301,16 @@ export function ProgressbarWidget({ value, onChange, readOnly }: FieldWidgetProp
   const pct = Math.min(100, Math.max(0, Number(value) ?? 0))
   const barRef = useRef<HTMLDivElement>(null)
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (readOnly || !barRef.current) return
-    const rect = barRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const newPct = Math.round((x / rect.width) * 100)
-    onChange(Math.min(100, Math.max(0, newPct)))
-  }
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (readOnly || !barRef.current) return
+      const rect = barRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const newPct = Math.round((x / rect.width) * 100)
+      onChange(Math.min(100, Math.max(0, newPct)))
+    },
+    [readOnly, onChange],
+  )
 
   return (
     <div className="flex items-center gap-2">
@@ -418,7 +421,7 @@ export function ImageUrlWidget({ field, value }: FieldWidgetProps) {
 // ── Percent Pie Widget (Phase 26) ──────────────────────────────────
 
 export function PercentPieWidget({ value }: FieldWidgetProps) {
-  const pct = Math.min(100, Math.max(0, Number(value) * 100))
+  const pct = Math.min(100, Math.max(0, (Number(value) || 0) * 100))
   const r = 16
   const c = 2 * Math.PI * r
   const offset = c - (pct / 100) * c
@@ -460,7 +463,13 @@ export function WebRibbonWidget({ field, record }: FieldWidgetProps) {
   const bgColor = (opts.bg_color as string) ?? 'text-bg-danger'
 
   if (!title) return null
-  if (field.invisible && record && evalCondition(field.invisible, record)) return null
+  if (field.invisible && record) {
+    try {
+      if (evalCondition(field.invisible, record)) return null
+    } catch {
+      // ignore evaluation errors
+    }
+  }
 
   const colorMap: Record<string, string> = {
     'text-bg-danger': 'bg-danger',
