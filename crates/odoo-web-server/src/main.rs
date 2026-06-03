@@ -9,7 +9,7 @@ use axum::extract::{ConnectInfo, Path, State, WebSocketUpgrade};
 use axum::http::HeaderMap;
 use axum::http::Method;
 use axum::response::IntoResponse;
-use axum::{Json, Router, routing::get, routing::post};
+use axum::{Json, Router, middleware, routing::get, routing::post};
 use clap::Parser;
 use odoo_core::config::ServerConfig;
 use odoo_core::types::LoginRequest;
@@ -22,6 +22,7 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 
 use odoo_web_server::AppState;
+use odoo_web_server::csrf::{self, CsrfConfig};
 use odoo_web_server::error::AppError;
 use odoo_web_server::{menu, proxy, report, session, ws};
 
@@ -42,6 +43,13 @@ struct Cli {
 
     #[arg(long, env = "FRONTEND_DIR", default_value = "../apps/oweb/dist")]
     frontend_dir: String,
+
+    #[arg(
+        long,
+        env = "ALLOWED_ORIGINS",
+        default_value = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    )]
+    allowed_origins: String,
 }
 
 #[tokio::main]
@@ -64,6 +72,12 @@ async fn main() -> anyhow::Result<()> {
         odoo_db: cli.odoo_db.clone(),
         frontend_dir: cli.frontend_dir.clone(),
         log_level: "info".into(),
+        allowed_origins: cli
+            .allowed_origins
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
     };
 
     info!("Odoo URL: {}", config.odoo_url);
@@ -98,6 +112,30 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // Build dynamic CORS origins
+    let cors_origins: Vec<axum::http::HeaderValue> = config
+        .allowed_origins
+        .iter()
+        .filter_map(|origin| origin.parse().ok())
+        .collect();
+
+    // Build CSRF-protected routes (state-changing endpoints only)
+    let csrf_config = CsrfConfig {
+        allowed_origins: config.allowed_origins.clone(),
+    };
+    let csrf_protected = Router::new()
+        .route("/api/session/login", post(session_login))
+        .route("/api/session/logout", post(session_logout))
+        .route("/api/odoo/{*path}", post(proxy_odoo))
+        .route(
+            "/api/odoo-http/{*path}",
+            axum::routing::any(proxy_odoo_http),
+        )
+        .layer(middleware::from_fn_with_state(
+            csrf_config,
+            csrf::csrf_guard,
+        ));
+
     // Build router
     let frontend_dir = config.frontend_dir.clone();
     let app = Router::new()
@@ -105,16 +143,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/menu", get(menu::get_menu))
         .route("/api/menus", get(menu::get_menus))
         .route("/api/session", get(get_session_info))
-        .route("/api/session/login", post(session_login))
-        .route("/api/session/logout", post(session_logout))
         .route("/api/session/languages", get(get_languages))
         .route("/api/session/modules", get(get_modules))
         .route("/api/session/check", get(session_check))
-        .route("/api/odoo/{*path}", post(proxy_odoo))
-        .route(
-            "/api/odoo-http/{*path}",
-            axum::routing::any(proxy_odoo_http),
-        )
         .route("/api/web/image/{*path}", get(proxy_image))
         .route("/api/logo", get(proxy_logo))
         .route("/api/translations", get(proxy_translations))
@@ -122,18 +153,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/report/download", get(download_report))
         .route("/api/report/barcode/{*path}", get(proxy_barcode))
         .route("/ws/events", get(ws_events_handler))
+        .merge(csrf_protected)
         .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024)) // 10 MB
         .fallback_service(ServeDir::new(&frontend_dir).append_index_html_on_directories(true))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .layer(
             CorsLayer::new()
-                .allow_origin([
-                    "http://localhost:5173".parse().unwrap(),
-                    "http://localhost:3000".parse().unwrap(),
-                    "http://127.0.0.1:5173".parse().unwrap(),
-                    "http://127.0.0.1:3000".parse().unwrap(),
-                ])
+                .allow_origin(cors_origins)
                 .allow_methods([
                     axum::http::Method::GET,
                     axum::http::Method::POST,
