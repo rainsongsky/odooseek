@@ -164,6 +164,32 @@ fn menu_cache_key(cookie: &str) -> String {
     format!("{:x}", h.finish())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn menu_cache_key_is_deterministic() {
+        let k1 = menu_cache_key("session_id=abc123");
+        let k2 = menu_cache_key("session_id=abc123");
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn menu_cache_key_differs_for_different_cookies() {
+        let k1 = menu_cache_key("session_id=abc123");
+        let k2 = menu_cache_key("session_id=xyz789");
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn menu_cache_key_handles_empty_string() {
+        let k = menu_cache_key("");
+        // Should not panic
+        assert!(!k.is_empty());
+    }
+}
+
 /// GET /api/menu — legacy endpoint, returns root menu items
 /// Kept for backward compatibility during migration.
 pub async fn get_menu(State(state): State<AppState>) -> Result<Response, AppError> {
