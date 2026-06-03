@@ -22,8 +22,14 @@ import { DomainWidget } from './domain'
 import { FilterableSelectionWidget } from './filterable-selection'
 import { FloatFactorWidget } from './float-factor'
 import { GaugeWidget, StatInfoWidget } from './gauge-statinfo'
+import { Many2ManyAvatarUserWidget } from './many2many-avatar'
 import { Many2ManyBinaryWidget } from './many2many-binary'
 import { BinaryWidget, ImageFieldWidget } from './media'
+import {
+  ActivityExceptionWidget,
+  Many2ManyTaxTagsWidget,
+  UpgradeBooleanWidget,
+} from './misc-widgets'
 import { OrgChartWidget } from './OrgChart'
 import { PresenceIcon } from './PresenceIcon'
 import { PropertiesWidget } from './properties'
@@ -47,6 +53,7 @@ import {
   StatusbarWidget,
 } from './selection'
 import { SignatureWidget } from './signature'
+import { Many2OneUomWidget, TimesheetUomWidget } from './uom-widgets'
 import {
   BooleanFavoriteWidget,
   BooleanIconWidget,
@@ -87,6 +94,7 @@ export const FIELD_INPUT_CLASS =
 
 // Re-export all widget components for direct use
 export {
+  ActivityExceptionWidget,
   AttachmentImageWidget,
   BadgeSelectionFilterWidget,
   BadgeSelectionWidget,
@@ -117,12 +125,15 @@ export {
   IntegerWidget,
   KanbanActivityWidget,
   LabelSelectionWidget,
+  Many2ManyAvatarUserWidget,
   Many2ManyBinaryWidget,
   Many2ManyCheckboxesWidget,
   Many2ManyTagsAvatarWidget,
   Many2ManyTagsWidget,
+  Many2ManyTaxTagsWidget,
   Many2ManyWidget,
   Many2OneAvatarWidget,
+  Many2OneUomWidget,
   Many2OneWidget,
   MonetaryWidget,
   One2ManyWidget,
@@ -144,6 +155,8 @@ export {
   StatInfoWidget,
   StatusbarWidget,
   TextWidget,
+  TimesheetUomWidget,
+  UpgradeBooleanWidget,
   UrlWidget,
   VersionTimeline,
 }
@@ -227,6 +240,12 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   ace: CodeEditorWidget,
   code: CodeEditorWidget,
   many2many_binary: Many2ManyBinaryWidget,
+  many2many_avatar_user: Many2ManyAvatarUserWidget,
+  many2many_tax_tags: Many2ManyTaxTagsWidget,
+  timesheet_uom: TimesheetUomWidget,
+  many2one_uom: Many2OneUomWidget,
+  upgrade_boolean: UpgradeBooleanWidget,
+  activity_exception: ActivityExceptionWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
