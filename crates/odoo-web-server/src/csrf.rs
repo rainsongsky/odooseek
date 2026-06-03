@@ -60,14 +60,18 @@ mod tests {
         let config = CsrfConfig {
             allowed_origins: vec!["http://localhost:5173".into(), "http://example.com".into()],
         };
-        assert!(config
-            .allowed_origins
-            .iter()
-            .any(|o| "http://localhost:5173".starts_with(o)));
-        assert!(config
-            .allowed_origins
-            .iter()
-            .any(|o| "http://example.com/app".starts_with(o)));
+        assert!(
+            config
+                .allowed_origins
+                .iter()
+                .any(|o| "http://localhost:5173".starts_with(o))
+        );
+        assert!(
+            config
+                .allowed_origins
+                .iter()
+                .any(|o| "http://example.com/app".starts_with(o))
+        );
     }
 
     #[test]
@@ -75,10 +79,12 @@ mod tests {
         let config = CsrfConfig {
             allowed_origins: vec!["http://localhost:5173".into()],
         };
-        assert!(!config
-            .allowed_origins
-            .iter()
-            .any(|o| "http://evil.com".starts_with(o)));
+        assert!(
+            !config
+                .allowed_origins
+                .iter()
+                .any(|o| "http://evil.com".starts_with(o))
+        );
     }
 
     #[test]

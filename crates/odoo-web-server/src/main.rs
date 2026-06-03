@@ -22,9 +22,9 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 
 use odoo_web_server::AppState;
+use odoo_web_server::csrf::{self, CsrfConfig};
 use odoo_web_server::error::AppError;
 use odoo_web_server::{menu, proxy, report, session, ws};
-use odoo_web_server::csrf::{self, CsrfConfig};
 
 #[derive(Parser, Debug)]
 #[command(name = "odoo-web-server")]
