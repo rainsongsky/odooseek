@@ -411,4 +411,64 @@ mod tests {
         let result = build_odoo_url("http://odoo:8069", "%ff%fe");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn extract_method_returns_method_name() {
+        let body = axum::body::Bytes::from(
+            r#"{"jsonrpc":"2.0","params":{"model":"res.partner","method":"search_read"}}"#,
+        );
+        assert_eq!(extract_method(&body), Some("search_read".into()));
+    }
+
+    #[test]
+    fn extract_method_missing_params_returns_none() {
+        let body = axum::body::Bytes::from(r#"{"jsonrpc":"2.0"}"#);
+        assert_eq!(extract_method(&body), None);
+    }
+
+    #[test]
+    fn extract_method_invalid_json_returns_none() {
+        let body = axum::body::Bytes::from("not json");
+        assert_eq!(extract_method(&body), None);
+    }
+
+    #[test]
+    fn try_build_cache_key_readable_method() {
+        let body = axum::body::Bytes::from(
+            r#"{"params":{"model":"res.partner","method":"search_read","args":[[],["name"]]}}"#,
+        );
+        let result = try_build_cache_key(&body);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn try_build_cache_key_write_method_rejected() {
+        let body = axum::body::Bytes::from(
+            r#"{"params":{"model":"res.partner","method":"write","args":[1,{}]}}"#,
+        );
+        let result = try_build_cache_key(&body);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn try_build_cache_key_no_method_fails() {
+        let body = axum::body::Bytes::from(r#"{"params":{"model":"res.partner"}}"#);
+        let result = try_build_cache_key(&body);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn write_methods_binary_search() {
+        assert!(WRITE_METHODS.binary_search(&"create").is_ok());
+        assert!(WRITE_METHODS.binary_search(&"write").is_ok());
+        assert!(WRITE_METHODS.binary_search(&"search_read").is_err());
+    }
+
+    #[test]
+    fn matches_proxy_header_case_insensitive() {
+        assert!(matches_proxy_header("Content-Type"));
+        assert!(matches_proxy_header("content-type"));
+        assert!(matches_proxy_header("Set-Cookie"));
+        assert!(!matches_proxy_header("x-custom"));
+    }
 }
