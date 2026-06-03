@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { isRedirect, redirect } from '@tanstack/react-router'
-import { createContext, type ReactNode, useContext } from 'react'
+import { isRedirect, redirect, useRouter } from '@tanstack/react-router'
+import { createContext, type ReactNode, useContext, useEffect } from 'react'
 import { parseSessionGroups, type SessionGroups, userHasGroup } from './groups'
 
 export interface AuthState {
@@ -62,12 +62,25 @@ const AuthContext = createContext<{
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
+  const router = useRouter()
   const { data: session = ANONYMOUS } = useQuery({
     queryKey: ['auth', 'session'],
     queryFn: fetchSession,
     staleTime: 60_000,
     retry: false,
   })
+
+  useEffect(() => {
+    const handler = () => {
+      queryClient.setQueryData(['auth', 'session'], ANONYMOUS)
+      router.navigate({
+        to: '/login',
+        search: { redirect: window.location.pathname + window.location.search },
+      })
+    }
+    window.addEventListener('odoo:session-expired', handler)
+    return () => window.removeEventListener('odoo:session-expired', handler)
+  }, [queryClient, router])
 
   return (
     <AuthContext.Provider

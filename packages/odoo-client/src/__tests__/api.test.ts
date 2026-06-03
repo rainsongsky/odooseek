@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import { describe, expect, test, vi } from 'vitest'
-import { callKw, fieldsGet, getViews, nameSearch, read, readGroup, searchRead } from '../api'
+import { callKw, fieldsGet, getViews, nameSearch, read, readGroup, searchRead, SessionExpiredError } from '../api'
 
 describe('api', () => {
   test('searchRead generates correct args', async () => {
@@ -223,5 +223,45 @@ describe('api', () => {
     expect(ids[0]).toBe(1)
     expect(ids[1]).toBe(2)
     expect(ids[2]).toBe(3)
+  })
+
+  test('401 response dispatches custom event and throws SessionExpiredError', async () => {
+    let eventDispatched = false
+    const handler = () => {
+      eventDispatched = true
+    }
+    window.addEventListener('odoo:session-expired', handler)
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({}),
+    })
+    globalThis.fetch = mockFetch
+
+    await expect(searchRead('res.partner', [], ['id'])).rejects.toThrow(SessionExpiredError)
+    expect(eventDispatched).toBe(true)
+
+    window.removeEventListener('odoo:session-expired', handler)
+  })
+
+  test('non-401 error does not dispatch session-expired event', async () => {
+    let eventDispatched = false
+    const handler = () => {
+      eventDispatched = true
+    }
+    window.addEventListener('odoo:session-expired', handler)
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({}),
+    })
+    globalThis.fetch = mockFetch
+
+    await expect(searchRead('res.partner', [], ['id'])).rejects.toThrow('HTTP 500')
+    expect(eventDispatched).toBe(false)
+
+    window.removeEventListener('odoo:session-expired', handler)
   })
 })

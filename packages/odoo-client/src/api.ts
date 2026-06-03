@@ -1,3 +1,11 @@
+/** Thrown when the Odoo session has expired (HTTP 401). */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super('Session expired')
+    this.name = 'SessionExpiredError'
+  }
+}
+
 interface JsonRpcResponse<T> {
   jsonrpc: '2.0'
   id: number
@@ -34,8 +42,10 @@ async function jsonRpc<T>(url: string, params: Record<string, unknown>): Promise
 
   if (!res.ok) {
     if (res.status === 401) {
-      window.location.href = '/login'
-      throw new Error('Session expired')
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('odoo:session-expired'))
+      }
+      throw new SessionExpiredError()
     }
     throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   }
