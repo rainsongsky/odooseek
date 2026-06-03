@@ -1066,6 +1066,7 @@ dependencies = [
  "futures",
  "http",
  "odoo-core",
+ "percent-encoding",
  "reqwest",
  "serde",
  "serde_json",

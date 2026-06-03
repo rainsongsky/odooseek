@@ -156,14 +156,45 @@ pub async fn proxy_image(
 // ── Helpers ─────────────────────────────────────────────────
 
 fn build_odoo_url(odoo_base: &str, path: &str) -> Result<String, AppError> {
-    if path.contains("..") || path.contains('\0') {
+    // Loop-decode until stable to handle multiple layers of percent-encoding
+    let mut decoded = path.to_string();
+    loop {
+        let next = percent_encoding::percent_decode_str(&decoded)
+            .decode_utf8()
+            .map_err(|_| {
+                AppError(OdooError::Api {
+                    code: 400,
+                    message: "Invalid path encoding".into(),
+                    data: None,
+                })
+            })?;
+        let next_str = next.to_string();
+        if next_str == decoded {
+            break;
+        }
+        decoded = next_str;
+    }
+
+    // Reject null bytes
+    if decoded.contains('\0') {
         return Err(AppError(OdooError::Api {
             code: 400,
             message: "Invalid path".into(),
             data: None,
         }));
     }
-    Ok(format!("{}/{}", odoo_base, path))
+
+    for component in std::path::Path::new(&decoded).components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            return Err(AppError(OdooError::Api {
+                code: 400,
+                message: "Invalid path".into(),
+                data: None,
+            }));
+        }
+    }
+
+    Ok(format!("{}/{}", odoo_base, decoded))
 }
 
 fn get_cookie_header(headers: &HeaderMap) -> Option<String> {
@@ -338,3 +369,53 @@ static WRITE_METHODS: [&str; 12] = [
     "unlink",
     "write",
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_url_simple_path() {
+        let result = build_odoo_url("http://odoo:8069", "web/session/authenticate").unwrap();
+        assert_eq!(result, "http://odoo:8069/web/session/authenticate");
+    }
+
+    #[test]
+    fn build_url_rejects_literal_dot_dot() {
+        let result = build_odoo_url("http://odoo:8069", "../etc/passwd");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn build_url_rejects_null_byte() {
+        let result = build_odoo_url("http://odoo:8069", "path\0sneaky");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn build_url_rejects_single_encoded_dot_dot() {
+        // %2e%2e after axum decode → .. should be caught
+        let result = build_odoo_url("http://odoo:8069", "..%2fetc");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn build_url_rejects_double_encoded_dot_dot() {
+        // %252e%252e → axum decodes to %2e%2e → full decode yields .. → caught
+        let result = build_odoo_url("http://odoo:8069", "%252e%252e%252fetc");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn build_url_allows_normal_encoded_path() {
+        let result = build_odoo_url("http://odoo:8069", "web%2Fimage%2F123");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn build_url_rejects_invalid_utf8_encoding() {
+        // percent_decode of invalid UTF-8 sequence
+        let result = build_odoo_url("http://odoo:8069", "%ff%fe");
+        assert!(result.is_err());
+    }
+}
