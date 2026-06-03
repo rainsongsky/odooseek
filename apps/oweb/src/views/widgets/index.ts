@@ -1,6 +1,7 @@
 import type { FieldElement } from '@odooseek/odoo-client'
 import { BackgroundImageWidget } from './BackgroundImage'
 import { BadgeWidget } from './BadgeWidget'
+import { BadgeSelectionFilterWidget } from './badge-selection-filter'
 import {
   BooleanToggleWidget,
   BooleanWidget,
@@ -84,6 +85,7 @@ export const FIELD_INPUT_CLASS =
 // Re-export all widget components for direct use
 export {
   AttachmentImageWidget,
+  BadgeSelectionFilterWidget,
   BadgeSelectionWidget,
   BadgeWidget,
   BinaryWidget,
@@ -214,6 +216,7 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   float_factor: FloatFactorWidget,
   gauge: GaugeWidget,
   statinfo: StatInfoWidget,
+  selection_badge_with_filter: BadgeSelectionFilterWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
