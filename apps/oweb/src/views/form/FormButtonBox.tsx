@@ -30,7 +30,7 @@ export function StatButton({
   } else if (button.content?.type === 'custom') {
     const raw = button.content.valueField ? record?.[button.content.valueField] : undefined
     value = raw != null ? String(raw) : ''
-    text = button.content.textFallback ?? text
+    text = raw != null ? '' : (button.content.textFallback ?? button.string ?? '')
   }
 
   const handleClick = useCallback(async () => {
