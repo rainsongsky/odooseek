@@ -63,15 +63,15 @@ export function FormEditActions({
       )}
       {editMode ? (
         <>
-          <button type="button" onClick={onCancel} className={btnNeutral}>
+          <button type="button" onClick={onCancel} className={btnNeutral} data-testid="form-cancel-button">
             Cancel
           </button>
-          <button type="button" onClick={onSave} disabled={isSaving} className={btnSave}>
+          <button type="button" onClick={onSave} disabled={isSaving} className={btnSave} data-testid="form-save-button">
             {isSaving ? 'Saving...' : 'Save'}
           </button>
         </>
       ) : (
-        <button type="button" onClick={onEdit} className={btnAccent}>
+        <button type="button" onClick={onEdit} className={btnAccent} data-testid="form-edit-button">
           Edit
         </button>
       )}

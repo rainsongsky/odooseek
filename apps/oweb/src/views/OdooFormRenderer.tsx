@@ -593,8 +593,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     setSaveError(null)
   }, [versionReadOnly, record, formValues, fields])
 
+  const isCreating = !recordId && !newRecordId
   const showExternalEditActions =
-    !!recordId && !awaitingRecord && !recordError && !!record?.[0] && !versionReadOnly
+    (isCreating || (!!recordId && !awaitingRecord && !recordError && !!record?.[0])) &&
+    !versionReadOnly
 
   useEffect(() => {
     if (!externalEditActions || !onEditActionsChange) return
