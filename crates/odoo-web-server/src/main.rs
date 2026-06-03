@@ -5,7 +5,7 @@
 //! Browser (oweb) → REST/WS → odoo-web-server :3000 → JSON-RPC → Odoo :8069
 //! ```
 
-use axum::extract::{ConnectInfo, Path, State, WebSocketUpgrade};
+use axum::extract::{ConnectInfo, Path, Query, State, WebSocketUpgrade};
 use axum::http::HeaderMap;
 use axum::http::Method;
 use axum::response::IntoResponse;
@@ -24,6 +24,7 @@ use tracing::info;
 use odoo_web_server::AppState;
 use odoo_web_server::csrf::{self, CsrfConfig};
 use odoo_web_server::error::AppError;
+use odoo_web_server::health;
 use odoo_web_server::{menu, proxy, report, session, ws};
 
 #[derive(Parser, Debug)]
@@ -139,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
     // Build router
     let frontend_dir = config.frontend_dir.clone();
     let app = Router::new()
-        .route("/health", get(|| async { "ok" }))
+        .route("/health", get(health_check))
         .route("/api/menu", get(menu::get_menu))
         .route("/api/menus", get(menu::get_menus))
         .route("/api/session", get(get_session_info))
@@ -395,4 +396,13 @@ async fn ws_events_handler(
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| ws::handle_ws(socket, state.event_tx.subscribe()))
+}
+
+// ── Health check ────────────────────────────────────────────────────
+
+async fn health_check(
+    State(state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    health::health_check(state, params).await
 }
