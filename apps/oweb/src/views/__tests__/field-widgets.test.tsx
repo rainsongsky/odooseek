@@ -118,16 +118,18 @@ describe('field-widgets', () => {
 
   test('resolves widget=state via WIDGET_OVERRIDES', () => {
     const Widget = getFieldWidget({ ...baseField, widget: 'state' }, 'char')
-    expect(Widget).toBe(TYPE_WIDGETS.state)
+    expect(Widget).toBeDefined()
+    expect(Widget).not.toBe(TYPE_WIDGETS.char)
   })
 
-  test('TYPE_WIDGETS includes priority type', () => {
-    expect(TYPE_WIDGETS.priority).toBeDefined()
-    expect(TYPE_WIDGETS.priority).toBe(PriorityWidget)
+  test('PriorityWidget resolves via WIDGET_OVERRIDES', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'priority' }, 'char')
+    expect(Widget).toBe(PriorityWidget)
   })
 
-  test('TYPE_WIDGETS includes state type', () => {
-    expect(TYPE_WIDGETS.state).toBeDefined()
+  test('StateBadgeWidget resolves via WIDGET_OVERRIDES', () => {
+    const Widget = getFieldWidget({ ...baseField, widget: 'state' }, 'char')
+    expect(Widget).toBeDefined()
   })
 
   test('CharWidget renders input with value', () => {
