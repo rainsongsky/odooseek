@@ -4,20 +4,13 @@ import type {
   OdooFieldMeta,
   ViewField,
 } from '@odooseek/odoo-client'
-import {
-  callKw,
-  evalCondition,
-  getValue,
-  parseKanbanFields,
-  parseKanbanXml,
-  readGroup,
-} from '@odooseek/odoo-client'
+import { callKw, parseKanbanFields, parseKanbanXml, readGroup } from '@odooseek/odoo-client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import React, { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useConfirmDialog } from '../components/ConfirmDialog'
 import { HR_EMPLOYEE_MODEL } from '../lib/hr'
 import { ODOO_INDEXED_COLORS } from '../lib/odoo-colors'
-import { collectKanbanFieldNames, formatKanbanField, KanbanNode } from './kanban/KanbanNode'
+import { collectKanbanFieldNames, KanbanNode } from './kanban/KanbanNode'
 import { getFieldWidget, NOOP } from './widgets'
 import { PresenceIconOverlay } from './widgets/PresenceIcon'
 

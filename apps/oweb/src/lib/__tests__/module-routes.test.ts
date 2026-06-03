@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import {
   listPathForModel,
+  modulePrefixFromXmlid,
+  moduleRouteFromModel,
   recordPrefixForListPath,
   technicalModelFromActionPath,
-  moduleRouteFromModel,
-  modulePrefixFromXmlid,
 } from '../module-routes'
 
 describe('listPathForModel', () => {
