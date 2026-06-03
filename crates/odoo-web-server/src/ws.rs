@@ -263,10 +263,7 @@ mod tests {
 
     #[test]
     fn max_notification_id_null_ids() {
-        let notifications = vec![
-            json!({"id": null}),
-            json!({"id": 7}),
-        ];
+        let notifications = vec![json!({"id": null}), json!({"id": 7})];
         assert_eq!(max_notification_id(&notifications), Some(7));
     }
 }

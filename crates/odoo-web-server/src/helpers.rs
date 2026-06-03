@@ -272,7 +272,12 @@ mod tests {
         let resp = json_response_with_cookies(&data, &headers).into_response();
 
         assert_eq!(resp.status(), 200);
-        let ct = resp.headers().get("content-type").unwrap().to_str().unwrap();
+        let ct = resp
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap();
         assert!(ct.contains("application/json"));
     }
 
