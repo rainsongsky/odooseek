@@ -15,7 +15,9 @@ import {
   PercentageWidget,
   TextWidget,
 } from './basic'
+import { CodeEditorWidget } from './code-editor'
 import { DaterangeWidget } from './daterange'
+import { DomainWidget } from './domain'
 import { FilterableSelectionWidget } from './filterable-selection'
 import { FloatFactorWidget } from './float-factor'
 import { GaugeWidget, StatInfoWidget } from './gauge-statinfo'
@@ -92,11 +94,13 @@ export {
   BooleanToggleWidget,
   BooleanWidget,
   CharWidget,
+  CodeEditorWidget,
   ColorPickerWidget,
   CopyClipboardWidget,
   DaterangeWidget,
   DatetimeWidget,
   DateWidget,
+  DomainWidget,
   EmailWidget,
   FilterableSelectionWidget,
   FloatFactorWidget,
@@ -214,6 +218,10 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   float_factor: FloatFactorWidget,
   gauge: GaugeWidget,
   statinfo: StatInfoWidget,
+  // New widgets (issue #250-#251)
+  domain: DomainWidget,
+  ace: CodeEditorWidget,
+  code: CodeEditorWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
@@ -253,10 +261,8 @@ const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
   checkbox: 'boolean',
   color: 'color_picker',
   kanban_color_picker: 'color_picker',
-  ace: 'html',
-  code: 'html',
-  section_and_note_text: 'text',
   rotting_statusbar_duration: 'statusbar',
+  section_and_note_text: 'text',
   // CRM
   many2one_avatar_leader_user: 'many2one_avatar',
   badge_rotting: 'selection_badge',
