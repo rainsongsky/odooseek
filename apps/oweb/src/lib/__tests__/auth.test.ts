@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { hasGroup, type GroupCheckSession } from '../auth'
+import { type GroupCheckSession, hasGroup } from '../auth'
 
 describe('hasGroup', () => {
   const session: GroupCheckSession = {
