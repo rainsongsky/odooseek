@@ -113,11 +113,13 @@ export function ButtonBoxRenderer({
         <StatButton key={bi} button={btn} record={record} model={model} recordId={recordId} />
       ))}
       {overflow.length > 0 && (
-        <div className="relative">
+        <div
+          className="relative"
+          onMouseEnter={() => setOverflowOpen(true)}
+          onMouseLeave={() => setOverflowOpen(false)}
+        >
           <button
             type="button"
-            onClick={() => setOverflowOpen(!overflowOpen)}
-            onBlur={() => setTimeout(() => setOverflowOpen(false), 150)}
             className="flex items-center gap-1 rounded px-3 py-1.5 text-xs text-text-secondary hover:bg-hover"
           >
             More ▾
