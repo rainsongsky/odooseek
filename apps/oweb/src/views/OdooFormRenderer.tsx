@@ -36,6 +36,12 @@ import { readRecordWithFieldFallback, resolveFormReadFields } from '../lib/form-
 import { HeaderBar } from './form/FormHeaderBar'
 import { FormLayoutNode } from './form/FormLayoutNode'
 import { FormTimestamps } from './form/FormTimestamps'
+import {
+  isWizardModel,
+  normalizeOnchangeValue,
+  validateAllFields,
+  wizardBtn,
+} from './form/formUtils'
 import { Rainbowman } from './widgets/Rainbowman'
 
 export interface OdooFormRendererRef {
@@ -57,22 +63,6 @@ interface FormRendererProps {
 }
 
 export type { FormEditActionsProps }
-
-function isWizardModel(m?: string): boolean {
-  return (
-    !!m &&
-    (m.includes('.wizard') ||
-      m === 'crm.lead2opportunity.partner' ||
-      m === 'crm.lead.lost' ||
-      m === 'crm.merge.opportunity')
-  )
-}
-
-function wizardBtn(model: string) {
-  if (model === 'crm.lead.lost') return { label: 'Mark Lost', name: 'action_lost_reason_apply' }
-  if (model === 'crm.lead2opportunity.partner') return { label: 'Convert', name: 'action_apply' }
-  return { label: 'Confirm', name: 'action_apply' }
-}
 
 export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   {
@@ -280,13 +270,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           setFormValues(merged)
           baselineRef.current = { ...merged }
           setEditMode(true)
-          const missing = new Set<string>()
-          const errors = new Map<string, string>()
-          for (const [name, meta] of Object.entries(fields)) {
-            if (meta.required && isFieldValueEmpty(merged[name], meta.type)) missing.add(name)
-            const typeErr = validateFieldValue(merged[name], meta)
-            if (typeErr) errors.set(name, typeErr)
-          }
+          const { missing, errors } = validateAllFields(fields, merged)
           setMissingFields(missing)
           setFieldErrors(errors)
           triggerOnchange([], merged)
@@ -602,13 +586,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     const values = record?.[0] ? { ...record[0] } : { ...formValues }
     setFormValues(values)
     setEditMode(true)
-    const missing = new Set<string>()
-    const errors = new Map<string, string>()
-    for (const [name, meta] of Object.entries(fields)) {
-      if (meta.required && isFieldValueEmpty(values[name], meta.type)) missing.add(name)
-      const typeErr = validateFieldValue(values[name], meta)
-      if (typeErr) errors.set(name, typeErr)
-    }
+    const { missing, errors } = validateAllFields(fields, values)
     setMissingFields(missing)
     setFieldErrors(errors)
     setSaveError(null)
@@ -770,8 +748,3 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     </>
   )
 })
-
-function normalizeOnchangeValue(v: unknown, fieldType?: string): unknown {
-  if (fieldType === 'many2one' && v === false) return null
-  return v
-}
