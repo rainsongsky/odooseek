@@ -330,7 +330,16 @@ export function WizardDialog({
 
         <div className="px-5 py-4">
           {createError ? (
-            <p className="text-sm text-danger">{createError}</p>
+            <div className="flex flex-col items-center gap-3 py-4">
+              <p className="text-sm text-danger">{createError}</p>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded-md border border-border-default px-4 py-1.5 text-xs text-text-secondary hover:bg-hover"
+              >
+                Close
+              </button>
+            </div>
           ) : isCreating || isLoadingFields || !wizardId ? (
             <div className="flex items-center justify-center py-8">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
@@ -362,6 +371,7 @@ export function WizardDialog({
           )}
         </div>
 
+        {!createError && (
         <div className="flex justify-between border-t border-border-subtle px-5 py-3">
           <div>
             {stepIndex > 0 && (
@@ -380,7 +390,7 @@ export function WizardDialog({
                 key={btn.name}
                 type="button"
                 onClick={() => stepMutation.mutate({ button: btn, stepValues: values })}
-                disabled={stepMutation.isPending || !wizardId || !!createError}
+                disabled={stepMutation.isPending || !wizardId}
                 className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
                   btn.special === 'cancel'
                     ? 'border border-border-default text-text-secondary hover:bg-hover'
@@ -392,6 +402,7 @@ export function WizardDialog({
             ))}
           </div>
         </div>
+        )}
       </div>
     </div>
   )

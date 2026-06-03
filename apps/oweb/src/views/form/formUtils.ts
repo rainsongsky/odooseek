@@ -2,7 +2,17 @@ import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { isFieldValueEmpty, validateFieldValue } from '@odooseek/odoo-client'
 
 export function normalizeOnchangeValue(v: unknown, fieldType?: string): unknown {
-  if (fieldType === 'many2one' && v === false) return null
+  if (fieldType === 'many2one') {
+    if (v === false || v === null) return null
+    if (Array.isArray(v)) return v[0] // [id, display_name] → id
+    return v
+  }
+  if (fieldType === 'many2many' || fieldType === 'one2many') {
+    if (Array.isArray(v) && v.length > 0 && Array.isArray(v[0])) {
+      return v.map((item) => (Array.isArray(item) ? item[0] : item))
+    }
+    return v
+  }
   return v
 }
 
@@ -20,6 +30,17 @@ export function wizardBtn(model: string) {
   if (model === 'crm.lead.lost') return { label: 'Mark Lost', name: 'action_lost_reason_apply' }
   if (model === 'crm.lead2opportunity.partner') return { label: 'Convert', name: 'action_apply' }
   return { label: 'Confirm', name: 'action_apply' }
+}
+
+export function normalizeValuesForRpc(
+  values: Record<string, unknown>,
+  fields: Record<string, OdooFieldMeta>,
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(values)) {
+    normalized[k] = normalizeOnchangeValue(v, fields[k]?.type)
+  }
+  return normalized
 }
 
 export function validateAllFields(

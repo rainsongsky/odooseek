@@ -218,7 +218,7 @@ describe('OdooFormRenderer', () => {
     await user.click(screen.getByText('Save'))
 
     await waitFor(() => {
-      expect(screen.getByText(/Required/)).toBeInTheDocument()
+      expect(screen.getByText(/required/i)).toBeInTheDocument()
     })
   })
 
@@ -875,7 +875,7 @@ describe('OdooFormRenderer real-time validation', () => {
     await user.click(screen.getByText('Save'))
 
     await waitFor(() => {
-      expect(screen.getByText(/Required/)).toBeInTheDocument()
+      expect(screen.getByText(/required/i)).toBeInTheDocument()
     })
   })
 })

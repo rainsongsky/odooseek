@@ -39,6 +39,7 @@ import { FormTimestamps } from './form/FormTimestamps'
 import {
   isWizardModel,
   normalizeOnchangeValue,
+  normalizeValuesForRpc,
   validateAllFields,
   wizardBtn,
 } from './form/formUtils'
@@ -201,13 +202,18 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
           const meta = fields[k]
           fieldsSpec[k] = meta?.onChange ? { onChange: true } : {}
         }
-        const result = await callKw<{
+        const result = await         callKw<{
           value?: Record<string, unknown>
           warning?: { title: string; message: string; type: string }
         }>(
           model,
           'onchange',
-          [newRecordId ? [newRecordId] : [], values, fieldNames, fieldsSpec],
+          [
+            newRecordId ? [newRecordId] : [],
+            normalizeValuesForRpc(values, fields),
+            fieldNames,
+            fieldsSpec,
+          ],
           {},
         )
         if (result?.value) {
@@ -284,13 +290,16 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   }, [model, recordId, triggerOnchange, record, readFields, context])
 
   const saveMutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      newRecordId
-        ? callKw(model, 'write', [[newRecordId], values])
-        : callKw(model, 'create', [values]),
+    mutationFn: async (values: Record<string, unknown>) => {
+      const normalized = normalizeValuesForRpc(values, fields)
+      return newRecordId
+        ? callKw(model, 'write', [[newRecordId], normalized])
+        : callKw(model, 'create', [normalized])
+    },
     onSuccess: (result) => {
       if (!newRecordId && typeof result === 'number') {
         onRecordCreated?.(result)
+        setEditMode(false)
       } else {
         baselineRef.current = { ...formValues }
         const invalidateKey = newRecordId
@@ -309,6 +318,9 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       }
       setJustSaved(true)
       setTimeout(() => setJustSaved(false), 2000)
+    },
+    onError: (err) => {
+      setSaveError(err instanceof Error ? err.message : 'Save failed')
     },
   })
 
@@ -356,19 +368,22 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   const handleSave = useCallback(async (): Promise<void> => {
     if (effectiveMissingFields.size > 0 || effectiveFieldErrors.size > 0) {
       const parts: string[] = []
-      if (effectiveMissingFields.size > 0) {
-        const labels = Array.from(effectiveMissingFields).map((name) => fieldLabelMap[name] || name)
-        parts.push(`Required: ${labels.join(', ')}`)
+      for (const name of effectiveMissingFields) {
+        parts.push(`• ${fieldLabelMap[name] || name} is required`)
       }
       for (const [name, msg] of effectiveFieldErrors) {
-        parts.push(`${fieldLabelMap[name] || name}: ${msg}`)
+        parts.push(`• ${fieldLabelMap[name] || name}: ${msg}`)
       }
-      setSaveError(parts.join('; '))
+      setSaveError(parts.join('\n'))
       scrollToFirstError()
       return
     }
     setSaveError(null)
-    await saveMutation.mutateAsync(formValues)
+    try {
+      await saveMutation.mutateAsync(formValues)
+    } catch {
+      // onError already handled by useMutation
+    }
   }, [
     effectiveMissingFields,
     effectiveFieldErrors,
@@ -592,8 +607,10 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     setSaveError(null)
   }, [versionReadOnly, record, formValues, fields])
 
+  const isCreating = !recordId && !newRecordId
   const showExternalEditActions =
-    !!recordId && !awaitingRecord && !recordError && !!record?.[0] && !versionReadOnly
+    (isCreating || (!!recordId && !awaitingRecord && !recordError && !!record?.[0])) &&
+    !versionReadOnly
 
   useEffect(() => {
     if (!externalEditActions || !onEditActionsChange) return
@@ -658,7 +675,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
       />
 
       {saveError && (
-        <div className="o_form_sheet_bg mt-1 w-full rounded border border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger">
+        <div className="o_form_sheet_bg mt-1 w-full rounded border border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger whitespace-pre-line">
           {saveError}
         </div>
       )}

@@ -1,7 +1,7 @@
 import type { StatButtonElement } from '@odooseek/odoo-client'
 import { callKw } from '@odooseek/odoo-client'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 const MAX_BUTTON_BOX = 4
 
@@ -30,7 +30,7 @@ export function StatButton({
   } else if (button.content?.type === 'custom') {
     const raw = button.content.valueField ? record?.[button.content.valueField] : undefined
     value = raw != null ? String(raw) : ''
-    text = button.content.textFallback ?? text
+    text = raw != null ? '' : (button.content.textFallback ?? button.string ?? '')
   }
 
   const handleClick = useCallback(async () => {
@@ -98,8 +98,17 @@ export function ButtonBoxRenderer({
   inline?: boolean
 }) {
   const [overflowOpen, setOverflowOpen] = useState(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>()
   const primary = buttons.slice(0, MAX_BUTTON_BOX)
   const overflow = buttons.slice(MAX_BUTTON_BOX)
+
+  const handleEnter = () => {
+    clearTimeout(closeTimer.current)
+    setOverflowOpen(true)
+  }
+  const handleLeave = () => {
+    closeTimer.current = setTimeout(() => setOverflowOpen(false), 150)
+  }
 
   return (
     <div
@@ -113,17 +122,23 @@ export function ButtonBoxRenderer({
         <StatButton key={bi} button={btn} record={record} model={model} recordId={recordId} />
       ))}
       {overflow.length > 0 && (
-        <div className="relative">
+        <div
+          className="relative"
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
           <button
             type="button"
-            onClick={() => setOverflowOpen(!overflowOpen)}
-            onBlur={() => setTimeout(() => setOverflowOpen(false), 150)}
             className="flex items-center gap-1 rounded px-3 py-1.5 text-xs text-text-secondary hover:bg-hover"
           >
             More ▾
           </button>
           {overflowOpen && (
-            <div className="absolute left-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-border-subtle bg-surface shadow-lg">
+            <div
+              className="absolute left-0 top-full z-10 min-w-[140px] rounded-lg border border-border-subtle bg-surface shadow-lg"
+              onMouseEnter={handleEnter}
+              onMouseLeave={handleLeave}
+            >
               {overflow.map((btn, bi) => (
                 <div key={bi} className="px-2 py-1">
                   <StatButton button={btn} record={record} model={model} recordId={recordId} />

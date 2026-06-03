@@ -114,14 +114,22 @@ function parseButtonBox(el: Element): ButtonBoxElement {
         (c.getAttribute('class') ?? '').includes('o_stat_info'),
       )
       if (infoDiv) {
-        const textSpan = Array.from(infoDiv.children).find((c) =>
+        const textSpans = Array.from(infoDiv.children).filter((c) =>
           (c.getAttribute('class') ?? '').includes('o_stat_text'),
         )
+        // Find the visible (non-invisible) o_stat_text span
+        const visibleTextSpan = textSpans.find(
+          (s) => s.getAttribute('invisible') === null,
+        ) ?? textSpans[0]
+        const textField = visibleTextSpan?.getElementsByTagName('field')[0]
+        const textFallback = textField
+          ? textField.getAttribute('string') ?? undefined
+          : visibleTextSpan?.textContent?.trim() ?? undefined
         const valueField = infoDiv.getElementsByTagName('field')[0]
         content = {
           type: 'custom',
           valueField: valueField?.getAttribute('name') ?? undefined,
-          textFallback: textSpan?.textContent?.trim() ?? undefined,
+          textFallback,
         }
       }
     }
