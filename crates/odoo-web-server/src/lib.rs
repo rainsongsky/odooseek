@@ -21,7 +21,10 @@ pub use error::AppError;
 pub use rate_limit::RateLimiter;
 
 /// Application shared state
+///
+/// Fields accessed by the binary crate via State extractor.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AppState {
     pub http_client: reqwest::Client,
     pub odoo_url: String,
@@ -43,9 +46,9 @@ impl AppState {
             odoo_url,
             event_tx: tx,
             cache: ResponseCache::new(),
-            rate_limiter: std::sync::Arc::new(RateLimiter::new(30, 60)), // 30 login attempts per 60s
-            report_rate_limiter: std::sync::Arc::new(RateLimiter::new(10, 60)), // 10 reports per 60s
-            menu_rate_limiter: std::sync::Arc::new(RateLimiter::new(30, 60)), // 30 menu fetches per 60s
+            rate_limiter: std::sync::Arc::new(RateLimiter::new(30, 60)),
+            report_rate_limiter: std::sync::Arc::new(RateLimiter::new(10, 60)),
+            menu_rate_limiter: std::sync::Arc::new(RateLimiter::new(30, 60)),
         }
     }
 }

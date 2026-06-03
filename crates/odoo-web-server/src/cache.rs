@@ -12,6 +12,7 @@ use tokio::time::{Duration, Instant};
 #[derive(Clone)]
 pub struct ResponseCache {
     inner: Arc<RwLock<HashMap<String, CacheEntry>>>,
+    max_entries: usize,
 }
 
 struct CacheEntry {
@@ -20,9 +21,12 @@ struct CacheEntry {
 }
 
 impl ResponseCache {
+    const DEFAULT_MAX_ENTRIES: usize = 5000;
+
     pub fn new() -> Self {
         let cache = Self {
             inner: Arc::new(RwLock::new(HashMap::new())),
+            max_entries: Self::DEFAULT_MAX_ENTRIES,
         };
         let inner = cache.inner.clone();
         tokio::spawn(async move {
@@ -52,7 +56,18 @@ impl ResponseCache {
             value,
             expires_at: Instant::now() + ttl,
         };
-        self.inner.write().await.insert(key.to_string(), entry);
+        let mut cache = self.inner.write().await;
+        cache.insert(key.to_string(), entry);
+
+        // Evict oldest entry if over capacity
+        if cache.len() > self.max_entries
+            && let Some(oldest_key) = cache
+                .iter()
+                .min_by_key(|(_, e)| e.expires_at)
+                .map(|(k, _)| k.clone())
+        {
+            cache.remove(&oldest_key);
+        }
     }
 
     pub async fn invalidate(&self, prefix: &str) {
