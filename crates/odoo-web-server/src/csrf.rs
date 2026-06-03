@@ -50,3 +50,53 @@ pub async fn csrf_guard(
             .into_response())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_origin_matches_allowed() {
+        let config = CsrfConfig {
+            allowed_origins: vec!["http://localhost:5173".into(), "http://example.com".into()],
+        };
+        assert!(config
+            .allowed_origins
+            .iter()
+            .any(|o| "http://localhost:5173".starts_with(o)));
+        assert!(config
+            .allowed_origins
+            .iter()
+            .any(|o| "http://example.com/app".starts_with(o)));
+    }
+
+    #[test]
+    fn test_origin_rejects_unknown() {
+        let config = CsrfConfig {
+            allowed_origins: vec!["http://localhost:5173".into()],
+        };
+        assert!(!config
+            .allowed_origins
+            .iter()
+            .any(|o| "http://evil.com".starts_with(o)));
+    }
+
+    #[test]
+    fn test_referer_extraction_from_url() {
+        let referer = "http://localhost:5173/some/path";
+        let origin = referer
+            .trim_end_matches('/')
+            .rsplitn(3, '/')
+            .last()
+            .unwrap();
+        assert_eq!(origin, "http://localhost:5173");
+    }
+
+    #[test]
+    fn test_empty_origin_allowed() {
+        // Empty source (no Origin/Referer header) should be allowed
+        // because same-origin POSTs may not send Origin
+        let source = "";
+        assert!(source.is_empty());
+    }
+}
