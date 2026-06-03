@@ -284,10 +284,16 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   }, [model, recordId, triggerOnchange, record, readFields, context])
 
   const saveMutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      newRecordId
-        ? callKw(model, 'write', [[newRecordId], values])
-        : callKw(model, 'create', [values]),
+    mutationFn: async (values: Record<string, unknown>) => {
+      // Normalize many2one/many2many values to plain IDs before sending to Odoo
+      const normalized: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(values)) {
+        normalized[k] = normalizeOnchangeValue(v, fields[k]?.type)
+      }
+      return newRecordId
+        ? callKw(model, 'write', [[newRecordId], normalized])
+        : callKw(model, 'create', [normalized])
+    },
     onSuccess: (result) => {
       if (!newRecordId && typeof result === 'number') {
         onRecordCreated?.(result)

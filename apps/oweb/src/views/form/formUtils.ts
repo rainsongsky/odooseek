@@ -2,7 +2,17 @@ import type { OdooFieldMeta } from '@odooseek/odoo-client'
 import { isFieldValueEmpty, validateFieldValue } from '@odooseek/odoo-client'
 
 export function normalizeOnchangeValue(v: unknown, fieldType?: string): unknown {
-  if (fieldType === 'many2one' && v === false) return null
+  if (fieldType === 'many2one') {
+    if (v === false || v === null) return null
+    if (Array.isArray(v)) return v[0] // [id, display_name] → id
+    return v
+  }
+  if (fieldType === 'many2many' || fieldType === 'one2many') {
+    if (Array.isArray(v) && v.length > 0 && Array.isArray(v[0])) {
+      return v.map((item) => (Array.isArray(item) ? item[0] : item))
+    }
+    return v
+  }
   return v
 }
 

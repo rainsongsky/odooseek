@@ -12,6 +12,15 @@ describe('normalizeOnchangeValue', () => {
     expect(normalizeOnchangeValue(false, 'many2one')).toBe(null)
   })
 
+  test('extracts id from many2one tuple', () => {
+    expect(normalizeOnchangeValue([1, 'Sales'], 'many2one')).toBe(1)
+    expect(normalizeOnchangeValue([42, 'Admin'], 'many2one')).toBe(42)
+  })
+
+  test('extracts ids from many2many tuples', () => {
+    expect(normalizeOnchangeValue([[1, 'A'], [2, 'B']], 'many2many')).toEqual([1, 2])
+  })
+
   test('passes through other values', () => {
     expect(normalizeOnchangeValue('hello', 'char')).toBe('hello')
     expect(normalizeOnchangeValue(42, 'integer')).toBe(42)
