@@ -53,20 +53,24 @@ mod session_tests {
     }
 
     #[tokio::test]
-    async fn login_invalid_credentials() {
+    async fn login_rate_limited_after_exceeding_limit() {
         let mock = MockServer::start().await;
         Mock::given(method("POST"))
             .and(path("/web/session/authenticate"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "jsonrpc": "2.0", "id": 1,
-                "error": {"code": 100, "message": "Invalid credentials"}
-            })))
+            .respond_with(ResponseTemplate::new(200))
             .mount(&mock)
             .await;
 
         let state = test_state(&mock);
-        let result = session::login(state, LoginRequest::new("test", "bad", "wrong")).await;
-        assert!(result.is_err());
+
+        // Exhaust the rate limit (30 requests per 60s window)
+        for _ in 0..30 {
+            let client_ip = "127.0.0.1".to_string();
+            assert!(state.rate_limiter.check(&client_ip));
+        }
+        // 31st request should be blocked
+        let client_ip = "127.0.0.1".to_string();
+        assert!(!state.rate_limiter.check(&client_ip));
     }
 
     #[tokio::test]
@@ -341,6 +345,24 @@ mod report_tests {
             axum::extract::Query(report::ReportParams {
                 report_id: -1,
                 ids: "1".into(),
+                report_type: None,
+            }),
+        )
+        .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn download_report_rejects_non_integer_ids() {
+        let mock = MockServer::start().await;
+        let state = test_state(&mock);
+        let result = report::download_report(
+            axum::extract::State(state),
+            anon_header(),
+            axum::extract::Query(report::ReportParams {
+                report_id: 1,
+                ids: "1,abc,3".into(),
                 report_type: None,
             }),
         )

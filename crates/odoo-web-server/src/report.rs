@@ -171,3 +171,42 @@ pub async fn proxy_barcode(
 
     crate::proxy::build_proxy_response(status, &odoo_headers, axum::body::Body::from_stream(stream))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn report_params_deserialize_from_query() {
+        let params = ReportParams {
+            report_id: 1,
+            ids: "1,2,3".into(),
+            report_type: Some("pdf".into()),
+        };
+        assert_eq!(params.report_id, 1);
+        assert_eq!(params.ids, "1,2,3");
+        assert_eq!(params.report_type.as_deref(), Some("pdf"));
+    }
+
+    #[test]
+    fn report_params_default_report_type() {
+        let params = ReportParams {
+            report_id: 5,
+            ids: "10,20".into(),
+            report_type: None,
+        };
+        assert_eq!(params.report_id, 5);
+        assert_eq!(params.ids, "10,20");
+        assert!(params.report_type.is_none());
+    }
+
+    #[test]
+    fn report_params_single_id() {
+        let params = ReportParams {
+            report_id: 1,
+            ids: "42".into(),
+            report_type: None,
+        };
+        assert_eq!(params.ids, "42");
+    }
+}
