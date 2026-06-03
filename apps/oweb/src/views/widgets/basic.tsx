@@ -8,7 +8,7 @@ export function CharWidget({ field, value, onChange, readOnly, meta }: FieldWidg
   if (readOnly) {
     const v = value === false || value === null || value === undefined ? '' : String(value)
     if (!v) return <span className="text-sm text-text-primary">—</span>
-    if (field.widget === 'password' && v)
+    if (field.widget === 'password')
       return <span className="text-sm text-text-primary">{'•'.repeat(v.length)}</span>
     return <span className="text-sm text-text-primary">{v}</span>
   }

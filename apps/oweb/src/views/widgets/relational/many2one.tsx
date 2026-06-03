@@ -13,10 +13,15 @@ export function Many2OneWidget({
 }: FieldWidgetProps) {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const closeDropdown = useCallback(() => {
+    openRef.current = false
+    setOpen(false)
+  }, [])
   const [results, setResults] = useState<Array<{ id: number; display_name: string }>>([])
   const [focusIdx, setFocusIdx] = useState(-1)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const listRef = useRef<HTMLDivElement>(null)
+  const openRef = useRef(false)
   const opts = (_field.options as Record<string, unknown>) ?? {}
   const noCreate = opts.no_create === true || opts.no_create === '1'
   const noOpen = opts.no_open === true || opts.no_open === '1'
@@ -33,7 +38,7 @@ export function Many2OneWidget({
       clearTimeout(timer.current)
       timer.current = setTimeout(async () => {
         const relation = meta?.relation
-        if (!relation) return
+        if (!relation || !openRef.current) return
         const domain = parseDomainString(typeof meta.domain === 'string' ? meta.domain : null)
         const baseDomain = domain && domain.length > 0 ? domain : []
         const res = await callKw<{ records: Array<{ id: number; display_name: string }> }>(
@@ -72,9 +77,9 @@ export function Many2OneWidget({
       e.preventDefault()
       const r = results[focusIdx]
       onChange([r.id, r.display_name])
-      setOpen(false)
+      closeDropdown()
     } else if (e.key === 'Escape') {
-      setOpen(false)
+      closeDropdown()
     }
   }
 
@@ -93,11 +98,17 @@ export function Many2OneWidget({
           doSearch(e.target.value)
         }}
         onFocus={() => {
+          openRef.current = true
           setOpen(true)
           setSearch('')
           doSearch('')
         }}
-        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        onBlur={() =>
+          setTimeout(() => {
+            openRef.current = false
+            setOpen(false)
+          }, 200)
+        }
         onKeyDown={handleKeyDown}
         placeholder={_field.placeholder || 'Search...'}
         className="w-full border-0 border-b border-border-default bg-transparent px-1 py-2 text-sm text-text-primary focus:border-accent focus:outline-none placeholder:text-text-muted"
@@ -113,7 +124,7 @@ export function Many2OneWidget({
               type="button"
               onMouseDown={() => {
                 onChange([r.id, r.display_name])
-                setOpen(false)
+                closeDropdown()
               }}
               className={`w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-hover/50 ${
                 ri === focusIdx ? 'bg-hover/50' : ''
@@ -131,7 +142,7 @@ export function Many2OneWidget({
                   { name: search.trim() },
                 ])
                 onChange([newId, search.trim()])
-                setOpen(false)
+                closeDropdown()
               }}
               className="w-full border-t border-border-subtle px-3 py-1.5 text-left text-sm text-accent hover:bg-accent/10"
             >
