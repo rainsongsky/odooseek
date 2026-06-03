@@ -2,6 +2,7 @@ import type { ListColumn, OdooFieldMeta, ReadGroupResult, ViewField } from '@odo
 import { callKw, getDecorationClass, renderCell } from '@odooseek/odoo-client'
 import React from 'react'
 import { ChevronRight } from '@/lib/lucide-icons'
+import { isNonField } from './listUtils'
 
 interface GroupNodeProps {
   path: string
@@ -33,10 +34,6 @@ interface GroupNodeProps {
     onConfirm: () => void
   }) => void
   invalidateList: () => void
-}
-
-function isNonField(col: ListColumn): boolean {
-  return 'buttonType' in col || col.type === 'button_group'
 }
 
 function renderListCellContent(content: unknown): React.ReactNode {

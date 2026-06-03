@@ -1,19 +1,12 @@
 import type {
   ListButtonGroup,
-  ListColumn,
   OdooFieldMeta,
   ParsedListView,
   ViewField,
 } from '@odooseek/odoo-client'
 import { evalCondition, getColumnPrefs, setColumnPrefs } from '@odooseek/odoo-client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-
-function isViewField(col: ListColumn): col is ViewField {
-  return !('buttonType' in col) && col.type !== 'button_group'
-}
-function isNonField(col: ListColumn): boolean {
-  return 'buttonType' in col || col.type === 'button_group'
-}
+import { isNonField, isViewField } from './listUtils'
 
 export function useColumnPrefs(
   model: string,
