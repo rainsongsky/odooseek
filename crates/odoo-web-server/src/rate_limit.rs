@@ -54,3 +54,43 @@ impl RateLimiter {
         buckets.retain(|_, (_, start)| now.duration_since(*start).as_secs() < self.window_secs * 2);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_allows_requests_within_limit() {
+        let limiter = RateLimiter::new(3, 60);
+        assert!(limiter.check("127.0.0.1"));
+        assert!(limiter.check("127.0.0.1"));
+        assert!(limiter.check("127.0.0.1"));
+        assert!(!limiter.check("127.0.0.1"));
+    }
+
+    #[test]
+    fn test_different_keys_independent() {
+        let limiter = RateLimiter::new(1, 60);
+        assert!(limiter.check("a"));
+        assert!(!limiter.check("a"));
+        assert!(limiter.check("b"));
+    }
+
+    #[test]
+    fn test_window_resets_after_expiry() {
+        let limiter = RateLimiter::new(2, 1);
+        assert!(limiter.check("key"));
+        assert!(limiter.check("key"));
+        assert!(!limiter.check("key"));
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        assert!(limiter.check("key"));
+    }
+
+    #[test]
+    fn test_cleanup_removes_expired_entries() {
+        let limiter = RateLimiter::new(1, 0);
+        limiter.check("expired");
+        limiter.cleanup();
+        assert!(limiter.check("expired"));
+    }
+}
