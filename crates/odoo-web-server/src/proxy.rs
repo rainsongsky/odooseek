@@ -61,22 +61,7 @@ pub async fn proxy_odoo(
             state.cache.set(&cache_key, value, &cache_key).await;
         }
 
-        let mut builder = Response::builder().status(status);
-        for (key, value) in odoo_headers.iter() {
-            let name = key.as_str();
-            if matches_proxy_header(name)
-                && let Ok(v) = value.to_str()
-            {
-                builder = builder.header(name, v);
-            }
-        }
-        return builder
-            .body(axum::body::Body::from(body_bytes))
-            .map_err(|e| {
-                AppError(OdooError::InvalidResponse(format!(
-                    "Failed to build response: {e}"
-                )))
-            });
+        return build_proxy_response(status, &odoo_headers, axum::body::Body::from(body_bytes));
     }
 
     // Not cacheable — proxy normally
@@ -214,39 +199,24 @@ fn with_cookie(request: reqwest::RequestBuilder, headers: &HeaderMap) -> reqwest
 }
 
 async fn proxy_send(
-    _state: &AppState,
+    state: &AppState,
     request: reqwest::RequestBuilder,
 ) -> Result<Response, AppError> {
-    let request = request.build().map_err(|e| {
-        AppError(OdooError::Api {
-            code: 500,
-            message: format!("Failed to build proxy request: {e}"),
-            data: None,
-        })
-    })?;
-    let url = request.url().to_string();
-
-    let response = _state.http_client.execute(request).await.map_err(|e| {
-        tracing::warn!("Odoo unreachable at {url}: {e}");
-        OdooError::Unreachable(format!("Odoo not reachable: {e}"))
-    })?;
-
-    let status = response.status();
-    let odoo_headers = response.headers().clone();
-    let body_bytes = response
-        .bytes()
-        .await
-        .map_err(|e| OdooError::Http(e.without_url()))?;
-
-    build_proxy_response(status, &odoo_headers, axum::body::Body::from(body_bytes))
+    proxy_request(state, request, false).await
 }
 
 /// Stream response body to avoid buffering large files (reports, images, attachments).
-/// Uses `bytes_stream()` to read chunks incrementally and `Body::from_stream()` to
-/// serve them to the browser without holding the entire response in memory.
 async fn proxy_send_streaming(
-    _state: &AppState,
+    state: &AppState,
     request: reqwest::RequestBuilder,
+) -> Result<Response, AppError> {
+    proxy_request(state, request, true).await
+}
+
+async fn proxy_request(
+    state: &AppState,
+    request: reqwest::RequestBuilder,
+    streaming: bool,
 ) -> Result<Response, AppError> {
     let request = request.build().map_err(|e| {
         AppError(OdooError::Api {
@@ -257,7 +227,7 @@ async fn proxy_send_streaming(
     })?;
     let url = request.url().to_string();
 
-    let response = _state.http_client.execute(request).await.map_err(|e| {
+    let response = state.http_client.execute(request).await.map_err(|e| {
         tracing::warn!("Odoo unreachable at {url}: {e}");
         OdooError::Unreachable(format!("Odoo not reachable: {e}"))
     })?;
@@ -265,11 +235,19 @@ async fn proxy_send_streaming(
     let status = response.status();
     let odoo_headers = response.headers().clone();
 
-    let stream = response
-        .bytes_stream()
-        .map(|r| r.map_err(|e| std::io::Error::other(e.to_string())));
+    let body = if streaming {
+        let stream = response
+            .bytes_stream()
+            .map(|r| r.map_err(|e| std::io::Error::other(e.to_string())));
+        axum::body::Body::from_stream(stream)
+    } else {
+        let body_bytes = response
+            .bytes()
+            .await
+            .map_err(|e| OdooError::Http(e.without_url()))?;
+        axum::body::Body::from(body_bytes)
+    };
 
-    let body = axum::body::Body::from_stream(stream);
     build_proxy_response(status, &odoo_headers, body)
 }
 
@@ -298,7 +276,7 @@ fn matches_proxy_header_ignore_case(name: &str) -> bool {
 }
 
 /// Build axum Response from Odoo response status + headers + body.
-fn build_proxy_response(
+pub(crate) fn build_proxy_response(
     status: reqwest::StatusCode,
     odoo_headers: &HeaderMap,
     body: axum::body::Body,

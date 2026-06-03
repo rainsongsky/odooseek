@@ -7,6 +7,7 @@
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
+use futures::StreamExt;
 use serde::Deserialize;
 
 use crate::AppState;
@@ -123,32 +124,12 @@ pub async fn download_report(
 
     let status = response.status();
     let odoo_headers = response.headers().clone();
-    let body_bytes = response
-        .bytes()
-        .await
-        .map_err(|e| OdooError::Http(e.without_url()))?;
 
-    // Build axum response, forwarding content-type and content-disposition
-    let mut builder = Response::builder().status(status);
+    let stream = response
+        .bytes_stream()
+        .map(|r| r.map_err(|e| std::io::Error::other(e.to_string())));
 
-    for (key, value) in odoo_headers.iter() {
-        let name = key.as_str();
-        if matches!(
-            name,
-            "content-type" | "content-disposition" | "content-length" | "cache-control" | "etag"
-        ) && let Ok(v) = value.to_str()
-        {
-            builder = builder.header(name, v);
-        }
-    }
-
-    builder
-        .body(axum::body::Body::from(body_bytes))
-        .map_err(|e| {
-            AppError(OdooError::InvalidResponse(format!(
-                "Failed to build response: {e}"
-            )))
-        })
+    crate::proxy::build_proxy_response(status, &odoo_headers, axum::body::Body::from_stream(stream))
 }
 
 /// GET /api/report/barcode/{barcode_type}/{value}
@@ -183,26 +164,10 @@ pub async fn proxy_barcode(
 
     let status = response.status();
     let odoo_headers = response.headers().clone();
-    let body_bytes = response
-        .bytes()
-        .await
-        .map_err(|e| OdooError::Http(e.without_url()))?;
 
-    let mut builder = Response::builder().status(status);
-    for (key, value) in odoo_headers.iter() {
-        let name = key.as_str();
-        if matches!(name, "content-type" | "content-length" | "cache-control")
-            && let Ok(v) = value.to_str()
-        {
-            builder = builder.header(name, v);
-        }
-    }
+    let stream = response
+        .bytes_stream()
+        .map(|r| r.map_err(|e| std::io::Error::other(e.to_string())));
 
-    builder
-        .body(axum::body::Body::from(body_bytes))
-        .map_err(|e| {
-            AppError(OdooError::InvalidResponse(format!(
-                "Failed to build barcode response: {e}"
-            )))
-        })
+    crate::proxy::build_proxy_response(status, &odoo_headers, axum::body::Body::from_stream(stream))
 }
