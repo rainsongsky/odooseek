@@ -19,9 +19,11 @@ import {
 import { CodeEditorWidget } from './code-editor'
 import { DaterangeWidget } from './daterange'
 import { DomainWidget } from './domain'
+import { FieldSelectorWidget } from './field-selector'
 import { FilterableSelectionWidget } from './filterable-selection'
 import { FloatFactorWidget } from './float-factor'
 import { GaugeWidget, StatInfoWidget } from './gauge-statinfo'
+import { JsonCheckboxesWidget, JsonWidget } from './json-widgets'
 import { Many2ManyAvatarUserWidget } from './many2many-avatar'
 import { Many2ManyBinaryWidget } from './many2many-binary'
 import { BinaryWidget, ImageFieldWidget } from './media'
@@ -115,6 +117,7 @@ export {
   DomainWidget,
   DynamicSelectionWidget,
   EmailWidget,
+  FieldSelectorWidget,
   FilterableSelectionWidget,
   FloatFactorWidget,
   FloatTimeWidget,
@@ -125,6 +128,8 @@ export {
   ImageFieldWidget,
   ImageUrlWidget,
   IntegerWidget,
+  JsonCheckboxesWidget,
+  JsonWidget,
   KanbanActivityWidget,
   LabelSelectionWidget,
   Many2ManyAvatarUserWidget,
@@ -251,6 +256,10 @@ const WIDGET_OVERRIDES: Record<string, React.ComponentType<FieldWidgetProps>> = 
   activity_exception: ActivityExceptionWidget,
   dynamic_selection: DynamicSelectionWidget,
   project_task_state_selection: ProjectTaskStateWidget,
+  field_selector: FieldSelectorWidget,
+  json: JsonWidget,
+  json_checkboxes: JsonCheckboxesWidget,
+  account_json_checkboxes: JsonCheckboxesWidget,
 }
 
 const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
