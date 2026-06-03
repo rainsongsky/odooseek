@@ -26,16 +26,26 @@ impl RateLimiter {
     }
 
     /// Check if request is allowed. Returns true if within limit.
+    /// Recovers from poisoned mutex gracefully instead of panicking.
     pub fn check(&self, key: &str) -> bool {
-        let mut buckets = self.buckets.lock().unwrap();
+        let mut buckets = self.buckets.lock().unwrap_or_else(|e| e.into_inner());
+        Self::check_inner(&mut buckets, self.max_requests, self.window_secs, key)
+    }
+
+    fn check_inner(
+        buckets: &mut HashMap<String, (u32, Instant)>,
+        max_requests: u32,
+        window_secs: u64,
+        key: &str,
+    ) -> bool {
         let now = Instant::now();
         let entry = buckets
             .entry(key.to_string())
-            .or_insert_with(|| (self.max_requests, now));
+            .or_insert_with(|| (max_requests, now));
 
         // Reset window if expired
-        if now.duration_since(entry.1).as_secs() >= self.window_secs {
-            entry.0 = self.max_requests;
+        if now.duration_since(entry.1).as_secs() >= window_secs {
+            entry.0 = max_requests;
             entry.1 = now;
         }
 
@@ -48,8 +58,9 @@ impl RateLimiter {
     }
 
     /// Periodic cleanup of expired entries.
+    /// Recovers from poisoned mutex gracefully instead of panicking.
     pub fn cleanup(&self) {
-        let mut buckets = self.buckets.lock().unwrap();
+        let mut buckets = self.buckets.lock().unwrap_or_else(|e| e.into_inner());
         let now = Instant::now();
         buckets.retain(|_, (_, start)| now.duration_since(*start).as_secs() < self.window_secs * 2);
     }
@@ -92,5 +103,18 @@ mod tests {
         limiter.check("expired");
         limiter.cleanup();
         assert!(limiter.check("expired"));
+    }
+
+    #[test]
+    fn test_recovers_from_poisoned_mutex() {
+        let limiter = RateLimiter::new(10, 60);
+        // Manually poison the mutex
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = limiter.buckets.lock().unwrap();
+            panic!("simulate panic while holding lock");
+        }));
+        // After poison, check() and cleanup() should still work
+        assert!(limiter.check("recovered"));
+        limiter.cleanup();
     }
 }

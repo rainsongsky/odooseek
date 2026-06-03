@@ -142,8 +142,8 @@ async fn main() -> anyhow::Result<()> {
     let frontend_dir = config.frontend_dir.clone();
     let app = Router::new()
         .route("/health", get(health_check))
-        .route("/api/menu", get(menu::get_menu))
-        .route("/api/menus", get(menu::get_menus))
+        .route("/api/menu", get(menu_handler))
+        .route("/api/menus", get(menus_handler))
         .route("/api/session", get(get_session_info))
         .route("/api/session/languages", get(get_languages))
         .route("/api/session/modules", get(get_modules))
@@ -372,14 +372,56 @@ async fn session_check(
     session::check(state, headers).await
 }
 
+// ── Menu handlers with rate limiting ────────────────────────────────
+
+async fn menu_handler(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Result<impl IntoResponse, AppError> {
+    let client_ip = addr.ip().to_string();
+    if !state.menu_rate_limiter.check(&client_ip) {
+        return Err(AppError(odoo_core::error::OdooError::Api {
+            code: 429,
+            message: "Too many menu requests. Try again later.".into(),
+            data: None,
+        }));
+    }
+    menu::get_menu(State(state)).await
+}
+
+async fn menus_handler(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
+    let client_ip = addr.ip().to_string();
+    if !state.menu_rate_limiter.check(&client_ip) {
+        return Err(AppError(odoo_core::error::OdooError::Api {
+            code: 429,
+            message: "Too many menu requests. Try again later.".into(),
+            data: None,
+        }));
+    }
+    menu::get_menus(State(state), headers).await
+}
+
 // ── Report download proxy ──────────────────────────────────────────
 
 async fn download_report(
-    state: State<AppState>,
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     query: axum::extract::Query<report::ReportParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    report::download_report(state, headers, query).await
+    let client_ip = addr.ip().to_string();
+    if !state.report_rate_limiter.check(&client_ip) {
+        return Err(AppError(odoo_core::error::OdooError::Api {
+            code: 429,
+            message: "Too many report downloads. Try again later.".into(),
+            data: None,
+        }));
+    }
+    report::download_report(State(state), headers, query).await
 }
 
 async fn proxy_barcode(
