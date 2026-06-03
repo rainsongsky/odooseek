@@ -5,15 +5,16 @@ import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { DialogProvider } from '../../hooks/useDialog'
+import { ToastProvider } from '../../hooks/useToast'
 import { OdooFormRenderer } from '../OdooFormRenderer'
 
 const mockCallKw = vi.fn()
 const mockCallButton = vi.fn()
 const mockLoadAction = vi.fn()
-vi.mock('@odooseek/odoo-client', async (original) => {
-  const actual = await original()
+vi.mock('@odooseek/odoo-client', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('@odooseek/odoo-client')
   return {
-    ...(actual as Record<string, unknown>),
+    ...actual,
     callKw: (...args: unknown[]) => mockCallKw(...args),
     callButton: (...args: unknown[]) => mockCallButton(...args),
     loadAction: (...args: unknown[]) => mockLoadAction(...args),
@@ -24,7 +25,9 @@ let queryClient: QueryClient
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
-    <DialogProvider>{children}</DialogProvider>
+    <ToastProvider>
+      <DialogProvider>{children}</DialogProvider>
+    </ToastProvider>
   </QueryClientProvider>
 )
 
@@ -838,5 +841,41 @@ describe('OdooFormRenderer', () => {
     })
 
     expect(container.querySelector('.o_group_nested_row')).toBeTruthy()
+  })
+})
+
+describe('OdooFormRenderer real-time validation', () => {
+  beforeEach(() => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    mockCallKw.mockReset()
+    mockCallKw.mockImplementation((_model, method) => {
+      if (method === 'read') return Promise.resolve(readResult)
+      if (method === 'write') return Promise.resolve(true)
+      if (method === 'onchange') return Promise.resolve({ value: {} })
+      return Promise.resolve(undefined)
+    })
+  })
+
+  test('save shows Required error when name is cleared', async () => {
+    const user = userEvent.setup()
+
+    render(<OdooFormRenderer model="res.partner" arch={formArch} fields={fields} recordId={1} />, {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('Edit'))
+    await waitFor(() => {
+      expect(screen.getByText('Cancel')).toBeInTheDocument()
+    })
+
+    await user.clear(screen.getByDisplayValue('Test'))
+    await user.click(screen.getByText('Save'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Required/)).toBeInTheDocument()
+    })
   })
 })

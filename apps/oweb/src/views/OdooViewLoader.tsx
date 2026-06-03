@@ -49,7 +49,7 @@ const OdooGraphRenderer = lazy(() =>
   import('./OdooGraphRenderer').then((m) => ({ default: m.OdooGraphRenderer })),
 )
 const OdooCalendarRenderer = lazy(() =>
-  import('./OdooCalendarRenderer').then((m) => ({ default: m.OdooCalendarRenderer })),
+  import('./calendar/OdooCalendarRenderer').then((m) => ({ default: m.OdooCalendarRenderer })),
 )
 const OdooActivityRenderer = lazy(() =>
   import('./OdooActivityRenderer').then((m) => ({ default: m.OdooActivityRenderer })),
@@ -63,7 +63,7 @@ const viewPrefetchers: Record<string, () => Promise<unknown>> = {
   kanban: () => import('./OdooKanbanRenderer'),
   pivot: () => import('./OdooPivotRenderer'),
   graph: () => import('./OdooGraphRenderer'),
-  calendar: () => import('./OdooCalendarRenderer'),
+  calendar: () => import('./calendar/OdooCalendarRenderer'),
   activity: () => import('./OdooActivityRenderer'),
 }
 
@@ -130,10 +130,7 @@ export function OdooViewLoader({
         prev.justSaved === actions.justSaved &&
         prev.saveError === actions.saveError &&
         prev.isSaving === actions.isSaving &&
-        prev.compact === actions.compact &&
-        prev.onEdit === actions.onEdit &&
-        prev.onSave === actions.onSave &&
-        prev.onCancel === actions.onCancel
+        prev.compact === actions.compact
       ) {
         return prev
       }
@@ -288,6 +285,24 @@ export function OdooViewLoader({
       }
     },
     [recordId, toast],
+  )
+
+  const handleActionExecuted = useCallback(
+    async (actionId: number) => {
+      try {
+        const context: Record<string, unknown> = {
+          active_model: model,
+          active_id: recordId ?? false,
+          active_ids: recordId ? [recordId] : [],
+        }
+        await callKw('ir.actions.server', 'run', [[actionId]], { context })
+        toast.info('Action executed')
+        queryClient.invalidateQueries({ queryKey: ['odoo', 'get_views', model] })
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Action failed')
+      }
+    },
+    [model, recordId, toast, queryClient],
   )
 
   const handleDuplicate = useCallback(() => {
@@ -551,6 +566,7 @@ export function OdooViewLoader({
         onImport={viewType !== 'form' ? () => setShowImport(true) : undefined}
         onExport={viewType !== 'form' ? () => setShowExport(true) : undefined}
         onPrintAction={handlePrintAction}
+        onActionExecuted={handleActionExecuted}
         model={model}
         selectedIds={recordId ? [recordId] : []}
         onDuplicate={viewType === 'form' && recordId ? handleDuplicate : undefined}

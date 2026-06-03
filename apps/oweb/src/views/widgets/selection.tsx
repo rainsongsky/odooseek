@@ -1,3 +1,5 @@
+import { searchRead } from '@odooseek/odoo-client'
+import { useQuery } from '@tanstack/react-query'
 import type { FieldWidgetProps } from './index'
 
 export function SelectionWidget({
@@ -37,7 +39,9 @@ export function SelectionWidget({
 export function PriorityWidget({ value, readOnly, onChange, meta }: FieldWidgetProps) {
   const selection = meta?.selection ?? []
   const max = selection.length || 3
-  const stars = Number(value) || 0
+  const currentKey = String(value ?? '0')
+  const currentIdx = selection.findIndex(([k]) => k === currentKey)
+  const stars = currentIdx >= 0 ? currentIdx + 1 : Number(value) || 0
   if (readOnly) {
     return (
       <span className="inline-flex gap-0.5 text-sm">
@@ -55,7 +59,7 @@ export function PriorityWidget({ value, readOnly, onChange, meta }: FieldWidgetP
         <button
           key={i}
           type="button"
-          onClick={() => onChange(i + 1)}
+          onClick={() => onChange(selection[i]?.[0] ?? String(i))}
           title={selection[i]?.[1] ?? `Level ${i + 1}`}
           className={`text-sm ${i < stars ? 'text-warning' : 'text-border-default hover:text-warning/80'}`}
         >
@@ -99,8 +103,67 @@ export function StateBadgeWidget({ value, meta }: FieldWidgetProps) {
 
 // ── Statusbar Widget (Phase 24) ────────────────────────────────────
 
-export function StatusbarWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
+interface StageInfo {
+  id: number
+  name: string
+  sequence: number
+  fold?: boolean
+}
+
+function useStages(relation: string | undefined): StageInfo[] {
+  const { data } = useQuery({
+    queryKey: ['odoo', 'stages', relation],
+    queryFn: () => {
+      if (!relation) return []
+      return searchRead<StageInfo[]>(relation, [], ['name', 'sequence', 'fold'], 0, 100, 'sequence')
+    },
+    enabled: !!relation,
+    staleTime: 5 * 60_000,
+  })
+  return data ?? []
+}
+
+export function StatusbarWidget({ value, onChange, readOnly, field, meta }: FieldWidgetProps) {
+  // Many2one stage field — always call hook (enabled guards internally)
+  const stageRelation = meta?.relation
+  const stages = useStages(stageRelation)
+  const stageId = Array.isArray(value) ? (value as [number, string])[0] : null
+
+  // Selection field (simple state list)
   const selection = meta?.selection ?? []
+
+  if (stages.length > 0) {
+    const currentIdx = stages.findIndex((s) => s.id === stageId)
+
+    return (
+      <div className="flex items-center gap-0.5">
+        {stages.map((stage, i) => {
+          const isCurrent = stage.id === stageId
+          const isPast = currentIdx >= 0 && i < currentIdx
+          return (
+            <button
+              key={stage.id}
+              type="button"
+              disabled={readOnly || isCurrent}
+              title={stage.name}
+              onClick={() => onChange([stage.id, stage.name])}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${
+                isCurrent
+                  ? 'bg-accent text-on-accent'
+                  : isPast
+                    ? 'bg-success/15 text-success hover:bg-success/25'
+                    : 'bg-elevated text-text-muted hover:bg-hover'
+              }`}
+            >
+              {stage.name}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // Fallback: selection-based statusbar
   const currentVal = String(value ?? '')
   const currentIdx = selection.findIndex(([k]) => k === currentVal)
 
