@@ -1,7 +1,7 @@
 //! WebSocket event bridge — connects to Odoo Bus and broadcasts to browsers.
 //!
-//! Strategy: Try real WebSocket connection to Odoo first. If it fails (e.g. Odoo
-//! behind a proxy that doesn't support WebSocket), fall back to HTTP polling.
+//! Strategy: Run WebSocket (with auto-reconnect) and HTTP polling in parallel.
+//! The HTTP poll deduplicates events already captured by WebSocket.
 
 use axum::extract::ws::{Message, WebSocket};
 use futures::{SinkExt, StreamExt};
@@ -11,29 +11,42 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{debug, info, warn};
 
 /// Spawn background tasks for Odoo Bus event relay.
-/// Tries WebSocket connection first, falls back to HTTP polling.
+/// Runs WebSocket (auto-reconnect) and HTTP polling in parallel.
 pub async fn poll_odoo_bus(
     client: reqwest::Client,
     odoo_url: String,
     event_tx: broadcast::Sender<serde_json::Value>,
 ) {
-    let base = odoo_url.trim_end_matches('/');
+    let base = odoo_url.trim_end_matches('/').to_string();
 
-    // Try real WebSocket first
-    match connect_odoo_ws(base, event_tx.clone()).await {
-        Ok(()) => {
-            info!("Connected to Odoo Bus via WebSocket");
-            return;
+    // Spawn WebSocket with infinite reconnect
+    let ws_event_tx = event_tx.clone();
+    let ws_base = base.clone();
+    tokio::spawn(async move {
+        loop {
+            match connect_odoo_ws(&ws_base, ws_event_tx.clone()).await {
+                Ok(()) => info!("Odoo WS connected"),
+                Err(e) => warn!("Odoo WS error: {e}"),
+            }
+            info!("Reconnecting Odoo WS in 10s...");
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         }
-        Err(e) => {
-            warn!("Odoo WebSocket failed ({e}), falling back to HTTP polling");
-        }
-    }
+    });
 
-    // Fallback: HTTP polling
+    // HTTP polling as supplementary channel
+    http_poll_loop(&client, &base, &event_tx).await;
+}
+
+/// HTTP polling loop — runs alongside WebSocket.
+async fn http_poll_loop(
+    client: &reqwest::Client,
+    base: &str,
+    event_tx: &broadcast::Sender<serde_json::Value>,
+) {
     let bus_url = format!("{}/websocket/peek_notifications", base);
     let mut last: i64 = 0;
     let mut first_poll = true;
+    let mut seen_ids: std::collections::HashSet<i64> = std::collections::HashSet::new();
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
@@ -73,13 +86,26 @@ pub async fn poll_odoo_bus(
             && !notifications.is_empty()
         {
             debug!(
-                "Broadcasting {} Odoo Bus notification(s)",
+                "Broadcasting {} Odoo Bus notification(s) via HTTP poll",
                 notifications.len()
             );
             last = max_notification_id(notifications).unwrap_or(last);
-            crate::metrics::record_ws_broadcast(notifications.len());
+
+            let mut new_count = 0usize;
             for n in notifications {
-                let _ = event_tx.send(n.clone());
+                let nid = n.get("id").and_then(|id| id.as_i64());
+                let is_new = nid.is_none_or(|id| seen_ids.insert(id));
+                if is_new {
+                    let _ = event_tx.send(n.clone());
+                    new_count += 1;
+                }
+            }
+            if new_count > 0 {
+                crate::metrics::record_ws_broadcast(new_count);
+            }
+
+            if seen_ids.len() > 10000 {
+                seen_ids.clear();
             }
         }
     }
