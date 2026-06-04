@@ -5,6 +5,7 @@
 
 pub mod cache;
 pub mod csrf;
+pub mod docs;
 pub mod error;
 pub mod health;
 pub mod helpers;

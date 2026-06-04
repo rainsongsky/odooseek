@@ -4,6 +4,20 @@ use std::collections::HashMap;
 
 use crate::AppState;
 
+/// Health check endpoint.
+///
+/// Returns BFF status. Use `?deep=true` to also check Odoo connectivity.
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "health",
+    params(
+        ("deep" = Option<String>, Query, description = "Set to \"true\" to check Odoo connectivity")
+    ),
+    responses(
+        (status = 200, description = "Health status", body = serde_json::Value)
+    )
+)]
 pub async fn health_check(state: AppState, params: HashMap<String, String>) -> impl IntoResponse {
     if params.get("deep").is_some_and(|v| v == "true") {
         let url = format!("{}/web/session/get_session_info", state.odoo_url);

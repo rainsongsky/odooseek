@@ -21,9 +21,11 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tracing::info;
+use utoipa::OpenApi;
 
 use odoo_web_server::AppState;
 use odoo_web_server::csrf::{self, CsrfConfig};
+use odoo_web_server::docs;
 use odoo_web_server::error::AppError;
 use odoo_web_server::health;
 use odoo_web_server::metrics;
@@ -193,6 +195,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/event/{id}/ics", get(proxy_event_ics))
         .route("/ws/events", get(ws_events_handler))
         .merge(csrf_protected)
+        .merge(
+            utoipa_swagger_ui::SwaggerUi::new("/docs")
+                .url("/openapi.json", docs::ApiDoc::openapi()),
+        )
         .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024)) // 10 MB
         .fallback_service(ServeDir::new(&frontend_dir).append_index_html_on_directories(true))
         .layer(middleware::from_fn(metrics::http_metrics))
