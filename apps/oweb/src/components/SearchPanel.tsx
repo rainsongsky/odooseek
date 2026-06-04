@@ -1,4 +1,8 @@
-import type { ParsedSearchPanel, SearchPanelCategory } from '@odooseek/odoo-client'
+import type {
+  ParsedSearchPanel,
+  SearchPanelCategory,
+  SearchPanelField,
+} from '@odooseek/odoo-client'
 import { callKw, searchRead } from '@odooseek/odoo-client'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
@@ -27,19 +31,13 @@ export function SearchPanel({ model, searchPanel, domain, onCategoryChange }: Se
           onSelect={(id) => {
             const next = { ...activeFilters, [f.name]: id || null }
             setActiveFilters(next)
-            // Build domain from all active filters
-            const domains: unknown[] = []
+            const extra: unknown[] = []
             for (const [fieldName, val] of Object.entries(next)) {
               if (val != null) {
-                const fieldDef = panelFields.find((p) => p.name === fieldName)
-                const select = fieldDef?.select ?? 'one'
-                if (select === 'one') {
-                  domains.push([fieldName, '=', val])
-                }
+                extra.push([fieldName, '=', val])
               }
             }
-            const newDomain = domains.length > 0 ? [...domain, ...domains] : domain
-            onCategoryChange(newDomain)
+            onCategoryChange(extra)
           }}
         />
       ))}
@@ -55,15 +53,7 @@ function SearchPanelSection({
   onSelect,
 }: {
   model: string
-  field: {
-    name: string
-    select: 'one' | 'multi'
-    icon?: string
-    enableCounters: boolean
-    limit?: number
-    groupBy?: string
-    color?: string
-  }
+  field: SearchPanelField
   domain: unknown[]
   activeId: number | string | null
   onSelect: (id: number | string | null) => void
@@ -71,7 +61,6 @@ function SearchPanelSection({
   const [expanded, setExpanded] = useState(true)
   const [showAll, setShowAll] = useState(false)
 
-  // Use the search panel API to get categories
   const queryKey = ['odoo', 'searchpanel', model, field.name, JSON.stringify(domain)]
   const { data: categories, isLoading } = useQuery({
     queryKey,
@@ -95,7 +84,6 @@ function SearchPanelSection({
         })
         return (result?.values ?? []) as SearchPanelCategory[]
       } catch {
-        // Fallback: search_read the relation field
         try {
           const meta = await callKw<Record<string, { type: string; relation?: string }>>(
             model,
@@ -129,14 +117,9 @@ function SearchPanelSection({
 
   const displayCategories = useMemo(() => {
     if (!categories) return []
-    const raw = categories as SearchPanelCategory[]
-    const mapped: SearchPanelCategory[] = raw.map((c) => ({
+    const mapped: SearchPanelCategory[] = (categories as SearchPanelCategory[]).map((c) => ({
       id: c.id as number | string,
-      displayName: String(
-        c.__count != null
-          ? `${c.displayName ?? c.display_name ?? c.id} (${c.__count})`
-          : (c.displayName ?? c.display_name ?? c.id),
-      ),
+      displayName: c.displayName ?? c.display_name ?? String(c.id),
       count: c.__count,
     }))
     if (field.limit && !showAll) {
@@ -156,7 +139,11 @@ function SearchPanelSection({
       >
         {field.icon && <i className={`fa ${field.icon} w-4 text-center`} />}
         <span className="flex-1 text-left truncate">
-          {field.name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+          {field.string ||
+            field.name
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase())
+              .replace(/\bId\b/g, '')}
         </span>
         <span className="text-[10px]">{expanded ? '▼' : '►'}</span>
       </button>

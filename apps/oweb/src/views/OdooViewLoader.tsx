@@ -31,6 +31,7 @@ import { useRecordActions } from '../hooks/useRecordActions'
 import { useToast } from '../hooks/useToast'
 import { HR_EMPLOYEE_MODEL } from '../lib/hr'
 import { HR_WIZARD_STEPS } from '../lib/hr-wizards'
+import { hasJscClassHandler, JS_CLASS_COMPONENTS } from '../lib/js-class-map'
 
 // Lazy-loaded views — only fetched when the user switches to that view type
 const OdooListRenderer = lazy(() =>
@@ -54,6 +55,9 @@ const OdooCalendarRenderer = lazy(() =>
 const OdooActivityRenderer = lazy(() =>
   import('./OdooActivityRenderer').then((m) => ({ default: m.OdooActivityRenderer })),
 )
+const OdooHierarchyRenderer = lazy(() =>
+  import('./OdooHierarchyRenderer').then((m) => ({ default: m.OdooHierarchyRenderer })),
+)
 
 type OdooFormRendererRef = React.ComponentRef<typeof OdooFormRenderer>
 
@@ -65,6 +69,7 @@ const viewPrefetchers: Record<string, () => Promise<unknown>> = {
   graph: () => import('./OdooGraphRenderer'),
   calendar: () => import('./calendar/OdooCalendarRenderer'),
   activity: () => import('./OdooActivityRenderer'),
+  hierarchy: () => import('./OdooHierarchyRenderer'),
 }
 
 export function prefetchView(type: string) {
@@ -163,6 +168,7 @@ export function OdooViewLoader({
   const [showExport, setShowExport] = useState(false)
   const [searchPanelDomain, setSearchPanelDomain] = useState<unknown[]>([])
   const [mobileSearchPanelOpen, setMobileSearchPanelOpen] = useState(false)
+  const [searchPanelOpen, setSearchPanelOpen] = useState(true) // desktop toggle
   useEffect(() => {
     setRecordId(_recordId)
     setInternalRecordId(_recordId)
@@ -173,9 +179,16 @@ export function OdooViewLoader({
     setInternalRecordId(undefined)
   }, [model])
 
-  const effectiveDomain = useMemo(
+  const effectiveDomain = useMemo<unknown[]>(
     () => [...initialDomain, ...domain, ...searchPanelDomain],
     [initialDomain, domain, searchPanelDomain],
+  )
+
+  /** Domain passed to SearchPanel: base domain WITHOUT searchpanel filters,
+   *  so each section's counts are computed independently of other sections. */
+  const searchPanelBaseDomain = useMemo<unknown[]>(
+    () => [...initialDomain, ...domain],
+    [initialDomain, domain],
   )
 
   const { duplicate, archive, unarchive, remove } = useRecordActions(model)
@@ -231,6 +244,15 @@ export function OdooViewLoader({
         toast.info('Action executed')
       } else if (action.type === 'ir.actions.act_window_close') {
         onBackToList?.()
+      } else if (action.type === 'ir.actions.client') {
+        const tag = (action as Record<string, unknown>).tag as string | undefined
+        if (tag === 'event.event_barcode_scan_view') {
+          const ctx = (action as Record<string, unknown>).context as
+            | Record<string, unknown>
+            | undefined
+          const eventId = ctx?.default_event_id ?? recordId
+          window.open(`/event/registration-desk?event_id=${eventId}`, '_self')
+        }
       }
     },
     [
@@ -525,6 +547,9 @@ export function OdooViewLoader({
   }
 
   const arch = activeView?.arch ?? ''
+  const jsClassMatch = arch.match(/js_class\s*=\s*"([^"]+)"/)
+  const jsClass = jsClassMatch?.[1]
+  const hasCustomJsHandler = !!jsClass && hasJscClassHandler(jsClass)
   const viewTitle = arch.match(/<[^ ]+\s+[^>]*string\s*=\s*"([^"]+)"/i)?.[1] || undefined
   const recordName = (recordNameData?.[0]?.display_name as string) || undefined
   const toolbar = activeView?.toolbar
@@ -537,7 +562,8 @@ export function OdooViewLoader({
     internalViewType === 'pivot' ||
     internalViewType === 'graph' ||
     internalViewType === 'calendar' ||
-    internalViewType === 'activity'
+    internalViewType === 'activity' ||
+    internalViewType === 'hierarchy'
 
   const renderContent = () => (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -579,13 +605,34 @@ export function OdooViewLoader({
           searchPanel
             ? {
                 visible: true,
-                open: mobileSearchPanelOpen,
-                onToggle: () => setMobileSearchPanelOpen((open) => !open),
+                open: searchPanelOpen,
+                onToggle: () => setSearchPanelOpen((open) => !open),
               }
             : undefined
         }
       />
-      {viewType === 'list' && (
+      {hasCustomJsHandler && jsClass
+        ? (() => {
+            const CustomView = JS_CLASS_COMPONENTS[jsClass]
+            if (!CustomView) return null
+            return (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <Suspense fallback={<ListSkeleton />}>
+                  <CustomView
+                    model={model}
+                    arch={arch}
+                    fields={fields}
+                    domain={effectiveDomain}
+                    groupBy={groupBy}
+                    recordId={recordId}
+                    context={context}
+                  />
+                </Suspense>
+              </div>
+            )
+          })()
+        : null}
+      {!hasCustomJsHandler && viewType === 'list' && (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Suspense fallback={<ListSkeleton />}>
             <OdooListRenderer
@@ -599,7 +646,7 @@ export function OdooViewLoader({
           </Suspense>
         </div>
       )}
-      {viewType === 'form' && (
+      {!hasCustomJsHandler && viewType === 'form' && (
         <Suspense fallback={<FormSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {model === HR_EMPLOYEE_MODEL && recordId ? (
@@ -636,7 +683,7 @@ export function OdooViewLoader({
           </div>
         </Suspense>
       )}
-      {viewType === 'kanban' && (
+      {!hasCustomJsHandler && viewType === 'kanban' && (
         <Suspense fallback={<KanbanSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             <OdooKanbanRenderer
@@ -650,7 +697,7 @@ export function OdooViewLoader({
           </div>
         </Suspense>
       )}
-      {viewType === 'pivot' && (
+      {!hasCustomJsHandler && viewType === 'pivot' && (
         <Suspense fallback={<PivotSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             <OdooPivotRenderer
@@ -662,7 +709,7 @@ export function OdooViewLoader({
           </div>
         </Suspense>
       )}
-      {viewType === 'graph' && (
+      {!hasCustomJsHandler && viewType === 'graph' && (
         <Suspense fallback={<GraphSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             <OdooGraphRenderer
@@ -674,7 +721,7 @@ export function OdooViewLoader({
           </div>
         </Suspense>
       )}
-      {internalViewType === 'calendar' && (
+      {!hasCustomJsHandler && internalViewType === 'calendar' && (
         <Suspense fallback={<CalendarSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             <OdooCalendarRenderer
@@ -687,7 +734,7 @@ export function OdooViewLoader({
           </div>
         </Suspense>
       )}
-      {internalViewType === 'activity' && (
+      {!hasCustomJsHandler && internalViewType === 'activity' && (
         <Suspense fallback={<ListSkeleton />}>
           <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             <OdooActivityRenderer
@@ -699,6 +746,13 @@ export function OdooViewLoader({
               onRecordClick={onRowClick}
               onOpenFormDialog={openFormDialog}
             />
+          </div>
+        </Suspense>
+      )}
+      {!hasCustomJsHandler && internalViewType === 'hierarchy' && (
+        <Suspense fallback={<ListSkeleton />}>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <OdooHierarchyRenderer model={model} arch={activeView.arch} />
           </div>
         </Suspense>
       )}
@@ -718,19 +772,68 @@ export function OdooViewLoader({
             />
           )}
           <div
-            className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col bg-surface shadow-lg transition-transform duration-200 md:static md:z-auto md:w-48 md:max-w-none md:translate-x-0 md:shadow-none ${
-              mobileSearchPanelOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            className={`flex flex-col bg-surface transition-all duration-200 border-r border-border-subtle ${
+              mobileSearchPanelOpen
+                ? 'fixed inset-y-0 left-0 z-50 w-64 max-w-[85vw] shadow-lg'
+                : '-translate-x-full'
+            } md:relative md:z-auto md:max-w-none md:translate-x-0 md:shadow-none ${
+              searchPanelOpen ? 'md:w-52' : 'md:w-9'
             }`}
           >
-            <SearchPanel
-              model={model}
-              searchPanel={searchPanel}
-              domain={[...initialDomain, ...domain]}
-              onCategoryChange={(nextDomain) => {
-                setSearchPanelDomain(nextDomain)
-                setMobileSearchPanelOpen(false)
-              }}
-            />
+            {searchPanelOpen ? (
+              <>
+                <div className="flex items-center justify-between border-b border-border-subtle px-3 py-1.5">
+                  <span className="text-[10px] font-semibold uppercase text-text-muted tracking-wider">
+                    Filters
+                  </span>
+                  <button
+                    type="button"
+                    className="rounded p-0.5 text-text-muted hover:bg-hover hover:text-text-primary"
+                    onClick={() => setSearchPanelOpen(false)}
+                    title="Collapse filters"
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                  </button>
+                </div>
+                <SearchPanel
+                  model={model}
+                  searchPanel={searchPanel}
+                  domain={searchPanelBaseDomain}
+                  onCategoryChange={(searchPanelFilterDomain) => {
+                    setSearchPanelDomain(searchPanelFilterDomain)
+                    setMobileSearchPanelOpen(false)
+                  }}
+                />
+              </>
+            ) : (
+              <button
+                type="button"
+                className="flex flex-1 flex-col items-center gap-1 py-3 text-text-muted hover:bg-hover hover:text-text-primary"
+                onClick={() => setSearchPanelOpen(true)}
+                title="Expand filters"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+                <span className="text-[9px] font-medium uppercase writing-vertical">Filters</span>
+              </button>
+            )}
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {renderContent()}

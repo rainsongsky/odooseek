@@ -3,6 +3,104 @@ import { evalCondition, getValue } from '@odooseek/odoo-client'
 import React from 'react'
 import { getFieldWidget, NOOP } from '../widgets'
 
+/** Translate Odoo/Bootstrap CSS classes to Tailwind equivalents. */
+function translateOdooClass(className?: string): string | undefined {
+  if (!className) return undefined
+  return className
+    .split(/\s+/)
+    .map((c) => ODOO_TO_TW[c] ?? c)
+    .filter(Boolean)
+    .join(' ')
+}
+
+const ODOO_TO_TW: Record<string, string> = {
+  // Display
+  'd-flex': 'flex',
+  'd-block': 'block',
+  'd-inline-block': 'inline-block',
+  'd-inline': 'inline',
+  // Flex
+  'flex-row': 'flex-row',
+  'flex-column': 'flex-col',
+  'justify-content-center': 'justify-center',
+  'align-items-center': 'items-center',
+  'align-items-end': 'items-end',
+  // Spacing (Bootstrap → Tailwind)
+  'm-0': 'm-0',
+  'm-1': 'm-1',
+  'm-2': 'm-2',
+  'mt-0': 'mt-0',
+  'mt-1': 'mt-1',
+  'mt-2': 'mt-2',
+  'mb-0': 'mb-0',
+  'mb-1': 'mb-1',
+  'mb-2': 'mb-2',
+  'ms-0': 'ml-0',
+  'ms-1': 'ml-1',
+  'ms-2': 'ml-2',
+  'ms-auto': 'ml-auto',
+  'me-0': 'mr-0',
+  'me-1': 'mr-1',
+  'me-2': 'mr-2',
+  'me-auto': 'mr-auto',
+  'ps-0': 'pl-0',
+  'ps-1': 'pl-1',
+  'ps-2': 'pl-2',
+  'pe-0': 'pr-0',
+  'p-0': 'p-0',
+  'p-1': 'p-1',
+  'p-2': 'p-2',
+  'px-0': 'px-0',
+  'px-2': 'px-2',
+  'py-0': 'py-0',
+  // Positioning
+  'position-relative': 'relative',
+  'position-absolute': 'absolute',
+  'bottom-0': 'bottom-0',
+  'end-0': 'right-0',
+  'start-0': 'left-0',
+  'top-0': 'top-0',
+  // Float
+  'float-end': 'float-right',
+  'float-start': 'float-left',
+  // Width / height
+  'w-25': 'w-1/4',
+  'w-50': 'w-1/2',
+  'w-75': 'w-3/4',
+  'w-100': 'w-full',
+  'h-25': 'h-1/4',
+  'h-50': 'h-1/2',
+  'h-75': 'h-3/4',
+  'h-100': 'h-full',
+  'h-auto': 'h-auto',
+  'mw-100': 'max-w-full',
+  'mh-100': 'max-h-full',
+  // Typography
+  'fw-bold': 'font-bold',
+  'fw-normal': 'font-normal',
+  'fs-4': 'text-xl',
+  'fs-5': 'text-lg',
+  'fs-6': 'text-base',
+  'text-truncate': 'truncate',
+  'text-end': 'text-end',
+  'text-center': 'text-center',
+  // Background
+  'bg-100': 'bg-muted',
+  'bg-light': 'bg-muted',
+  'bg-white': 'bg-white',
+  'bg-gradient': 'bg-gradient-to-b from-transparent to-black/5',
+  // Misc
+  'opacity-50': 'opacity-50',
+  'object-fit-contain': 'object-contain',
+  // Odoo-specific kanban layout classes
+  o_kanban_aside_full: 'shrink-0 w-16 aspect-square overflow-hidden rounded',
+  o_kanban_card_full: 'w-full',
+  o_hr_employee_kanban: '',
+  // Odoo color utilities
+  'text-primary': 'text-accent',
+  'text-bg-danger': 'bg-red-500 text-white',
+}
+
 export function formatKanbanField(value: unknown, meta: OdooFieldMeta): string {
   if (value == null || value === false) return ''
   if (typeof value === 'boolean') return value ? '\u2713' : ''
@@ -52,6 +150,13 @@ export function KanbanNode({
       const meta = fields[node.name]
       if (!meta) return null
 
+      // optional="hide": skip rendering when value is null/empty
+      if (node.optional === 'hide') {
+        const val = record[node.name]
+        if (val == null || val === false || val === '') return null
+        if (Array.isArray(val) && val.length === 0) return null
+      }
+
       if (node.widget === 'background_image') {
         const Widget = getFieldWidget(
           { type: 'field', name: node.name, widget: node.widget, options: node.options },
@@ -73,14 +178,16 @@ export function KanbanNode({
 
       if (
         node.widget === 'image' &&
-        (meta.type === 'binary' || meta.name.toLowerCase().startsWith('image'))
+        (meta.type === 'binary' ||
+          meta.name.toLowerCase().startsWith('image') ||
+          meta.name.toLowerCase().startsWith('avatar'))
       ) {
         const size = node.options?.size as [number, number] | undefined
         if (size && Array.isArray(size)) {
           return (
             <img
               src={`/api/web/image/${model}/${recordId}/${node.name}`}
-              className={node.class}
+              className={translateOdooClass(node.class)}
               width={size[0]}
               height={size[1]}
               loading="lazy"
@@ -94,7 +201,9 @@ export function KanbanNode({
         return (
           <img
             src={`/api/web/image/${model}/${recordId}/${node.name}`}
-            className={[node.class, imgClass].filter(Boolean).join(' ')}
+            className={[translateOdooClass(node.class), translateOdooClass(imgClass)]
+              .filter(Boolean)
+              .join(' ')}
             loading="lazy"
             onError={(e) => {
               ;(e.target as HTMLElement).style.display = 'none'
@@ -104,7 +213,11 @@ export function KanbanNode({
       }
 
       if (!node.widget) {
-        return <div className={node.class}>{formatKanbanField(record[node.name], meta)}</div>
+        return (
+          <div className={translateOdooClass(node.class)}>
+            {formatKanbanField(record[node.name], meta)}
+          </div>
+        )
       }
 
       const Widget = getFieldWidget(
@@ -112,7 +225,7 @@ export function KanbanNode({
         meta.type,
       )
       return (
-        <div className={node.class}>
+        <div className={translateOdooClass(node.class)}>
           <Widget
             field={{ type: 'field', name: node.name, widget: node.widget, options: node.options }}
             value={record[node.name]}
@@ -241,7 +354,7 @@ export function KanbanNode({
     case 'html':
       return React.createElement(
         node.tag,
-        { className: node.class, key: undefined },
+        { className: translateOdooClass(node.class) || undefined, key: undefined },
         ...node.children.map((c, i) => (
           <KanbanNode
             key={i}

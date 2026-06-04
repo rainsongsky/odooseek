@@ -317,13 +317,169 @@ const WIDGET_ALIASES: Record<string, keyof typeof WIDGET_OVERRIDES> = {
   timesheet_uom_no_toggle: 'timesheet_uom',
   many2many_avatar_employee: 'many2many_avatar_user',
   website_redirect: 'website_redirect_button',
+  // Event module
+  event_state_selection: 'state_selection',
+  event_icon_selection: 'selection',
+  EventMailTemplateReferenceField: 'many2one',
+  // Stock module
+  forecast_widget: 'gauge',
+  counted_quantity_widget: 'float',
+  stock_action_field: 'statinfo',
+  package_m2o: 'many2one',
+  package_m2m: 'many2many_tags',
+  pick_from: 'many2one',
+  sml_x2_many: 'one2many',
+  move_product_label_field: 'many2one',
+  stock_rescheduling_popover: 'many2one',
+  many2many_barcode_tags: 'many2many_tags',
+  picking_type_dashboard_graph: 'gauge',
+  stock_move_one2many: 'one2many',
+  popover_widget: 'many2one',
+  stock_forced_placeholder: 'char',
+  generate_serials: 'text',
+  import_lots: 'text',
+  // Account module
+  account_type_selection: 'selection',
+  many2many_tax_tags: 'many2many_tags',
+  open_move_widget: 'many2one',
+  line_open_move_widget: 'many2one',
+  analytic_distribution: 'many2one',
+  receipt_selector: 'selection',
+  account_move_statusbar_secured: 'statusbar',
+  invoice_payments_widget: 'many2one',
+  x2many_buttons: 'many2one',
+  actionable_errors: 'many2one',
+  many2many_tags_banks: 'many2many_tags',
+  account_tax_repartition_line_factor_percent: 'float',
+  // Sale module
+  sol_o2m: 'one2many',
+  sol_product_many2one: 'many2one',
+  sol_text: 'text',
+  'account-tax-totals-field': 'text',
+  // CRM module — extras not already in aliases
+  open_match_line_widget: 'many2one',
+  monetary_no_zero: 'monetary',
+  // Purchase module
+  purchase_file_uploader: 'binary',
+  product_label_section_and_note_field: 'many2one',
+  product_label_section_and_note_field_o2m: 'one2many',
+  toaster_button: 'many2one',
+  // Project module
+  project_is_favorite: 'boolean_favorite',
+  project_state_selection: 'state_selection',
+  status_with_color: 'selection_badge',
+  name_with_subtask_count: 'many2one',
+  statusbar_duration: 'statusbar',
+  // MRP module
+  mrp_timer: 'float',
+  mrp_workorder_popover: 'many2one',
+  mrp_remaining_days_unformatted: 'remaining_days',
+  mrp_should_consume: 'boolean',
+  // Calendar module
+  many2manyattendee: 'many2many_tags',
+  many2manyattendeeexpandable: 'many2many_tags',
+  calendar_week_days: 'many2many_checkboxes',
+  calendar_event_notes_html: 'text',
+  // HR Holidays / Time Off
+  hr_holidays_radio_image: 'image_url',
+  float_time_selection: 'float_time',
+  day_selection: 'selection',
+  float_without_trailing_zeros: 'float',
+  // Helpdesk
+  helpdesk_sla_many2many_tags: 'many2many_tags',
+  helpdesk_smiley_badge: 'selection_badge',
+  // Survey
+  radio_selection_with_filter: 'radio',
+  boolean_update_flag: 'boolean',
+  integer_update_flag: 'integer',
+  // POS
+  many2many_tags_placeholder_list_view: 'many2many_tags',
+  section_one2many: 'one2many',
+  // Payroll
+  hr_payroll_status_bubble: 'selection_badge',
+  actionable_warnings: 'selection_badge',
+  formatted_text_preview: 'text',
+  salary_attachment_2many: 'many2many',
+  payrun_binary: 'binary',
+  // Lunch
+  lunch_is_favorite: 'boolean_favorite',
+  // Knowledge
+  knowledge_html: 'text',
+  knowledge_icon: 'selection',
+  char_emojis: 'text',
+  text_emojis: 'text',
+  // Documents
+  document_favorite: 'boolean_favorite',
+  document_size: 'text',
+  documents_folder_many2one: 'many2one',
+  documents_kanban_activity: 'kanban_activity',
+  documents_type_icon: 'selection',
+  // Sign
+  sign_request_documents_dropdown: 'many2one',
+  // Mass Mailing
+  mass_mailing_html: 'text',
+  // Social
+  social_post_formatter: 'text',
+  social_many2many_images: 'many2many',
+  // Website
+  page_url: 'url',
+  // SMS / WhatsApp / VoIP
+  sms_widget: 'text',
+  whatsapp_text_variables: 'text',
+  voip_call_status_badge: 'selection_badge',
+  voip_flag_phone: 'boolean',
+  voip_simple_datetime: 'date',
+  // Stock Barcode
+  barcode_handler: 'char',
+  image_preview: 'binary',
+  stock_barcode_quant_one2many: 'one2many',
+  // HR Work Entry
+  many2one_work_entry_type: 'many2one',
+  // Account misc
+  account_report_lines_list_x2many: 'one2many',
+  account_audit_progressbar: 'progressbar',
+  account_return_name_badge: 'selection_badge',
+  account_return_selection_badge: 'selection_badge',
+  open_decimal_precision_button: 'many2one',
+  autosave_many2many_tax_tags: 'many2many_tags',
+  char_with_placeholder_field: 'char',
+  char_with_placeholder_field_to_check: 'char',
+  // HR misc
+  hr_homeworking_radio_image: 'radio',
+  // Project misc
+  task_done_checkmark: 'boolean',
+  task_stage_with_state_selection: 'selection',
+  timer_start_field: 'float',
+  // Marketing Automation
+  mailing_filter: 'many2one',
+  mailing_many2one: 'many2one',
+  subscription_graph: 'gauge',
+  marketing_activity_graph: 'gauge',
+  // Appraisal
+  appraisal_percentpie: 'percentpie',
+  appraisal_remaining_days: 'remaining_days',
+  // Referral
+  CopyClipboardReferralButton: 'copy_clipboard',
+  referral_many2one_avatar_user: 'many2one_avatar',
+  // Skills
+  many2many_tags_skills: 'many2many_tags',
+  many2one_tags_skills: 'many2one',
+  skills_one2many: 'one2many',
+  resume_one2many: 'one2many',
+  formatted_date: 'date',
+  boolean_toggle_load: 'boolean_toggle',
+  // Purchase misc
+  pol_product_many2one: 'many2one',
 }
 
-function resolveWidgetOverride(widget?: string) {
-  if (!widget) return undefined
-  if (WIDGET_OVERRIDES[widget]) return WIDGET_OVERRIDES[widget]
-  const alias = WIDGET_ALIASES[widget]
-  if (alias) return WIDGET_OVERRIDES[alias]
+function resolveWidgetOverride(
+  widgetName?: string,
+): React.ComponentType<FieldWidgetProps> | undefined {
+  if (!widgetName) return undefined
+  const direct = WIDGET_OVERRIDES[widgetName]
+  if (direct) return direct
+  const aliasKey = WIDGET_ALIASES[widgetName]
+  if (aliasKey) return WIDGET_OVERRIDES[aliasKey]
   return undefined
 }
 
