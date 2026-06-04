@@ -22,8 +22,11 @@ import { Route as PurchaseIndexRouteImport } from './routes/purchase/index'
 import { Route as ProjectIndexRouteImport } from './routes/project/index'
 import { Route as ProductIndexRouteImport } from './routes/product/index'
 import { Route as MrpIndexRouteImport } from './routes/mrp/index'
+import { Route as MaintenanceIndexRouteImport } from './routes/maintenance/index'
 import { Route as InventoryIndexRouteImport } from './routes/inventory/index'
 import { Route as HrIndexRouteImport } from './routes/hr/index'
+import { Route as HolidaysIndexRouteImport } from './routes/holidays/index'
+import { Route as FleetIndexRouteImport } from './routes/fleet/index'
 import { Route as ExpensesIndexRouteImport } from './routes/expenses/index'
 import { Route as EventIndexRouteImport } from './routes/event/index'
 import { Route as CrmIndexRouteImport } from './routes/crm/index'
@@ -55,6 +58,8 @@ import { Route as MrpUnbuildsRouteImport } from './routes/mrp/unbuilds'
 import { Route as MrpRoutingsRouteImport } from './routes/mrp/routings'
 import { Route as MrpProductionsRouteImport } from './routes/mrp/productions'
 import { Route as MrpBomsRouteImport } from './routes/mrp/boms'
+import { Route as MaintenanceRequestsRouteImport } from './routes/maintenance/requests'
+import { Route as MaintenanceEquipmentRouteImport } from './routes/maintenance/equipment'
 import { Route as InventoryWarehouseRouteImport } from './routes/inventory/warehouse'
 import { Route as InventoryWaitingRouteImport } from './routes/inventory/waiting'
 import { Route as InventoryTodoRouteImport } from './routes/inventory/todo'
@@ -84,6 +89,8 @@ import { Route as HrJobsRouteImport } from './routes/hr/jobs'
 import { Route as HrEmployeesRouteImport } from './routes/hr/employees'
 import { Route as HrDirectoryRouteImport } from './routes/hr/directory'
 import { Route as HrDepartmentsRouteImport } from './routes/hr/departments'
+import { Route as HolidaysLeavesRouteImport } from './routes/holidays/leaves'
+import { Route as FleetVehiclesRouteImport } from './routes/fleet/vehicles'
 import { Route as ExpensesMyRouteImport } from './routes/expenses/my'
 import { Route as EventTypesRouteImport } from './routes/event/types'
 import { Route as EventTicketsRouteImport } from './routes/event/tickets'
@@ -138,6 +145,8 @@ import { Route as MrpUnbuildIdRouteImport } from './routes/mrp/unbuild.$id'
 import { Route as MrpRoutingIdRouteImport } from './routes/mrp/routing.$id'
 import { Route as MrpProductionIdRouteImport } from './routes/mrp/production.$id'
 import { Route as MrpBomIdRouteImport } from './routes/mrp/bom.$id'
+import { Route as MaintenanceRequestIdRouteImport } from './routes/maintenance/request.$id'
+import { Route as MaintenanceEquipmentIdRouteImport } from './routes/maintenance/equipment.$id'
 import { Route as InventoryWarehouseIdRouteImport } from './routes/inventory/warehouse.$id'
 import { Route as InventoryScrapIdRouteImport } from './routes/inventory/scrap.$id'
 import { Route as InventoryQuantIdRouteImport } from './routes/inventory/quant.$id'
@@ -152,6 +161,8 @@ import { Route as InventoryLocationIdRouteImport } from './routes/inventory/loca
 import { Route as InventoryCarrierCarrierIdRouteImport } from './routes/inventory/carrier.$carrierId'
 import { Route as HrEmployeeIdRouteImport } from './routes/hr/employee.$id'
 import { Route as HrDepartmentIdRouteImport } from './routes/hr/department.$id'
+import { Route as HolidaysLeaveIdRouteImport } from './routes/holidays/leave.$id'
+import { Route as FleetVehicleIdRouteImport } from './routes/fleet/vehicle.$id'
 import { Route as ExpensesSheetIdRouteImport } from './routes/expenses/sheet.$id'
 import { Route as ExpensesExpenseIdRouteImport } from './routes/expenses/expense.$id'
 import { Route as EventRegistrationIdRouteImport } from './routes/event/registration.$id'
@@ -233,6 +244,11 @@ const MrpIndexRoute = MrpIndexRouteImport.update({
   path: '/mrp/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MaintenanceIndexRoute = MaintenanceIndexRouteImport.update({
+  id: '/maintenance/',
+  path: '/maintenance/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InventoryIndexRoute = InventoryIndexRouteImport.update({
   id: '/inventory/',
   path: '/inventory/',
@@ -241,6 +257,16 @@ const InventoryIndexRoute = InventoryIndexRouteImport.update({
 const HrIndexRoute = HrIndexRouteImport.update({
   id: '/hr/',
   path: '/hr/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HolidaysIndexRoute = HolidaysIndexRouteImport.update({
+  id: '/holidays/',
+  path: '/holidays/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FleetIndexRoute = FleetIndexRouteImport.update({
+  id: '/fleet/',
+  path: '/fleet/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpensesIndexRoute = ExpensesIndexRouteImport.update({
@@ -398,6 +424,16 @@ const MrpBomsRoute = MrpBomsRouteImport.update({
   path: '/mrp/boms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MaintenanceRequestsRoute = MaintenanceRequestsRouteImport.update({
+  id: '/maintenance/requests',
+  path: '/maintenance/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaintenanceEquipmentRoute = MaintenanceEquipmentRouteImport.update({
+  id: '/maintenance/equipment',
+  path: '/maintenance/equipment',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InventoryWarehouseRoute = InventoryWarehouseRouteImport.update({
   id: '/inventory/warehouse',
   path: '/inventory/warehouse',
@@ -542,6 +578,16 @@ const HrDirectoryRoute = HrDirectoryRouteImport.update({
 const HrDepartmentsRoute = HrDepartmentsRouteImport.update({
   id: '/hr/departments',
   path: '/hr/departments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HolidaysLeavesRoute = HolidaysLeavesRouteImport.update({
+  id: '/holidays/leaves',
+  path: '/holidays/leaves',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FleetVehiclesRoute = FleetVehiclesRouteImport.update({
+  id: '/fleet/vehicles',
+  path: '/fleet/vehicles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpensesMyRoute = ExpensesMyRouteImport.update({
@@ -820,6 +866,16 @@ const MrpBomIdRoute = MrpBomIdRouteImport.update({
   path: '/mrp/bom/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MaintenanceRequestIdRoute = MaintenanceRequestIdRouteImport.update({
+  id: '/maintenance/request/$id',
+  path: '/maintenance/request/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaintenanceEquipmentIdRoute = MaintenanceEquipmentIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MaintenanceEquipmentRoute,
+} as any)
 const InventoryWarehouseIdRoute = InventoryWarehouseIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -889,6 +945,16 @@ const HrEmployeeIdRoute = HrEmployeeIdRouteImport.update({
 const HrDepartmentIdRoute = HrDepartmentIdRouteImport.update({
   id: '/hr/department/$id',
   path: '/hr/department/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HolidaysLeaveIdRoute = HolidaysLeaveIdRouteImport.update({
+  id: '/holidays/leave/$id',
+  path: '/holidays/leave/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FleetVehicleIdRoute = FleetVehicleIdRouteImport.update({
+  id: '/fleet/vehicle/$id',
+  path: '/fleet/vehicle/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpensesSheetIdRoute = ExpensesSheetIdRouteImport.update({
@@ -1017,6 +1083,8 @@ export interface FileRoutesByFullPath {
   '/event/tickets': typeof EventTicketsRoute
   '/event/types': typeof EventTypesRoute
   '/expenses/my': typeof ExpensesMyRoute
+  '/fleet/vehicles': typeof FleetVehiclesRoute
+  '/holidays/leaves': typeof HolidaysLeavesRoute
   '/hr/departments': typeof HrDepartmentsRoute
   '/hr/directory': typeof HrDirectoryRoute
   '/hr/employees': typeof HrEmployeesRoute
@@ -1046,6 +1114,8 @@ export interface FileRoutesByFullPath {
   '/inventory/todo': typeof InventoryTodoRoute
   '/inventory/waiting': typeof InventoryWaitingRoute
   '/inventory/warehouse': typeof InventoryWarehouseRouteWithChildren
+  '/maintenance/equipment': typeof MaintenanceEquipmentRouteWithChildren
+  '/maintenance/requests': typeof MaintenanceRequestsRoute
   '/mrp/boms': typeof MrpBomsRoute
   '/mrp/productions': typeof MrpProductionsRoute
   '/mrp/routings': typeof MrpRoutingsRoute
@@ -1077,8 +1147,11 @@ export interface FileRoutesByFullPath {
   '/crm/': typeof CrmIndexRoute
   '/event/': typeof EventIndexRoute
   '/expenses/': typeof ExpensesIndexRoute
+  '/fleet/': typeof FleetIndexRoute
+  '/holidays/': typeof HolidaysIndexRoute
   '/hr/': typeof HrIndexRoute
   '/inventory/': typeof InventoryIndexRoute
+  '/maintenance/': typeof MaintenanceIndexRoute
   '/mrp/': typeof MrpIndexRoute
   '/product/': typeof ProductIndexRoute
   '/project/': typeof ProjectIndexRoute
@@ -1100,6 +1173,8 @@ export interface FileRoutesByFullPath {
   '/event/registration/$id': typeof EventRegistrationIdRoute
   '/expenses/expense/$id': typeof ExpensesExpenseIdRoute
   '/expenses/sheet/$id': typeof ExpensesSheetIdRoute
+  '/fleet/vehicle/$id': typeof FleetVehicleIdRoute
+  '/holidays/leave/$id': typeof HolidaysLeaveIdRoute
   '/hr/department/$id': typeof HrDepartmentIdRoute
   '/hr/employee/$id': typeof HrEmployeeIdRoute
   '/inventory/carrier/$carrierId': typeof InventoryCarrierCarrierIdRoute
@@ -1114,6 +1189,8 @@ export interface FileRoutesByFullPath {
   '/inventory/quant/$id': typeof InventoryQuantIdRoute
   '/inventory/scrap/$id': typeof InventoryScrapIdRoute
   '/inventory/warehouse/$id': typeof InventoryWarehouseIdRoute
+  '/maintenance/equipment/$id': typeof MaintenanceEquipmentIdRoute
+  '/maintenance/request/$id': typeof MaintenanceRequestIdRoute
   '/mrp/bom/$id': typeof MrpBomIdRoute
   '/mrp/production/$id': typeof MrpProductionIdRoute
   '/mrp/routing/$id': typeof MrpRoutingIdRoute
@@ -1177,6 +1254,8 @@ export interface FileRoutesByTo {
   '/event/tickets': typeof EventTicketsRoute
   '/event/types': typeof EventTypesRoute
   '/expenses/my': typeof ExpensesMyRoute
+  '/fleet/vehicles': typeof FleetVehiclesRoute
+  '/holidays/leaves': typeof HolidaysLeavesRoute
   '/hr/departments': typeof HrDepartmentsRoute
   '/hr/directory': typeof HrDirectoryRoute
   '/hr/employees': typeof HrEmployeesRoute
@@ -1206,6 +1285,8 @@ export interface FileRoutesByTo {
   '/inventory/todo': typeof InventoryTodoRoute
   '/inventory/waiting': typeof InventoryWaitingRoute
   '/inventory/warehouse': typeof InventoryWarehouseRouteWithChildren
+  '/maintenance/equipment': typeof MaintenanceEquipmentRouteWithChildren
+  '/maintenance/requests': typeof MaintenanceRequestsRoute
   '/mrp/boms': typeof MrpBomsRoute
   '/mrp/productions': typeof MrpProductionsRoute
   '/mrp/routings': typeof MrpRoutingsRoute
@@ -1237,8 +1318,11 @@ export interface FileRoutesByTo {
   '/crm': typeof CrmIndexRoute
   '/event': typeof EventIndexRoute
   '/expenses': typeof ExpensesIndexRoute
+  '/fleet': typeof FleetIndexRoute
+  '/holidays': typeof HolidaysIndexRoute
   '/hr': typeof HrIndexRoute
   '/inventory': typeof InventoryIndexRoute
+  '/maintenance': typeof MaintenanceIndexRoute
   '/mrp': typeof MrpIndexRoute
   '/product': typeof ProductIndexRoute
   '/project': typeof ProjectIndexRoute
@@ -1260,6 +1344,8 @@ export interface FileRoutesByTo {
   '/event/registration/$id': typeof EventRegistrationIdRoute
   '/expenses/expense/$id': typeof ExpensesExpenseIdRoute
   '/expenses/sheet/$id': typeof ExpensesSheetIdRoute
+  '/fleet/vehicle/$id': typeof FleetVehicleIdRoute
+  '/holidays/leave/$id': typeof HolidaysLeaveIdRoute
   '/hr/department/$id': typeof HrDepartmentIdRoute
   '/hr/employee/$id': typeof HrEmployeeIdRoute
   '/inventory/carrier/$carrierId': typeof InventoryCarrierCarrierIdRoute
@@ -1274,6 +1360,8 @@ export interface FileRoutesByTo {
   '/inventory/quant/$id': typeof InventoryQuantIdRoute
   '/inventory/scrap/$id': typeof InventoryScrapIdRoute
   '/inventory/warehouse/$id': typeof InventoryWarehouseIdRoute
+  '/maintenance/equipment/$id': typeof MaintenanceEquipmentIdRoute
+  '/maintenance/request/$id': typeof MaintenanceRequestIdRoute
   '/mrp/bom/$id': typeof MrpBomIdRoute
   '/mrp/production/$id': typeof MrpProductionIdRoute
   '/mrp/routing/$id': typeof MrpRoutingIdRoute
@@ -1338,6 +1426,8 @@ export interface FileRoutesById {
   '/event/tickets': typeof EventTicketsRoute
   '/event/types': typeof EventTypesRoute
   '/expenses/my': typeof ExpensesMyRoute
+  '/fleet/vehicles': typeof FleetVehiclesRoute
+  '/holidays/leaves': typeof HolidaysLeavesRoute
   '/hr/departments': typeof HrDepartmentsRoute
   '/hr/directory': typeof HrDirectoryRoute
   '/hr/employees': typeof HrEmployeesRoute
@@ -1367,6 +1457,8 @@ export interface FileRoutesById {
   '/inventory/todo': typeof InventoryTodoRoute
   '/inventory/waiting': typeof InventoryWaitingRoute
   '/inventory/warehouse': typeof InventoryWarehouseRouteWithChildren
+  '/maintenance/equipment': typeof MaintenanceEquipmentRouteWithChildren
+  '/maintenance/requests': typeof MaintenanceRequestsRoute
   '/mrp/boms': typeof MrpBomsRoute
   '/mrp/productions': typeof MrpProductionsRoute
   '/mrp/routings': typeof MrpRoutingsRoute
@@ -1398,8 +1490,11 @@ export interface FileRoutesById {
   '/crm/': typeof CrmIndexRoute
   '/event/': typeof EventIndexRoute
   '/expenses/': typeof ExpensesIndexRoute
+  '/fleet/': typeof FleetIndexRoute
+  '/holidays/': typeof HolidaysIndexRoute
   '/hr/': typeof HrIndexRoute
   '/inventory/': typeof InventoryIndexRoute
+  '/maintenance/': typeof MaintenanceIndexRoute
   '/mrp/': typeof MrpIndexRoute
   '/product/': typeof ProductIndexRoute
   '/project/': typeof ProjectIndexRoute
@@ -1421,6 +1516,8 @@ export interface FileRoutesById {
   '/event/registration/$id': typeof EventRegistrationIdRoute
   '/expenses/expense/$id': typeof ExpensesExpenseIdRoute
   '/expenses/sheet/$id': typeof ExpensesSheetIdRoute
+  '/fleet/vehicle/$id': typeof FleetVehicleIdRoute
+  '/holidays/leave/$id': typeof HolidaysLeaveIdRoute
   '/hr/department/$id': typeof HrDepartmentIdRoute
   '/hr/employee/$id': typeof HrEmployeeIdRoute
   '/inventory/carrier/$carrierId': typeof InventoryCarrierCarrierIdRoute
@@ -1435,6 +1532,8 @@ export interface FileRoutesById {
   '/inventory/quant/$id': typeof InventoryQuantIdRoute
   '/inventory/scrap/$id': typeof InventoryScrapIdRoute
   '/inventory/warehouse/$id': typeof InventoryWarehouseIdRoute
+  '/maintenance/equipment/$id': typeof MaintenanceEquipmentIdRoute
+  '/maintenance/request/$id': typeof MaintenanceRequestIdRoute
   '/mrp/bom/$id': typeof MrpBomIdRoute
   '/mrp/production/$id': typeof MrpProductionIdRoute
   '/mrp/routing/$id': typeof MrpRoutingIdRoute
@@ -1500,6 +1599,8 @@ export interface FileRouteTypes {
     | '/event/tickets'
     | '/event/types'
     | '/expenses/my'
+    | '/fleet/vehicles'
+    | '/holidays/leaves'
     | '/hr/departments'
     | '/hr/directory'
     | '/hr/employees'
@@ -1529,6 +1630,8 @@ export interface FileRouteTypes {
     | '/inventory/todo'
     | '/inventory/waiting'
     | '/inventory/warehouse'
+    | '/maintenance/equipment'
+    | '/maintenance/requests'
     | '/mrp/boms'
     | '/mrp/productions'
     | '/mrp/routings'
@@ -1560,8 +1663,11 @@ export interface FileRouteTypes {
     | '/crm/'
     | '/event/'
     | '/expenses/'
+    | '/fleet/'
+    | '/holidays/'
     | '/hr/'
     | '/inventory/'
+    | '/maintenance/'
     | '/mrp/'
     | '/product/'
     | '/project/'
@@ -1583,6 +1689,8 @@ export interface FileRouteTypes {
     | '/event/registration/$id'
     | '/expenses/expense/$id'
     | '/expenses/sheet/$id'
+    | '/fleet/vehicle/$id'
+    | '/holidays/leave/$id'
     | '/hr/department/$id'
     | '/hr/employee/$id'
     | '/inventory/carrier/$carrierId'
@@ -1597,6 +1705,8 @@ export interface FileRouteTypes {
     | '/inventory/quant/$id'
     | '/inventory/scrap/$id'
     | '/inventory/warehouse/$id'
+    | '/maintenance/equipment/$id'
+    | '/maintenance/request/$id'
     | '/mrp/bom/$id'
     | '/mrp/production/$id'
     | '/mrp/routing/$id'
@@ -1660,6 +1770,8 @@ export interface FileRouteTypes {
     | '/event/tickets'
     | '/event/types'
     | '/expenses/my'
+    | '/fleet/vehicles'
+    | '/holidays/leaves'
     | '/hr/departments'
     | '/hr/directory'
     | '/hr/employees'
@@ -1689,6 +1801,8 @@ export interface FileRouteTypes {
     | '/inventory/todo'
     | '/inventory/waiting'
     | '/inventory/warehouse'
+    | '/maintenance/equipment'
+    | '/maintenance/requests'
     | '/mrp/boms'
     | '/mrp/productions'
     | '/mrp/routings'
@@ -1720,8 +1834,11 @@ export interface FileRouteTypes {
     | '/crm'
     | '/event'
     | '/expenses'
+    | '/fleet'
+    | '/holidays'
     | '/hr'
     | '/inventory'
+    | '/maintenance'
     | '/mrp'
     | '/product'
     | '/project'
@@ -1743,6 +1860,8 @@ export interface FileRouteTypes {
     | '/event/registration/$id'
     | '/expenses/expense/$id'
     | '/expenses/sheet/$id'
+    | '/fleet/vehicle/$id'
+    | '/holidays/leave/$id'
     | '/hr/department/$id'
     | '/hr/employee/$id'
     | '/inventory/carrier/$carrierId'
@@ -1757,6 +1876,8 @@ export interface FileRouteTypes {
     | '/inventory/quant/$id'
     | '/inventory/scrap/$id'
     | '/inventory/warehouse/$id'
+    | '/maintenance/equipment/$id'
+    | '/maintenance/request/$id'
     | '/mrp/bom/$id'
     | '/mrp/production/$id'
     | '/mrp/routing/$id'
@@ -1820,6 +1941,8 @@ export interface FileRouteTypes {
     | '/event/tickets'
     | '/event/types'
     | '/expenses/my'
+    | '/fleet/vehicles'
+    | '/holidays/leaves'
     | '/hr/departments'
     | '/hr/directory'
     | '/hr/employees'
@@ -1849,6 +1972,8 @@ export interface FileRouteTypes {
     | '/inventory/todo'
     | '/inventory/waiting'
     | '/inventory/warehouse'
+    | '/maintenance/equipment'
+    | '/maintenance/requests'
     | '/mrp/boms'
     | '/mrp/productions'
     | '/mrp/routings'
@@ -1880,8 +2005,11 @@ export interface FileRouteTypes {
     | '/crm/'
     | '/event/'
     | '/expenses/'
+    | '/fleet/'
+    | '/holidays/'
     | '/hr/'
     | '/inventory/'
+    | '/maintenance/'
     | '/mrp/'
     | '/product/'
     | '/project/'
@@ -1903,6 +2031,8 @@ export interface FileRouteTypes {
     | '/event/registration/$id'
     | '/expenses/expense/$id'
     | '/expenses/sheet/$id'
+    | '/fleet/vehicle/$id'
+    | '/holidays/leave/$id'
     | '/hr/department/$id'
     | '/hr/employee/$id'
     | '/inventory/carrier/$carrierId'
@@ -1917,6 +2047,8 @@ export interface FileRouteTypes {
     | '/inventory/quant/$id'
     | '/inventory/scrap/$id'
     | '/inventory/warehouse/$id'
+    | '/maintenance/equipment/$id'
+    | '/maintenance/request/$id'
     | '/mrp/bom/$id'
     | '/mrp/production/$id'
     | '/mrp/routing/$id'
@@ -1981,6 +2113,8 @@ export interface RootRouteChildren {
   EventTicketsRoute: typeof EventTicketsRoute
   EventTypesRoute: typeof EventTypesRoute
   ExpensesMyRoute: typeof ExpensesMyRoute
+  FleetVehiclesRoute: typeof FleetVehiclesRoute
+  HolidaysLeavesRoute: typeof HolidaysLeavesRoute
   HrDepartmentsRoute: typeof HrDepartmentsRoute
   HrDirectoryRoute: typeof HrDirectoryRoute
   HrEmployeesRoute: typeof HrEmployeesRoute
@@ -2010,6 +2144,8 @@ export interface RootRouteChildren {
   InventoryTodoRoute: typeof InventoryTodoRoute
   InventoryWaitingRoute: typeof InventoryWaitingRoute
   InventoryWarehouseRoute: typeof InventoryWarehouseRouteWithChildren
+  MaintenanceEquipmentRoute: typeof MaintenanceEquipmentRouteWithChildren
+  MaintenanceRequestsRoute: typeof MaintenanceRequestsRoute
   MrpBomsRoute: typeof MrpBomsRoute
   MrpProductionsRoute: typeof MrpProductionsRoute
   MrpRoutingsRoute: typeof MrpRoutingsRoute
@@ -2041,8 +2177,11 @@ export interface RootRouteChildren {
   CrmIndexRoute: typeof CrmIndexRoute
   EventIndexRoute: typeof EventIndexRoute
   ExpensesIndexRoute: typeof ExpensesIndexRoute
+  FleetIndexRoute: typeof FleetIndexRoute
+  HolidaysIndexRoute: typeof HolidaysIndexRoute
   HrIndexRoute: typeof HrIndexRoute
   InventoryIndexRoute: typeof InventoryIndexRoute
+  MaintenanceIndexRoute: typeof MaintenanceIndexRoute
   MrpIndexRoute: typeof MrpIndexRoute
   ProductIndexRoute: typeof ProductIndexRoute
   ProjectIndexRoute: typeof ProjectIndexRoute
@@ -2064,6 +2203,8 @@ export interface RootRouteChildren {
   EventRegistrationIdRoute: typeof EventRegistrationIdRoute
   ExpensesExpenseIdRoute: typeof ExpensesExpenseIdRoute
   ExpensesSheetIdRoute: typeof ExpensesSheetIdRoute
+  FleetVehicleIdRoute: typeof FleetVehicleIdRoute
+  HolidaysLeaveIdRoute: typeof HolidaysLeaveIdRoute
   HrDepartmentIdRoute: typeof HrDepartmentIdRoute
   HrEmployeeIdRoute: typeof HrEmployeeIdRoute
   InventoryCarrierCarrierIdRoute: typeof InventoryCarrierCarrierIdRoute
@@ -2076,6 +2217,7 @@ export interface RootRouteChildren {
   InventoryPickingTypeIdRoute: typeof InventoryPickingTypeIdRoute
   InventoryPickingIdRoute: typeof InventoryPickingIdRoute
   InventoryQuantIdRoute: typeof InventoryQuantIdRoute
+  MaintenanceRequestIdRoute: typeof MaintenanceRequestIdRoute
   MrpBomIdRoute: typeof MrpBomIdRoute
   MrpProductionIdRoute: typeof MrpProductionIdRoute
   MrpRoutingIdRoute: typeof MrpRoutingIdRoute
@@ -2185,6 +2327,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MrpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maintenance/': {
+      id: '/maintenance/'
+      path: '/maintenance'
+      fullPath: '/maintenance/'
+      preLoaderRoute: typeof MaintenanceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inventory/': {
       id: '/inventory/'
       path: '/inventory'
@@ -2197,6 +2346,20 @@ declare module '@tanstack/react-router' {
       path: '/hr'
       fullPath: '/hr/'
       preLoaderRoute: typeof HrIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/holidays/': {
+      id: '/holidays/'
+      path: '/holidays'
+      fullPath: '/holidays/'
+      preLoaderRoute: typeof HolidaysIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fleet/': {
+      id: '/fleet/'
+      path: '/fleet'
+      fullPath: '/fleet/'
+      preLoaderRoute: typeof FleetIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expenses/': {
@@ -2416,6 +2579,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MrpBomsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maintenance/requests': {
+      id: '/maintenance/requests'
+      path: '/maintenance/requests'
+      fullPath: '/maintenance/requests'
+      preLoaderRoute: typeof MaintenanceRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maintenance/equipment': {
+      id: '/maintenance/equipment'
+      path: '/maintenance/equipment'
+      fullPath: '/maintenance/equipment'
+      preLoaderRoute: typeof MaintenanceEquipmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inventory/warehouse': {
       id: '/inventory/warehouse'
       path: '/inventory/warehouse'
@@ -2617,6 +2794,20 @@ declare module '@tanstack/react-router' {
       path: '/hr/departments'
       fullPath: '/hr/departments'
       preLoaderRoute: typeof HrDepartmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/holidays/leaves': {
+      id: '/holidays/leaves'
+      path: '/holidays/leaves'
+      fullPath: '/holidays/leaves'
+      preLoaderRoute: typeof HolidaysLeavesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fleet/vehicles': {
+      id: '/fleet/vehicles'
+      path: '/fleet/vehicles'
+      fullPath: '/fleet/vehicles'
+      preLoaderRoute: typeof FleetVehiclesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expenses/my': {
@@ -2997,6 +3188,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MrpBomIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maintenance/request/$id': {
+      id: '/maintenance/request/$id'
+      path: '/maintenance/request/$id'
+      fullPath: '/maintenance/request/$id'
+      preLoaderRoute: typeof MaintenanceRequestIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maintenance/equipment/$id': {
+      id: '/maintenance/equipment/$id'
+      path: '/$id'
+      fullPath: '/maintenance/equipment/$id'
+      preLoaderRoute: typeof MaintenanceEquipmentIdRouteImport
+      parentRoute: typeof MaintenanceEquipmentRoute
+    }
     '/inventory/warehouse/$id': {
       id: '/inventory/warehouse/$id'
       path: '/$id'
@@ -3093,6 +3298,20 @@ declare module '@tanstack/react-router' {
       path: '/hr/department/$id'
       fullPath: '/hr/department/$id'
       preLoaderRoute: typeof HrDepartmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/holidays/leave/$id': {
+      id: '/holidays/leave/$id'
+      path: '/holidays/leave/$id'
+      fullPath: '/holidays/leave/$id'
+      preLoaderRoute: typeof HolidaysLeaveIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fleet/vehicle/$id': {
+      id: '/fleet/vehicle/$id'
+      path: '/fleet/vehicle/$id'
+      fullPath: '/fleet/vehicle/$id'
+      preLoaderRoute: typeof FleetVehicleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expenses/sheet/$id': {
@@ -3226,6 +3445,17 @@ const InventoryWarehouseRouteChildren: InventoryWarehouseRouteChildren = {
 const InventoryWarehouseRouteWithChildren =
   InventoryWarehouseRoute._addFileChildren(InventoryWarehouseRouteChildren)
 
+interface MaintenanceEquipmentRouteChildren {
+  MaintenanceEquipmentIdRoute: typeof MaintenanceEquipmentIdRoute
+}
+
+const MaintenanceEquipmentRouteChildren: MaintenanceEquipmentRouteChildren = {
+  MaintenanceEquipmentIdRoute: MaintenanceEquipmentIdRoute,
+}
+
+const MaintenanceEquipmentRouteWithChildren =
+  MaintenanceEquipmentRoute._addFileChildren(MaintenanceEquipmentRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
@@ -3274,6 +3504,8 @@ const rootRouteChildren: RootRouteChildren = {
   EventTicketsRoute: EventTicketsRoute,
   EventTypesRoute: EventTypesRoute,
   ExpensesMyRoute: ExpensesMyRoute,
+  FleetVehiclesRoute: FleetVehiclesRoute,
+  HolidaysLeavesRoute: HolidaysLeavesRoute,
   HrDepartmentsRoute: HrDepartmentsRoute,
   HrDirectoryRoute: HrDirectoryRoute,
   HrEmployeesRoute: HrEmployeesRoute,
@@ -3303,6 +3535,8 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryTodoRoute: InventoryTodoRoute,
   InventoryWaitingRoute: InventoryWaitingRoute,
   InventoryWarehouseRoute: InventoryWarehouseRouteWithChildren,
+  MaintenanceEquipmentRoute: MaintenanceEquipmentRouteWithChildren,
+  MaintenanceRequestsRoute: MaintenanceRequestsRoute,
   MrpBomsRoute: MrpBomsRoute,
   MrpProductionsRoute: MrpProductionsRoute,
   MrpRoutingsRoute: MrpRoutingsRoute,
@@ -3334,8 +3568,11 @@ const rootRouteChildren: RootRouteChildren = {
   CrmIndexRoute: CrmIndexRoute,
   EventIndexRoute: EventIndexRoute,
   ExpensesIndexRoute: ExpensesIndexRoute,
+  FleetIndexRoute: FleetIndexRoute,
+  HolidaysIndexRoute: HolidaysIndexRoute,
   HrIndexRoute: HrIndexRoute,
   InventoryIndexRoute: InventoryIndexRoute,
+  MaintenanceIndexRoute: MaintenanceIndexRoute,
   MrpIndexRoute: MrpIndexRoute,
   ProductIndexRoute: ProductIndexRoute,
   ProjectIndexRoute: ProjectIndexRoute,
@@ -3357,6 +3594,8 @@ const rootRouteChildren: RootRouteChildren = {
   EventRegistrationIdRoute: EventRegistrationIdRoute,
   ExpensesExpenseIdRoute: ExpensesExpenseIdRoute,
   ExpensesSheetIdRoute: ExpensesSheetIdRoute,
+  FleetVehicleIdRoute: FleetVehicleIdRoute,
+  HolidaysLeaveIdRoute: HolidaysLeaveIdRoute,
   HrDepartmentIdRoute: HrDepartmentIdRoute,
   HrEmployeeIdRoute: HrEmployeeIdRoute,
   InventoryCarrierCarrierIdRoute: InventoryCarrierCarrierIdRoute,
@@ -3369,6 +3608,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryPickingTypeIdRoute: InventoryPickingTypeIdRoute,
   InventoryPickingIdRoute: InventoryPickingIdRoute,
   InventoryQuantIdRoute: InventoryQuantIdRoute,
+  MaintenanceRequestIdRoute: MaintenanceRequestIdRoute,
   MrpBomIdRoute: MrpBomIdRoute,
   MrpProductionIdRoute: MrpProductionIdRoute,
   MrpRoutingIdRoute: MrpRoutingIdRoute,

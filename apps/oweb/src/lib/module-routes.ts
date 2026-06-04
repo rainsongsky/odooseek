@@ -162,6 +162,16 @@ export const MODEL_MODULE_ROUTES: Readonly<Record<string, ModuleRouteSpec>> = {
     listPath: '/project/milestones',
     recordPrefix: '/project/milestone',
   },
+  'fleet.vehicle': { listPath: '/fleet/vehicles', recordPrefix: '/fleet/vehicle' },
+  'maintenance.request': {
+    listPath: '/maintenance/requests',
+    recordPrefix: '/maintenance/request',
+  },
+  'maintenance.equipment': {
+    listPath: '/maintenance/equipment',
+    recordPrefix: '/maintenance/equipment',
+  },
+  'hr.leave': { listPath: '/holidays/leaves', recordPrefix: '/holidays/leave' },
 }
 
 /** Odoo 19 `actionPath` slug per module prefix (when actionPath is not a technical model name). */
@@ -206,6 +216,16 @@ export const MODULE_ACTION_PATH_ROUTES: Readonly<Record<string, Readonly<Record<
     },
     hr_attendance: {
       attendance: '/attendance/kiosk',
+    },
+    fleet: {
+      vehicles: '/fleet/vehicles',
+    },
+    maintenance: {
+      requests: '/maintenance/requests',
+      equipment: '/maintenance/equipment',
+    },
+    hr_holidays: {
+      leaves: '/holidays/leaves',
     },
   }
 
