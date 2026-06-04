@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/tanstack-react'
 import {
-  CharWidget,
-  TextWidget,
-  IntegerWidget,
-  FloatWidget,
-  BooleanWidget,
   BooleanToggleWidget,
+  BooleanWidget,
+  CharWidget,
+  FloatWidget,
+  IntegerWidget,
+  TextWidget,
 } from '../basic'
 import type { FieldWidgetProps } from '../index'
 

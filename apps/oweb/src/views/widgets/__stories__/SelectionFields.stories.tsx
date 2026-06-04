@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/tanstack-react'
-import { SelectionWidget, PriorityWidget, StatusbarWidget, StateBadgeWidget } from '../selection'
 import type { FieldWidgetProps } from '../index'
+import { PriorityWidget, SelectionWidget, StateBadgeWidget, StatusbarWidget } from '../selection'
 
 const meta: Meta = {
   title: 'Widgets/Selection Fields',

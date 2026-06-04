@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/tanstack-react'
+import type { FieldWidgetProps } from '../index'
 import {
-  EmailWidget,
-  PhoneWidget,
-  UrlWidget,
-  ProgressbarWidget,
   ColorPickerWidget,
   CopyClipboardWidget,
+  EmailWidget,
+  PhoneWidget,
+  ProgressbarWidget,
+  UrlWidget,
 } from '../utility'
-import type { FieldWidgetProps } from '../index'
 
 const meta: Meta = {
   title: 'Widgets/Utility Fields',
