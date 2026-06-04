@@ -1,5 +1,5 @@
-import { callKw } from '@odooseek/odoo-client'
 import type { ListButtonElement } from '@odooseek/odoo-client'
+import { callKw } from '@odooseek/odoo-client'
 import { useState } from 'react'
 
 export function ListButtonCell({

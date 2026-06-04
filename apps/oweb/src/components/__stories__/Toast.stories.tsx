@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/tanstack-react'
-import { ToastContainer } from '../Toast'
-import { ToastProvider, useToast } from '@/hooks/useToast'
 import { useEffect } from 'react'
+import { ToastProvider, useToast } from '@/hooks/useToast'
+import { ToastContainer } from '../Toast'
 
 function ToastDemo({
   type,
@@ -37,7 +37,7 @@ export const Success: Story = {
   render: () => <ToastDemo type="success" message="Record saved successfully" />,
 }
 
-export const Error: Story = {
+export const ErrorToast: Story = {
   render: () => <ToastDemo type="error" message="Failed to save record" />,
 }
 

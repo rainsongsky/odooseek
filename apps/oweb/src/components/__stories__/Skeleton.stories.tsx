@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/tanstack-react'
-import { ListSkeleton, FormSheetSkeleton, FormSkeleton } from '../Skeleton'
+import { FormSheetSkeleton, FormSkeleton, ListSkeleton } from '../Skeleton'
 
 const meta: Meta = {
   title: 'Components/Skeleton',
