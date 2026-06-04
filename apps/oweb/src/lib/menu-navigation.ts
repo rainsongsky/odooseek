@@ -571,6 +571,38 @@ const XMLID_ROUTE_RULES: ReadonlyArray<{ fragment: string; to: string; recordPre
     to: '/project/milestones',
     recordPrefix: '/project/milestone',
   },
+  // Fleet
+  {
+    fragment: 'menu_fleet_vehicle',
+    to: '/fleet/vehicles',
+    recordPrefix: '/fleet/vehicle',
+  },
+  {
+    fragment: 'fleet_vehicle_action',
+    to: '/fleet/vehicles',
+    recordPrefix: '/fleet/vehicle',
+  },
+  // Maintenance
+  {
+    fragment: 'maintenance_request_action',
+    to: '/maintenance/requests',
+    recordPrefix: '/maintenance/request',
+  },
+  {
+    fragment: 'maintenance_equipment_action',
+    to: '/maintenance/equipment',
+    recordPrefix: '/maintenance/equipment',
+  },
+  // HR Holidays
+  {
+    fragment: 'hr_leave_action',
+    to: '/holidays/leaves',
+    recordPrefix: '/holidays/leave',
+  },
+  {
+    fragment: 'hr_leave_allocation_action',
+    to: '/holidays/allocations',
+  },
 ]
 
 export { modulePrefixFromXmlid } from './module-routes'

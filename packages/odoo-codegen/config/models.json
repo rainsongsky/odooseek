@@ -101,6 +101,15 @@
     "hr.attendance",
     "account.analytic.line",
     "account.analytic.plan",
-    "account.tax.group"
+    "account.tax.group",
+    "fleet.vehicle",
+    "fleet.vehicle.model",
+    "fleet.vehicle.log.services",
+    "maintenance.request",
+    "maintenance.equipment",
+    "maintenance.team",
+    "hr.leave",
+    "hr.leave.type",
+    "hr.leave.allocation"
   ]
 }
