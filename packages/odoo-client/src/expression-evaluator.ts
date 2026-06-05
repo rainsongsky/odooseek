@@ -51,6 +51,7 @@ export function evalCondition(expr: string, record: Record<string, unknown>): bo
     return val == null || val === false || val === ''
   }
 
+
   // Handle: "!(expr)" — negate a parenthesized sub-expression
   const notParenMatch = expr.match(/^!\s*\((.+)\)$/)
   if (notParenMatch) {
