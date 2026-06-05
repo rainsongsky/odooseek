@@ -5,7 +5,6 @@ declare class BarcodeDetector {
   detect(image: ImageBitmapSource): Promise<Array<{ rawValue: string }>>
 }
 
-
 import { useEffect, useRef, useState } from 'react'
 
 interface BarcodeScannerProps {
