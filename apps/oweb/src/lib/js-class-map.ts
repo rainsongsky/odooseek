@@ -305,8 +305,11 @@ export const JS_CLASS_MAP: Record<string, null | JsClassLoader> = {
   analytic_pivot: null,
   analytic_list: null,
   analytic_line_grid: null,
-
   // ── Appraisal ────────────────────────────────────
+  approvals_category_kanban: null,
+  goal_kanban_view: null,
+  goal_list_view: null,
+
   appraisal_kanban_view: null,
   appraisal_list_view: null,
   appraisal_goal_delete_form: null,

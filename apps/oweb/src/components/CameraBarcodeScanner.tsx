@@ -5,6 +5,7 @@ declare class BarcodeDetector {
   detect(image: ImageBitmapSource): Promise<Array<{ rawValue: string }>>
 }
 
+
 import { useEffect, useRef, useState } from 'react'
 
 interface BarcodeScannerProps {
@@ -62,6 +63,7 @@ export function CameraBarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only effect, stopCamera reads refs
+
   useEffect(() => {
     return () => stopCamera()
   }, [])
