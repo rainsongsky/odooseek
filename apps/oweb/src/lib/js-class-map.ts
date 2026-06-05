@@ -246,12 +246,6 @@ export const JS_CLASS_MAP: Record<string, null | JsClassLoader> = {
   // ── Others ────────────────────────────────────────
   base_settings: null,
   quotation_document_kanban: null,
-  // ── Mail ─────────────────────────────────────────
-  mail_composer_form: null,
-  mail_composer_save_template_form: null,
-  mail_activity_my_kanban: null,
-  activity_calendar: null,
-  pay_run_calendar: null,
   subcontracting_portal_move_list_view: null,
   subcontracting_portal_picking_form_view: null,
   referral_kanban: null,
@@ -267,11 +261,6 @@ export const JS_CLASS_MAP: Record<string, null | JsClassLoader> = {
   transifex_code_translation_tree: null,
   theme_preview_form: null,
   theme_preview_kanban: null,
-  // ── IoT ──────────────────────────────────────────
-  iot_device_form: null,
-  add_iot_box_wizard: null,
-  no_iot_box_found_wizard: null,
-  select_printers_wizard: null,
   room_booking_gantt: null,
   auth_passkey_key_create_view_form: null,
   fec_import_wizard_form: null,
@@ -320,6 +309,7 @@ export const JS_CLASS_MAP: Record<string, null | JsClassLoader> = {
   approvals_category_kanban: null,
   goal_kanban_view: null,
   goal_list_view: null,
+
   appraisal_kanban_view: null,
   appraisal_list_view: null,
   appraisal_goal_delete_form: null,
@@ -351,8 +341,6 @@ export const JS_CLASS_MAP: Record<string, null | JsClassLoader> = {
   // ── Time Off / Work Entries ──────────────────────
   work_entries_calendar: null,
   work_entries_gantt: null,
-  salary_calculator_form_view: null,
-  worksheet_validation: null,
 }
 
 /** Pre-computed lazy component map (lazy() must be at module level per React rules). */
