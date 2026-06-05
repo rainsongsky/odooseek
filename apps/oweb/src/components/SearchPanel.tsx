@@ -14,6 +14,17 @@ interface SearchPanelProps {
   onCategoryChange: (domain: unknown[]) => void
 }
 
+/** Remove any leaf clause for `fieldName` from domain, preserving bracket groups. */
+function domainWithoutField(domain: unknown[], fieldName: string): unknown[] {
+  return domain
+    .map((node) => {
+      if (!Array.isArray(node)) return node
+      if (typeof node[0] === 'string' && node[0] === fieldName) return null
+      return node
+    })
+    .filter(Boolean) as unknown[]
+}
+
 export function SearchPanel({ model, searchPanel, domain, onCategoryChange }: SearchPanelProps) {
   const [activeFilters, setActiveFilters] = useState<Record<string, number | string | null>>({})
 
@@ -26,7 +37,7 @@ export function SearchPanel({ model, searchPanel, domain, onCategoryChange }: Se
           key={f.name}
           model={model}
           field={f}
-          domain={domain}
+          domain={domainWithoutField(domain, f.name)}
           activeId={activeFilters[f.name] ?? null}
           onSelect={(id) => {
             const next = { ...activeFilters, [f.name]: id || null }
