@@ -53,6 +53,23 @@ export type { ValidationError } from './validation'
 
 export { generateReport, generateReportByXmlId } from './report'
 
+export { EventEmitter } from './events'
+export { Mutex } from './mutex'
+export { KeepLast, KeepLastDroppedError } from './keep-last'
+
+export { normalizeOnchangeValue, normalizeValuesForRpc, validateAllFields } from './onchange-helpers'
+
+export { RecordModel, _setCallKw } from './record-model'
+export type { RecordModelConfig, RecordModelSnapshot } from './record-model'
+
+export { ListModel } from './list-model'
+export type { ListModelConfig, ListModelSnapshot, InlineEditState } from './list-model'
+
+// Wire the real callKw into RecordModel
+import { callKw } from './api'
+import { _setCallKw } from './record-model'
+_setCallKw(callKw)
+
 export type {
   ViewType, OdooFieldMeta, ViewField,
   ParsedListView, ParsedFormView, ParsedKanbanView, ParsedActivityView, ParsedSearchView, ParsedPivotView, ParsedGraphView, ParsedCalendarView, ParsedHierarchyView,
