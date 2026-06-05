@@ -167,6 +167,13 @@ export function OdooViewLoader({
   const { searchPanelOpen, mobileSearchPanelOpen, setSearchPanelOpen, setMobileSearchPanelOpen } =
     useSearchPanel()
 
+  /** Domain passed to SearchPanel: base domain WITHOUT searchpanel filters,
+   *  so each section's counts are computed independently of other sections. */
+  const searchPanelBaseDomain = useMemo<unknown[]>(
+    () => [...initialDomain, ...domain],
+    [initialDomain, domain],
+  )
+
   const { duplicate, archive, unarchive, remove } = useRecordActions(model)
 
   type ViewData = {
