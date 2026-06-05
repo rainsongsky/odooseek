@@ -315,13 +315,6 @@ export const JS_CLASS_MAP: Record<string, null | JsClassLoader> = {
   appraisal_goal_delete_form: null,
   appraisal_goal_delete_list: null,
 
-  // ── Goals ────────────────────────────────────────
-  goal_kanban_view: null,
-  goal_list_view: null,
-
-  // ── Approval ─────────────────────────────────────
-  approvals_category_kanban: null,
-
   // ── ESG (Sustainability) ──────────────────────────
   esg_carbon_emission_graph: null,
   esg_carbon_emission_kanban: null,

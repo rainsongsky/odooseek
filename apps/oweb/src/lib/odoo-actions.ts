@@ -164,5 +164,4 @@ export const ODOO_ACTION_XML_ID = {
   contacts: {
     partners: 'contacts.action_contacts',
   },
-  },
 } as const
