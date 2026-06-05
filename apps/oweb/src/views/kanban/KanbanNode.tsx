@@ -93,7 +93,6 @@ const ODOO_TO_TW: Record<string, string> = {
   'opacity-50': 'opacity-50',
   'object-fit-contain': 'object-contain',
   // Odoo-specific kanban layout classes
-<<<<<<< HEAD
   o_kanban_aside_full: 'shrink-0 w-20 aspect-square overflow-hidden rounded',
   o_kanban_card_full: 'w-full',
   o_hr_employee_kanban: '',
