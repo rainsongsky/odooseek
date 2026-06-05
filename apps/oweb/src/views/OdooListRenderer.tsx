@@ -36,12 +36,12 @@ import {
   viewFieldToFieldElement,
 } from './list/listUtils'
 import { useColumnPrefs } from './list/useColumnPrefs'
+import { useVirtualList } from './list/useVirtualList'
 import { getFieldWidget } from './widgets'
 
 function renderListCellContent(content: ReturnType<typeof renderCell>): React.ReactNode {
   if (isListCellImage(content)) {
     return (
-      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative image with error fallback
       <img
         src={content.src}
         alt=""
@@ -159,6 +159,24 @@ export function OdooListRenderer({
 
   const data = (groupedData ?? []) as unknown[]
   const groupData = groupByActive ? (groupedData as ReadGroupResult[] | undefined) : null
+
+  const enableVirtual = !groupByActive && data.length > 200
+
+  const { visibleItems: virtualRows, totalSize } = useVirtualList({
+    data: data as unknown[],
+    containerRef: tableContainerRef,
+    isEditing: (index: number) => {
+      const record = (data as Array<Record<string, unknown>>)[index]
+      return (
+        snap.inlineEdit.mode === 'editing' && snap.inlineEdit.recordId === (record?.id as number)
+      )
+    },
+    overscan: 10,
+  })
+
+  const virtualPadBefore = virtualRows.length > 0 ? virtualRows[0].start : 0
+  const virtualPadAfter =
+    virtualRows.length > 0 ? totalSize - virtualRows[virtualRows.length - 1].end : 0
 
   // Restore scroll position after data loads
   useEffect(() => {
@@ -719,6 +737,322 @@ export function OdooListRenderer({
     ],
   )
 
+  const renderThead = () => (
+    <thead>
+      <tr className="sticky top-0 z-10 border-b border-border-subtle bg-surface/95 backdrop-blur-sm">
+        <th className="w-10 px-2 py-2.5">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someSelected
+            }}
+            onChange={handleToggleAll}
+            className="h-4 w-4 cursor-pointer rounded accent-accent"
+          />
+        </th>
+        {visibleColumns.map((col, ci) => {
+          if (isNonField(col)) {
+            return (
+              <th
+                key={`h-${ci}`}
+                className="px-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary"
+                style={{ width: isButtonGroup(col) ? col.buttons.length * 40 : 60 }}
+              />
+            )
+          }
+          const meta = fields[col.name]
+          const label = col.string || meta?.string || col.name
+          const defaultWidth = FIELD_TYPE_WIDTHS[meta?.type ?? ''] ?? DEFAULT_COL_WIDTH
+          const width = colWidths[col.name] ?? defaultWidth
+          return (
+            <th
+              key={`h-${col.name}-${ci}`}
+              onClick={() => !groupByActive && handleSort(col.name)}
+              className={`relative whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary transition-colors ${!groupByActive ? 'cursor-pointer hover:text-text-primary' : ''} ${col.class ?? ''}`}
+              style={width ? { width, minWidth: 60 } : undefined}
+            >
+              {label}
+              {!groupByActive && <span className="ml-1">{sortIcon(col.name)}</span>}
+              {!groupByActive && (
+                <hr
+                  className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize border-0 bg-transparent hover:bg-accent/30"
+                  onMouseDown={(e) => startResize(col.name, e)}
+                />
+              )}
+            </th>
+          )
+        })}
+        {isEditable && <th className="w-20 px-2 py-2.5" />}
+      </tr>
+    </thead>
+  )
+
+  const renderRecordRow = (record: Record<string, unknown>, i: number) => {
+    const recordId = record.id as number
+    const isEditing = snap.inlineEdit.mode === 'editing' && snap.inlineEdit.recordId === recordId
+    const rowDeco = getDecorationClass(
+      listView.decorations as unknown as Record<string, unknown>,
+      record,
+    )
+    return (
+      <tr
+        key={recordId}
+        data-testid="list-row"
+        data-record-id={String(recordId)}
+        draggable={hasHandle && !isEditing}
+        onDragStart={
+          hasHandle
+            ? (e) => {
+                listModel.setDragRow(i)
+                e.dataTransfer.effectAllowed = 'move'
+              }
+            : undefined
+        }
+        onDragOver={
+          hasHandle
+            ? (e) => {
+                e.preventDefault()
+                listModel.setDragOverRow(i)
+              }
+            : undefined
+        }
+        onDragEnd={
+          hasHandle
+            ? () => {
+                listModel.clearDragState()
+              }
+            : undefined
+        }
+        onDrop={
+          hasHandle
+            ? () => {
+                if (snap.dragRow !== null && snap.dragRow !== i) handleDrop(snap.dragRow, i)
+              }
+            : undefined
+        }
+        onClick={() => !isEditing && handleRowClick(record)}
+        className={[
+          'border-b border-border-subtle transition-colors hover:bg-hover/50',
+          isEditing ? 'bg-accent/5' : '',
+          snap.selectedIds.has(recordId) ? 'bg-accent/5' : '',
+          !isEditable && onRowClick && !listView.noOpen ? 'cursor-pointer' : '',
+          isEditable ? 'cursor-pointer' : '',
+          snap.dragOverRow === i && snap.dragRow !== null ? 'border-t-2 border-t-accent' : '',
+          i === data.length - 1 && snap.inlineEdit.mode !== 'creating' ? 'border-b-0' : '',
+          snap.focusRow === i && snap.inlineEdit.mode === 'idle'
+            ? 'outline outline-2 outline-accent/30 outline-offset-[-2px]'
+            : '',
+          rowDeco,
+          listView.rowClass ?? '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: checkbox cell */}
+        <td role="presentation" className="w-10 px-2 py-2" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={snap.selectedIds.has(recordId)}
+            onChange={() => handleToggleRow(recordId, false, i)}
+            onClick={(e) => handleToggleRow(recordId, e.shiftKey, i)}
+            className="h-4 w-4 cursor-pointer rounded accent-accent"
+          />
+        </td>
+        {visibleColumns.map((col, ci) => {
+          if (isNonField(col)) {
+            return (
+              // biome-ignore lint/a11y/noStaticElementInteractions: button cell
+              <td
+                key={`d-${ci}`}
+                role="presentation"
+                className="px-2 py-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {isButtonGroup(col)
+                  ? col.buttons.map((btn) => (
+                      <ListButtonCell
+                        key={btn.name}
+                        btn={btn}
+                        record={record}
+                        model={model}
+                        onDone={invalidateList}
+                      />
+                    ))
+                  : isListButton(col) && (
+                      <ListButtonCell
+                        btn={col}
+                        record={record}
+                        model={model}
+                        onDone={invalidateList}
+                      />
+                    )}
+              </td>
+            )
+          }
+          const cellDeco = getDecorationClass(col as unknown as Record<string, unknown>, record)
+          const meta = fields[col.name]
+          const isReadonly = meta?.readonly || col.readonly
+
+          if (isEditing && !isReadonly) {
+            const fe = editableFieldElements[ci] as FieldElement
+            const Widget = getFieldWidget(fe, meta?.type ?? 'char')
+            const errMsg = snap.validationErrors[col.name]
+            const hasRequiredErr = errMsg === 'Required'
+            const hasTypeErr = !!errMsg && !hasRequiredErr
+            const errRing = hasRequiredErr
+              ? ' ring-1 ring-danger ring-inset'
+              : hasTypeErr
+                ? ' ring-1 ring-warning ring-inset'
+                : ''
+            return (
+              // biome-ignore lint/a11y/noStaticElementInteractions: edit cell
+              <td
+                key={`d-${col.name}-${ci}`}
+                role="presentation"
+                className={`whitespace-nowrap px-1 py-0.5${errRing}`}
+                title={errMsg ?? undefined}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {createElement(Widget, {
+                  field: fe,
+                  value: snap.inlineEdit.values[col.name],
+                  onChange: (v: unknown) => handleInlineChange(col.name, v),
+                  readOnly: false,
+                  meta,
+                })}
+              </td>
+            )
+          }
+
+          const isBooleanToggle = isEditable && !isReadonly && meta?.type === 'boolean'
+          return (
+            <td
+              key={`d-${col.name}-${ci}`}
+              role={isBooleanToggle ? 'button' : undefined}
+              tabIndex={isBooleanToggle ? 0 : undefined}
+              title={(() => {
+                const t = renderListCellContent(
+                  renderCell(record[col.name], fields[col.name], model, record.id as number),
+                )
+                if (typeof t !== 'string') return undefined
+                return t.length > 30 ? t : undefined
+              })()}
+              className={[
+                'whitespace-nowrap px-4 py-2 text-sm text-text-primary',
+                cellDeco,
+                col.class ?? '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={
+                isBooleanToggle
+                  ? () => {
+                      toggleBooleanMutation.mutate({
+                        recordId,
+                        field: col.name,
+                        value: !record[col.name],
+                      })
+                    }
+                  : undefined
+              }
+              onKeyDown={
+                isBooleanToggle
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.currentTarget.click()
+                      }
+                    }
+                  : undefined
+              }
+              style={isBooleanToggle ? { cursor: 'pointer' } : undefined}
+            >
+              {renderListCellContent(
+                renderCell(record[col.name], fields[col.name], model, record.id as number),
+              )}
+            </td>
+          )
+        })}
+        {isEditing && (
+          // biome-ignore lint/a11y/noStaticElementInteractions: save/cancel cell
+          <td
+            role="presentation"
+            className="flex items-center gap-1 px-2 py-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleInlineSave}
+              disabled={saveMutation.isPending}
+              className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
+            >
+              {saveMutation.isPending ? '...' : 'Save'}
+            </button>
+            <button
+              type="button"
+              onClick={handleInlineCancel}
+              className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
+            >
+              Cancel
+            </button>
+          </td>
+        )}
+        {isEditable && !isEditing && (
+          // biome-ignore lint/a11y/noStaticElementInteractions: delete cell
+          <td
+            role="presentation"
+            className="px-2 py-1 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {listView.delete !== false && (
+              <button
+                type="button"
+                onClick={() => {
+                  confirmDialog({
+                    title: 'Delete Record',
+                    message: 'Are you sure you want to delete this record?',
+                    confirmLabel: 'Delete',
+                    variant: 'danger',
+                    onConfirm: () => deleteMutation.mutate(recordId),
+                  })
+                }}
+                className="text-xs text-text-muted hover:text-danger"
+              >
+                ×
+              </button>
+            )}
+          </td>
+        )}
+      </tr>
+    )
+  }
+
+  const renderTfoot = () => (
+    <tfoot>
+      <tr className="border-t-2 border-border-subtle bg-surface/50 font-semibold">
+        <td className="w-10 px-2 py-2" />
+        {visibleColumns.map((col, ci) => {
+          if (isNonField(col)) return <td key={`f-${ci}`} className="px-4 py-2" />
+          const colAggs = Object.entries(aggregates)
+            .filter(([k]) => k.startsWith(`${col.name}_`))
+            .map(([, v]) => v)
+          if (!colAggs.length) return <td key={`f-${ci}`} className="px-4 py-2" />
+          return (
+            <td key={`f-${ci}`} className="whitespace-nowrap px-4 py-2 text-sm text-text-primary">
+              {colAggs.map((a, ai) => (
+                <span key={ai}>
+                  {ai > 0 ? ' · ' : ''}
+                  {a.label}: {a.value}
+                </span>
+              ))}
+            </td>
+          )
+        })}
+        {isEditable && <td className="w-20 px-2 py-2" />}
+      </tr>
+    </tfoot>
+  )
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-4">
       <div className="flex shrink-0 items-center justify-between px-1">
@@ -988,415 +1322,128 @@ export function OdooListRenderer({
             data-testid="odoo-list-view"
             className="overflow-x-auto min-h-0 flex-1 overflow-y-auto rounded-lg border border-border-subtle"
           >
-            {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: table with keyboard navigation */}
-            <table className="w-full" onKeyDown={handleTableKeyDown}>
-              <thead>
-                <tr className="sticky top-0 z-10 border-b border-border-subtle bg-surface/95 backdrop-blur-sm">
-                  <th className="w-10 px-2 py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someSelected
-                      }}
-                      onChange={handleToggleAll}
-                      className="h-4 w-4 cursor-pointer rounded accent-accent"
+            {enableVirtual ? (
+              <table className="w-full" onKeyDown={handleTableKeyDown}>
+                {renderThead()}
+                <tbody>
+                  {snap.inlineEdit.mode === 'creating' && listView.editable !== 'bottom' && (
+                    <InlineEditRow
+                      columns={visibleColumns}
+                      fieldElements={editableFieldElements}
+                      fields={fields}
+                      values={snap.inlineEdit.values}
+                      onChange={handleInlineChange}
+                      onSave={handleInlineSave}
+                      onCancel={handleInlineCancel}
+                      isSaving={saveMutation.isPending}
+                      validationErrors={snap.validationErrors}
                     />
-                  </th>
-                  {visibleColumns.map((col, ci) => {
-                    if (isNonField(col)) {
-                      return (
-                        <th
-                          key={`h-${ci}`}
-                          className="px-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary"
-                          style={{ width: isButtonGroup(col) ? col.buttons.length * 40 : 60 }}
-                        />
-                      )
-                    }
-                    const meta = fields[col.name]
-                    const label = col.string || meta?.string || col.name
-                    const defaultWidth = FIELD_TYPE_WIDTHS[meta?.type ?? ''] ?? DEFAULT_COL_WIDTH
-                    const width = colWidths[col.name] ?? defaultWidth
-                    return (
-                      <th
-                        key={`h-${col.name}-${ci}`}
-                        onClick={() => !groupByActive && handleSort(col.name)}
-                        className={`relative whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary transition-colors ${!groupByActive ? 'cursor-pointer hover:text-text-primary' : ''} ${col.class ?? ''}`}
-                        style={width ? { width, minWidth: 60 } : undefined}
-                      >
-                        {label}
-                        {!groupByActive && <span className="ml-1">{sortIcon(col.name)}</span>}
-                        {!groupByActive && (
-                          <hr
-                            className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize border-0 bg-transparent hover:bg-accent/30"
-                            onMouseDown={(e) => startResize(col.name, e)}
-                          />
-                        )}
-                      </th>
-                    )
+                  )}
+                  {virtualPadBefore > 0 && (
+                    <tr style={{ height: virtualPadBefore }}>
+                      <td />
+                    </tr>
+                  )}
+                  {virtualRows.map((vr) => {
+                    const record = (data as Array<Record<string, unknown>>)[vr.index]
+                    return record ? renderRecordRow(record, vr.index) : null
                   })}
-                  {isEditable && <th className="w-20 px-2 py-2.5" />}
-                </tr>
-              </thead>
-              <tbody>
-                {snap.inlineEdit.mode === 'creating' && listView.editable !== 'bottom' && (
-                  <InlineEditRow
-                    columns={visibleColumns}
-                    fieldElements={editableFieldElements}
-                    fields={fields}
-                    values={snap.inlineEdit.values}
-                    onChange={handleInlineChange}
-                    onSave={handleInlineSave}
-                    onCancel={handleInlineCancel}
-                    isSaving={saveMutation.isPending}
-                    validationErrors={snap.validationErrors}
-                  />
-                )}
-                {groupByActive && groupData ? (
-                  <>
-                    {groupData.map((group, i) => renderGroupNode(String(i), group, 0))}
-                    {listView.groupCreate &&
-                      groupBy.length === 1 &&
-                      fields[groupBy[0]]?.type === 'many2one' && (
-                        <tr>
-                          <td className="w-10 px-2 py-2" />
-                          <td colSpan={visibleColumns.length} className="px-4 py-1">
-                            <form
-                              onSubmit={(e) => {
-                                e.preventDefault()
-                                if (newGroupName.trim())
-                                  createGroupMutation.mutate(newGroupName.trim())
-                              }}
-                              className="flex items-center gap-2"
-                            >
-                              <input
-                                type="text"
-                                value={newGroupName}
-                                onChange={(e) => setNewGroupName(e.target.value)}
-                                placeholder="Add a group..."
-                                className="w-40 rounded border border-border-default bg-transparent px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted"
-                              />
-                              <button
-                                type="submit"
-                                disabled={!newGroupName.trim() || createGroupMutation.isPending}
-                                className="rounded bg-accent px-2 py-0.5 text-[10px] text-on-accent hover:bg-accent/90 disabled:opacity-50"
-                              >
-                                Add
-                              </button>
-                            </form>
-                          </td>
-                        </tr>
-                      )}
-                  </>
-                ) : (
-                  (data as Array<Record<string, unknown>>).map((record, i) => {
-                    const recordId = record.id as number
-                    const isEditing =
-                      snap.inlineEdit.mode === 'editing' && snap.inlineEdit.recordId === recordId
-                    const rowDeco = getDecorationClass(
-                      listView.decorations as unknown as Record<string, unknown>,
-                      record,
-                    )
-                    return (
-                      <tr
-                        key={recordId}
-                        data-testid="list-row"
-                        data-record-id={String(recordId)}
-                        draggable={hasHandle && !isEditing}
-                        onDragStart={
-                          hasHandle
-                            ? (e) => {
-                                listModel.setDragRow(i)
-                                e.dataTransfer.effectAllowed = 'move'
-                              }
-                            : undefined
-                        }
-                        onDragOver={
-                          hasHandle
-                            ? (e) => {
-                                e.preventDefault()
-                                listModel.setDragOverRow(i)
-                              }
-                            : undefined
-                        }
-                        onDragEnd={
-                          hasHandle
-                            ? () => {
-                                listModel.clearDragState()
-                              }
-                            : undefined
-                        }
-                        onDrop={
-                          hasHandle
-                            ? () => {
-                                if (snap.dragRow !== null && snap.dragRow !== i)
-                                  handleDrop(snap.dragRow, i)
-                              }
-                            : undefined
-                        }
-                        onClick={() => !isEditing && handleRowClick(record)}
-                        className={[
-                          'border-b border-border-subtle transition-colors hover:bg-hover/50',
-                          isEditing ? 'bg-accent/5' : '',
-                          snap.selectedIds.has(recordId) ? 'bg-accent/5' : '',
-                          !isEditable && onRowClick && !listView.noOpen ? 'cursor-pointer' : '',
-                          isEditable ? 'cursor-pointer' : '',
-                          snap.dragOverRow === i && snap.dragRow !== null
-                            ? 'border-t-2 border-t-accent'
-                            : '',
-                          i === data.length - 1 && snap.inlineEdit.mode !== 'creating'
-                            ? 'border-b-0'
-                            : '',
-                          snap.focusRow === i && snap.inlineEdit.mode === 'idle'
-                            ? 'outline outline-2 outline-accent/30 outline-offset-[-2px]'
-                            : '',
-                          rowDeco,
-                          listView.rowClass ?? '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        {/* biome-ignore lint/a11y/noStaticElementInteractions: checkbox cell */}
-                        <td
-                          role="presentation"
-                          className="w-10 px-2 py-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={snap.selectedIds.has(recordId)}
-                            onChange={() => handleToggleRow(recordId, false, i)}
-                            onClick={(e) => handleToggleRow(recordId, e.shiftKey, i)}
-                            className="h-4 w-4 cursor-pointer rounded accent-accent"
-                          />
-                        </td>
-                        {visibleColumns.map((col, ci) => {
-                          if (isNonField(col)) {
-                            return (
-                              // biome-ignore lint/a11y/noStaticElementInteractions: button cell
-                              <td
-                                key={`d-${ci}`}
-                                role="presentation"
-                                className="px-2 py-2"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {isButtonGroup(col)
-                                  ? col.buttons.map((btn) => (
-                                      <ListButtonCell
-                                        key={btn.name}
-                                        btn={btn}
-                                        record={record}
-                                        model={model}
-                                        onDone={invalidateList}
-                                      />
-                                    ))
-                                  : isListButton(col) && (
-                                      <ListButtonCell
-                                        btn={col}
-                                        record={record}
-                                        model={model}
-                                        onDone={invalidateList}
-                                      />
-                                    )}
-                              </td>
-                            )
-                          }
-                          const cellDeco = getDecorationClass(
-                            col as unknown as Record<string, unknown>,
-                            record,
-                          )
-                          const meta = fields[col.name]
-                          const isReadonly = meta?.readonly || col.readonly
-
-                          if (isEditing && !isReadonly) {
-                            const fe = editableFieldElements[ci] as FieldElement
-                            const Widget = getFieldWidget(fe, meta?.type ?? 'char')
-                            const errMsg = snap.validationErrors[col.name]
-                            const hasRequiredErr = errMsg === 'Required'
-                            const hasTypeErr = !!errMsg && !hasRequiredErr
-                            const errRing = hasRequiredErr
-                              ? ' ring-1 ring-danger ring-inset'
-                              : hasTypeErr
-                                ? ' ring-1 ring-warning ring-inset'
-                                : ''
-                            return (
-                              // biome-ignore lint/a11y/noStaticElementInteractions: edit cell
-                              <td
-                                key={`d-${col.name}-${ci}`}
-                                role="presentation"
-                                className={`whitespace-nowrap px-1 py-0.5${errRing}`}
-                                title={errMsg ?? undefined}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {createElement(Widget, {
-                                  field: fe,
-                                  value: snap.inlineEdit.values[col.name],
-                                  onChange: (v: unknown) => handleInlineChange(col.name, v),
-                                  readOnly: false,
-                                  meta,
-                                })}
-                              </td>
-                            )
-                          }
-
-                          const isBooleanToggle =
-                            isEditable && !isReadonly && meta?.type === 'boolean'
-                          return (
-                            // biome-ignore lint/a11y/noNoninteractiveElementInteractions: td acts as boolean toggle in editable list
-                            <td
-                              key={`d-${col.name}-${ci}`}
-                              role={isBooleanToggle ? 'button' : undefined}
-                              tabIndex={isBooleanToggle ? 0 : undefined}
-                              title={(() => {
-                                const t = renderListCellContent(
-                                  renderCell(
-                                    record[col.name],
-                                    fields[col.name],
-                                    model,
-                                    record.id as number,
-                                  ),
-                                )
-                                if (typeof t !== 'string') return undefined
-                                return t.length > 30 ? t : undefined
-                              })()}
-                              className={[
-                                'whitespace-nowrap px-4 py-2 text-sm text-text-primary',
-                                cellDeco,
-                                col.class ?? '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              onClick={
-                                isBooleanToggle
-                                  ? () => {
-                                      toggleBooleanMutation.mutate({
-                                        recordId,
-                                        field: col.name,
-                                        value: !record[col.name],
-                                      })
-                                    }
-                                  : undefined
-                              }
-                              onKeyDown={
-                                isBooleanToggle
-                                  ? (e) => {
-                                      if (e.key === 'Enter' || e.key === ' ') {
-                                        e.currentTarget.click()
-                                      }
-                                    }
-                                  : undefined
-                              }
-                              style={isBooleanToggle ? { cursor: 'pointer' } : undefined}
-                            >
-                              {renderListCellContent(
-                                renderCell(
-                                  record[col.name],
-                                  fields[col.name],
-                                  model,
-                                  record.id as number,
-                                ),
-                              )}
-                            </td>
-                          )
-                        })}
-                        {isEditing && (
-                          // biome-ignore lint/a11y/noStaticElementInteractions: save/cancel cell
-                          <td
-                            role="presentation"
-                            className="flex items-center gap-1 px-2 py-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              onClick={handleInlineSave}
-                              disabled={saveMutation.isPending}
-                              className="rounded bg-accent px-2 py-0.5 text-[11px] font-medium text-on-accent hover:bg-accent/90 disabled:opacity-50"
-                            >
-                              {saveMutation.isPending ? '...' : 'Save'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleInlineCancel}
-                              className="rounded border border-border-default px-2 py-0.5 text-[11px] text-text-secondary hover:bg-hover"
-                            >
-                              Cancel
-                            </button>
-                          </td>
-                        )}
-                        {isEditable && !isEditing && (
-                          // biome-ignore lint/a11y/noStaticElementInteractions: delete cell
-                          <td
-                            role="presentation"
-                            className="px-2 py-1 text-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {listView.delete !== false && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  confirmDialog({
-                                    title: 'Delete Record',
-                                    message: 'Are you sure you want to delete this record?',
-                                    confirmLabel: 'Delete',
-                                    variant: 'danger',
-                                    onConfirm: () => deleteMutation.mutate(recordId),
-                                  })
+                  {virtualPadAfter > 0 && (
+                    <tr style={{ height: virtualPadAfter }}>
+                      <td />
+                    </tr>
+                  )}
+                  {snap.inlineEdit.mode === 'creating' && listView.editable === 'bottom' && (
+                    <InlineEditRow
+                      columns={visibleColumns}
+                      fieldElements={editableFieldElements}
+                      fields={fields}
+                      values={snap.inlineEdit.values}
+                      onChange={handleInlineChange}
+                      onSave={handleInlineSave}
+                      onCancel={handleInlineCancel}
+                      isSaving={saveMutation.isPending}
+                      validationErrors={snap.validationErrors}
+                    />
+                  )}
+                </tbody>
+                {Object.keys(aggregates).length > 0 && renderTfoot()}
+              </table>
+            ) : (
+              <table className="w-full" onKeyDown={handleTableKeyDown}>
+                {renderThead()}
+                <tbody>
+                  {snap.inlineEdit.mode === 'creating' && listView.editable !== 'bottom' && (
+                    <InlineEditRow
+                      columns={visibleColumns}
+                      fieldElements={editableFieldElements}
+                      fields={fields}
+                      values={snap.inlineEdit.values}
+                      onChange={handleInlineChange}
+                      onSave={handleInlineSave}
+                      onCancel={handleInlineCancel}
+                      isSaving={saveMutation.isPending}
+                      validationErrors={snap.validationErrors}
+                    />
+                  )}
+                  {groupByActive && groupData ? (
+                    <>
+                      {groupData.map((group, i) => renderGroupNode(String(i), group, 0))}
+                      {listView.groupCreate &&
+                        groupBy.length === 1 &&
+                        fields[groupBy[0]]?.type === 'many2one' && (
+                          <tr>
+                            <td className="w-10 px-2 py-2" />
+                            <td colSpan={visibleColumns.length} className="px-4 py-1">
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault()
+                                  if (newGroupName.trim())
+                                    createGroupMutation.mutate(newGroupName.trim())
                                 }}
-                                className="text-xs text-text-muted hover:text-danger"
+                                className="flex items-center gap-2"
                               >
-                                ×
-                              </button>
-                            )}
-                          </td>
+                                <input
+                                  type="text"
+                                  value={newGroupName}
+                                  onChange={(e) => setNewGroupName(e.target.value)}
+                                  placeholder="Add a group..."
+                                  className="w-40 rounded border border-border-default bg-transparent px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted"
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={!newGroupName.trim() || createGroupMutation.isPending}
+                                  className="rounded bg-accent px-2 py-0.5 text-[10px] text-on-accent hover:bg-accent/90 disabled:opacity-50"
+                                >
+                                  Add
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
                         )}
-                      </tr>
+                    </>
+                  ) : (
+                    (data as Array<Record<string, unknown>>).map((record, i) =>
+                      renderRecordRow(record, i),
                     )
-                  })
-                )}
-                {snap.inlineEdit.mode === 'creating' && listView.editable === 'bottom' && (
-                  <InlineEditRow
-                    columns={visibleColumns}
-                    fieldElements={editableFieldElements}
-                    fields={fields}
-                    values={snap.inlineEdit.values}
-                    onChange={handleInlineChange}
-                    onSave={handleInlineSave}
-                    onCancel={handleInlineCancel}
-                    isSaving={saveMutation.isPending}
-                    validationErrors={snap.validationErrors}
-                  />
-                )}
-              </tbody>
-              {Object.keys(aggregates).length > 0 && (
-                <tfoot>
-                  <tr className="border-t-2 border-border-subtle bg-surface/50 font-semibold">
-                    <td className="w-10 px-2 py-2" />
-                    {visibleColumns.map((col, ci) => {
-                      if (isNonField(col)) return <td key={`f-${ci}`} className="px-4 py-2" />
-                      // Collect all aggregate entries for this column
-                      const colAggs = Object.entries(aggregates)
-                        .filter(([k]) => k.startsWith(`${col.name}_`))
-                        .map(([, v]) => v)
-                      if (!colAggs.length) return <td key={`f-${ci}`} className="px-4 py-2" />
-                      return (
-                        <td
-                          key={`f-${ci}`}
-                          className="whitespace-nowrap px-4 py-2 text-sm text-text-primary"
-                        >
-                          {colAggs.map((a, i) => (
-                            <span key={i}>
-                              {i > 0 ? ' · ' : ''}
-                              {a.label}: {a.value}
-                            </span>
-                          ))}
-                        </td>
-                      )
-                    })}
-                    {isEditable && <td className="w-20 px-2 py-2" />}
-                  </tr>
-                </tfoot>
-              )}
-            </table>
+                  )}
+                  {snap.inlineEdit.mode === 'creating' && listView.editable === 'bottom' && (
+                    <InlineEditRow
+                      columns={visibleColumns}
+                      fieldElements={editableFieldElements}
+                      fields={fields}
+                      values={snap.inlineEdit.values}
+                      onChange={handleInlineChange}
+                      onSave={handleInlineSave}
+                      onCancel={handleInlineCancel}
+                      isSaving={saveMutation.isPending}
+                      validationErrors={snap.validationErrors}
+                    />
+                  )}
+                </tbody>
+                {Object.keys(aggregates).length > 0 && renderTfoot()}
+              </table>
+            )}
           </div>
         </>
       ) : null}
