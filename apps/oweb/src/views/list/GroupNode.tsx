@@ -25,7 +25,9 @@ interface GroupNodeProps {
   toggleGroupExpand: (path: string) => void
   toggleRow: (id: number, shiftKey: boolean, index: number) => void
   handleRowClick: (record: Record<string, unknown>) => void
-  setGroupExtraLimits: (limits: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void
+  setGroupExtraLimits: (
+    limits: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>),
+  ) => void
   confirmDialog: (opts: {
     title: string
     message: string

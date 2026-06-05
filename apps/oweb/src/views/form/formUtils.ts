@@ -1,5 +1,9 @@
 // Re-export from odoo-client (moved there for RecordModel use)
-export { normalizeOnchangeValue, normalizeValuesForRpc, validateAllFields } from '@odooseek/odoo-client'
+export {
+  normalizeOnchangeValue,
+  normalizeValuesForRpc,
+  validateAllFields,
+} from '@odooseek/odoo-client'
 
 export function isWizardModel(m?: string): boolean {
   return (

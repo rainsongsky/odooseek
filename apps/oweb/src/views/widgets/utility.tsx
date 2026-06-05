@@ -74,7 +74,7 @@ export function Many2ManyTagsWidget({ value, onChange, readOnly, meta }: FieldWi
       const results = await callKw<Array<{ id: number; display_name: string }>>(
         meta.relation,
         'search_read',
-        [[domain], ['id', 'display_name']],
+        [domain, ['id', 'display_name']],
         { limit: 10 },
       )
       setSearchResults(results.map((r) => [r.id, r.display_name]))
@@ -423,7 +423,6 @@ export function ImageUrlWidget({ field, value }: FieldWidgetProps) {
 
   if (!url) return <span className="text-sm text-text-muted">—</span>
   return (
-    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative image with error fallback
     <img
       src={url}
       alt={field.string || ''}

@@ -111,6 +111,7 @@ function RegistrationDesk() {
     }
   }, [initialEventId])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ref-only side effect
   useEffect(() => {
     inputRef.current?.focus()
   }, [selectedEventId, mode])

@@ -893,7 +893,8 @@ describe('RecordModel integration via FormRenderer', () => {
     const user = userEvent.setup()
     mockCallKw.mockImplementation((_model: string, method: string) => {
       if (method === 'read') return Promise.resolve(readResult)
-      if (method === 'onchange') return Promise.resolve({ value: { email: 'auto-filled@test.com' } })
+      if (method === 'onchange')
+        return Promise.resolve({ value: { email: 'auto-filled@test.com' } })
       return Promise.resolve(undefined)
     })
 
@@ -926,10 +927,11 @@ describe('RecordModel integration via FormRenderer', () => {
     const user = userEvent.setup()
     mockCallKw.mockImplementation((_model: string, method: string) => {
       if (method === 'read') return Promise.resolve(readResult)
-      if (method === 'onchange') return Promise.resolve({
-        value: {},
-        warning: { title: 'Heads Up', message: 'This partner has duplicates', type: 'dialog' },
-      })
+      if (method === 'onchange')
+        return Promise.resolve({
+          value: {},
+          warning: { title: 'Heads Up', message: 'This partner has duplicates', type: 'dialog' },
+        })
       return Promise.resolve(undefined)
     })
 
@@ -958,7 +960,8 @@ describe('RecordModel integration via FormRenderer', () => {
 
   test('new record loads defaults via default_get', async () => {
     mockCallKw.mockImplementation((_model: string, method: string) => {
-      if (method === 'default_get') return Promise.resolve({ name: 'New Partner', email: '', state: false })
+      if (method === 'default_get')
+        return Promise.resolve({ name: 'New Partner', email: '', state: false })
       if (method === 'onchange') return Promise.resolve({ value: {} })
       return Promise.resolve(undefined)
     })
@@ -980,7 +983,7 @@ describe('RecordModel integration via FormRenderer', () => {
       (c: unknown[]) => (c as unknown[])[1] === 'default_get',
     )
     expect(defaultGetCall).toBeDefined()
-    const args = defaultGetCall![2] as unknown[]
+    const args = defaultGetCall?.[2] as unknown[]
     expect(args[0]).toContain('name')
   })
 

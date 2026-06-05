@@ -61,6 +61,7 @@ export function ModuleRoute({
   const formRef = useRef<OdooFormRendererRef>(null)
   const viewInitialized = useRef(false)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ref write, no reactive deps needed
   useEffect(() => {
     viewInitialized.current = false
   }, [actionKey])

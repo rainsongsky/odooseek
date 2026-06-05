@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react'
 import type { GroupCheckSession } from '../../lib/auth'
 import { passesXmlGroups } from '../../lib/field-access'
 import { getFieldWidget } from '../widgets'
+import type { One2ManyWidgetHandle } from '../widgets/relational/one2many'
 import { ButtonBoxRenderer } from './FormButtonBox'
 import { isButtonVisible } from './FormHeaderBar'
 import { HelpPopover } from './HelpPopover'
@@ -35,6 +36,7 @@ export interface NodeProps {
   session?: GroupCheckSession
   missingFields?: Set<string>
   fieldErrors?: Map<string, string>
+  o2mRefs?: React.MutableRefObject<Map<string, One2ManyWidgetHandle>>
 }
 
 // ── Sheet partition helpers ──────────────────────────────────────
@@ -219,6 +221,7 @@ function NotebookRenderer({
   session,
   missingFields,
   fieldErrors,
+  o2mRefs,
 }: {
   pages: { string: string; invisible?: string; elements: FormElement[] }[]
   record?: Record<string, unknown>
@@ -233,6 +236,7 @@ function NotebookRenderer({
   session?: GroupCheckSession
   missingFields?: Set<string>
   fieldErrors?: Map<string, string>
+  o2mRefs?: React.MutableRefObject<Map<string, One2ManyWidgetHandle>>
 }) {
   const [activePage, setActivePage] = useState(0)
   const visiblePages = useMemo(
@@ -285,6 +289,7 @@ function NotebookRenderer({
             level={level + 1}
             missingFields={missingFields}
             fieldErrors={fieldErrors}
+            o2mRefs={o2mRefs}
           />
         )}
       </div>
@@ -309,6 +314,7 @@ export function FormLayoutNode({
   session,
   missingFields,
   fieldErrors,
+  o2mRefs,
 }: NodeProps) {
   return (
     <>
@@ -342,6 +348,7 @@ export function FormLayoutNode({
                           level={level + 1}
                           missingFields={missingFields}
                           fieldErrors={fieldErrors}
+                          o2mRefs={o2mRefs}
                         />
                       </div>
                     )}
@@ -362,6 +369,7 @@ export function FormLayoutNode({
                             level={level + 1}
                             missingFields={missingFields}
                             fieldErrors={fieldErrors}
+                            o2mRefs={o2mRefs}
                           />
                         </div>
                       )}
@@ -398,6 +406,7 @@ export function FormLayoutNode({
                   level={level + 1}
                   missingFields={missingFields}
                   fieldErrors={fieldErrors}
+                  o2mRefs={o2mRefs}
                 />
               </div>
             )
@@ -478,6 +487,7 @@ export function FormLayoutNode({
                       level={level + 1}
                       missingFields={missingFields}
                       fieldErrors={fieldErrors}
+                      o2mRefs={o2mRefs}
                     />
                   </div>
                 ))}
@@ -581,6 +591,7 @@ export function FormLayoutNode({
                 session={session}
                 missingFields={missingFields}
                 fieldErrors={fieldErrors}
+                o2mRefs={o2mRefs}
               />
             )
           case 'field': {
@@ -590,6 +601,14 @@ export function FormLayoutNode({
             if (evalModifier(el.invisible, record)) return null
             if (editMode && SYSTEM_FIELDS.has(el.name)) return null
             const Widget = getFieldWidget(el, meta.type)
+            const isO2m = meta.type === 'one2many'
+            const o2mRef =
+              isO2m && o2mRefs
+                ? (ref: One2ManyWidgetHandle | null) => {
+                    if (ref) o2mRefs.current.set(el.name, ref)
+                    else o2mRefs.current.delete(el.name)
+                  }
+                : undefined
             let fieldReadonly = !!meta.readonly
             if (el.readonly !== undefined)
               fieldReadonly =
@@ -628,6 +647,7 @@ export function FormLayoutNode({
                     record={record}
                     model={model}
                     recordId={recordId}
+                    widgetRef={o2mRef}
                   />
                 </div>
               )
@@ -650,6 +670,7 @@ export function FormLayoutNode({
                     record={record}
                     model={model}
                     recordId={recordId}
+                    widgetRef={o2mRef}
                   />
                   <span className="o_form_label">
                     {el.string || meta.string || el.name}
@@ -681,6 +702,7 @@ export function FormLayoutNode({
                   record={record}
                   model={model}
                   recordId={recordId}
+                  widgetRef={o2mRef}
                 />
               </div>
             )

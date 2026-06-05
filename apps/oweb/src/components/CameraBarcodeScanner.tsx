@@ -61,6 +61,7 @@ export function CameraBarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
     setStatus('idle')
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only effect, stopCamera reads refs
   useEffect(() => {
     return () => stopCamera()
   }, [])

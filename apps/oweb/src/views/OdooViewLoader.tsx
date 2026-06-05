@@ -146,7 +146,6 @@ export function OdooViewLoader({
   const { internalViewType, recordId, handleCreate } = useViewNavigation(viewType, _recordId, model)
   const {
     groupBy,
-    searchPanelDomain,
     effectiveDomain,
     searchPanelBaseDomain,
     handleSearch,

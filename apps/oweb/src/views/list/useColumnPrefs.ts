@@ -11,7 +11,7 @@ import { isNonField, isViewField } from './listUtils'
 export function useColumnPrefs(
   model: string,
   listView: ParsedListView,
-  fields: Record<string, OdooFieldMeta>,
+  _fields: Record<string, OdooFieldMeta>,
 ) {
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set())
   const [colWidths, setColWidths] = useState<Record<string, number>>({})

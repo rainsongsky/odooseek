@@ -99,6 +99,7 @@ export function ControlPanel({
     menuCloseTimerRef.current = setTimeout(() => setOpenMenu(null), 200)
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only, ref-based
   useEffect(() => () => clearMenuCloseTimer(), [])
 
   const menuHoverHandlers = (menu: 'print' | 'action') => ({

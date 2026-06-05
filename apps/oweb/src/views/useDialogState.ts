@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react'
 import type { OdooAction, ViewType } from '@odooseek/odoo-client'
-import { orderedViewTypesFromActWindow, generateReport } from '@odooseek/odoo-client'
+import { generateReport, orderedViewTypesFromActWindow } from '@odooseek/odoo-client'
+import { useCallback, useRef, useState } from 'react'
 import type { FormDialogItem } from '../components/FormDialog'
 import { useToast } from '../hooks/useToast'
 import { HR_WIZARD_STEPS } from '../lib/hr-wizards'

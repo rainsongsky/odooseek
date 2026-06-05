@@ -29,8 +29,8 @@ import type { FormEditActionsProps } from '../components/FormEditActions'
 import { FormSheetSkeleton } from '../components/Skeleton'
 import type { WizardStep } from '../components/WizardDialog'
 import { WizardDialog } from '../components/WizardDialog'
-import { useRecordModel } from '../hooks/useRecordModel'
 import { mergeVersionPreviewIntoRecord, useHrVersion } from '../hooks/HrVersionProvider'
+import { useRecordModel } from '../hooks/useRecordModel'
 import { useAuth } from '../lib/auth'
 import { readRecordWithFieldFallback, resolveFormReadFields } from '../lib/form-read-fields'
 import { HeaderBar } from './form/FormHeaderBar'
@@ -89,7 +89,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   const headerElement = formLayout.elements.find((e): e is HeaderElement => e.type === 'header')
   const nonHeaderElements = formLayout.elements.filter((e) => e.type !== 'header')
 
-  const { fieldLabelMap, invisibleFieldMap } = useMemo(() => {
+  const { invisibleFieldMap } = useMemo(() => {
     const labelMap: Record<string, string> = {}
     const invisibleMap = new Map<string, string>()
     const walk = (elements: FormElement[]) => {
@@ -132,7 +132,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
   // ── RecordModel ─────────────────────────────────────────
   const recordModel = useMemo(
     () => new RecordModel({ model, fields, recordId, context, readFields }),
-    [model, fields, recordId, readFields],
+    [model, fields, recordId, readFields, context],
   )
   const snap = useRecordModel(recordModel)
 
@@ -192,7 +192,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
         // Model sets saveError internally
       })
     }
-  }, [model, recordId, record, recordModel])
+  }, [recordId, record, recordModel])
 
   // ── Dirty change callback ────────────────────────────────
   useEffect(() => {
@@ -213,14 +213,7 @@ export const OdooFormRenderer = forwardRef(function OdooFormRenderer(
     } catch {
       // ignore
     }
-  }, [
-    scrollToFirstError,
-    recordModel,
-    onRecordCreated,
-    queryClient,
-    model,
-    recordId,
-  ])
+  }, [scrollToFirstError, recordModel, onRecordCreated, queryClient, model, recordId])
 
   const handleCancel = useCallback(() => {
     recordModel.discard()

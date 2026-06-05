@@ -35,7 +35,7 @@ function WebPage() {
   useEffect(() => {
     viewInitialized.current = false
     setRecordId(undefined)
-  }, [search.action, search.model])
+  }, [])
 
   useEffect(() => {
     if (searchViewType) {

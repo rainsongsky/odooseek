@@ -220,6 +220,7 @@ export interface FieldElement {
   mode?: string
   subViews?: {
     list?: O2mSubView
+    kanban?: O2mKanbanSubView
     form?: O2mFormSubView
   }
 }
@@ -234,6 +235,11 @@ export interface O2mSubView {
 
 export interface O2mFormSubView {
   elements: FormElement[]
+}
+
+export interface O2mKanbanSubView {
+  template: string
+  fields: string[]
 }
 
 export type O2mCommand =

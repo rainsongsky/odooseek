@@ -1,6 +1,6 @@
 import type { FieldWidgetProps } from './index'
 
-export function Many2ManyTaxTagsWidget({ value, readOnly, meta }: FieldWidgetProps) {
+export function Many2ManyTaxTagsWidget({ value }: FieldWidgetProps) {
   const tags: Array<[number, string]> = Array.isArray(value)
     ? value
         .filter((v) => Array.isArray(v))

@@ -126,7 +126,7 @@ function FormDialogBody({
   useEffect(() => {
     failureNotifiedRef.current = false
     setDismissed(false)
-  }, [item.id])
+  }, [])
 
   useEffect(() => {
     if (wizardCreateFailed) {

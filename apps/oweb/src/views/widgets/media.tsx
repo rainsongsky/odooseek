@@ -185,7 +185,6 @@ export function ImageFieldWidget({
     }
     return (
       <>
-        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: zoomable image uses role=button */}
         <img
           src={src}
           alt={field.string || field.name}

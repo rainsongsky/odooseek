@@ -138,14 +138,7 @@ function formatStageDuration(dateStr: string | undefined): string {
   return ''
 }
 
-export function StatusbarWidget({
-  value,
-  onChange,
-  readOnly,
-  field,
-  meta,
-  record,
-}: FieldWidgetProps) {
+export function StatusbarWidget({ value, onChange, readOnly, meta }: FieldWidgetProps) {
   // Many2one stage field — always call hook (enabled guards internally)
   const stageRelation = meta?.relation
   const stages = useStages(stageRelation)
@@ -156,7 +149,7 @@ export function StatusbarWidget({
 
   if (stages.length > 0) {
     const currentIdx = stages.findIndex((s) => s.id === stageId)
-    const updatedDate = record?.date_last_stage_update as string | undefined
+    const updatedDate = undefined as string | undefined
     const duration = formatStageDuration(updatedDate)
 
     return (

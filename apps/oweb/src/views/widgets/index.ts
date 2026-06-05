@@ -92,6 +92,7 @@ export interface FieldWidgetProps {
   record?: Record<string, unknown>
   model?: string
   recordId?: number
+  widgetRef?: React.Ref<unknown>
 }
 
 // Odoo 19 style: edit mode = bottom border only, read-only = plain text

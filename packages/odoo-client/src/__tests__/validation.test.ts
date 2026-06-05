@@ -161,9 +161,12 @@ describe('validateFieldValue', () => {
       expect(validateFieldValue(undefined, m2oMeta)).toBeNull()
     })
 
-    test('non-array non-false returns error', () => {
+    test('non-array non-false non-number returns error', () => {
       expect(validateFieldValue('some string', m2oMeta)).toBe('Invalid reference')
-      expect(validateFieldValue(42, m2oMeta)).toBe('Invalid reference')
+    })
+
+    test('raw number is valid (normalized many2one id)', () => {
+      expect(validateFieldValue(42, m2oMeta)).toBeNull()
     })
 
     test('array with wrong format returns error', () => {

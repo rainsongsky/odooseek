@@ -5,7 +5,7 @@ export function TimesheetUomWidget(props: FieldWidgetProps) {
   return <FloatTimeWidget {...props} />
 }
 
-export function Many2OneUomWidget({ value, onChange, readOnly, meta, field }: FieldWidgetProps) {
+export function Many2OneUomWidget({ value, readOnly, meta, field }: FieldWidgetProps) {
   const display =
     Array.isArray(value) && value.length === 2
       ? `${value[1]}${meta?.relation ? '' : ''}`

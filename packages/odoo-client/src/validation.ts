@@ -60,7 +60,7 @@ export function validateFieldValue(value: unknown, meta: OdooFieldMeta): string 
         if (value.length < 2 || typeof value[0] !== 'number' || typeof value[1] !== 'string') {
           return 'Invalid reference format'
         }
-      } else if (value !== false) {
+      } else if (typeof value !== 'number' && value !== false) {
         return 'Invalid reference'
       }
       break

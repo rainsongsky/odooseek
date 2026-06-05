@@ -41,10 +41,10 @@ interface GraphRendererProps {
   domain?: unknown[]
 }
 
-export function OdooGraphRenderer({ model, arch, fields, domain = [] }: GraphRendererProps) {
-  const { config } = useTheme()
+export function OdooGraphRenderer({ model, arch, domain = [] }: GraphRendererProps) {
+  useTheme()
   const graphView = useMemo(() => parseGraphXml(arch), [arch])
-  const chartColors = useMemo(() => getChartColors(), [config.presetId, config.accentId])
+  const chartColors = useMemo(() => getChartColors(), [])
 
   const [chartType, setChartType] = useState<ChartType>(graphView.graphType)
   const [activeMeasure, setActiveMeasure] = useState(graphView.measures[0]?.name ?? '__count')

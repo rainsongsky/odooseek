@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useReducer } from 'react'
 import type { ViewType } from '@odooseek/odoo-client'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 
 type NavigationState = {
   viewType: ViewType

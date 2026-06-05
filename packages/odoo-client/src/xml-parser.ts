@@ -229,23 +229,31 @@ function parseFormElements(container: Element): FormElement[] {
       const treeChild = Array.from(child.children).find(
         (c) => c.tagName === 'tree' || c.tagName === 'list',
       )
+      const kanbanChild = Array.from(child.children).find((c) => c.tagName === 'kanban')
       const formChild = Array.from(child.children).find((c) => c.tagName === 'form')
 
-      if (treeChild) {
-        fieldEl.subViews = {
-          list: {
+      if (treeChild || kanbanChild || formChild) {
+        if (!fieldEl.subViews) fieldEl.subViews = {}
+        if (treeChild) {
+          fieldEl.subViews.list = {
             columns: Array.from(treeChild.querySelectorAll('field')).map(parseFieldAttrs),
             editable: treeChild.getAttribute('editable') ?? undefined,
             decorations: parseDecorations(treeChild),
             create: treeChild.getAttribute('create') !== 'false',
             delete: treeChild.getAttribute('delete') !== 'false',
-          },
+          }
+        }
+        if (kanbanChild) {
+          const kanbanFields = Array.from(kanbanChild.querySelectorAll('field')).map(
+            (f) => f.getAttribute('name') ?? '',
+          )
+          const tmplNode = kanbanChild.querySelector('templates')
+          const tmpl = tmplNode?.innerHTML ?? kanbanChild.innerHTML
+          fieldEl.subViews.kanban = { template: tmpl, fields: kanbanFields }
         }
         if (formChild) {
           fieldEl.subViews.form = { elements: parseFormElements(formChild) }
         }
-      } else if (formChild) {
-        fieldEl.subViews = { form: { elements: parseFormElements(formChild) } }
       }
 
       elements.push(fieldEl)

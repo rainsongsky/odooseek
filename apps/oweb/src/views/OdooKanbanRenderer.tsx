@@ -632,15 +632,17 @@ function KanbanCard({
     )
 
   return (
-    <button
-      type="button"
+    // biome-ignore lint/a11y/useSemanticElements: contains nested <button> for CardActions dropdown
+    <div
+      role="button"
       tabIndex={0}
       draggable
       onDragStart={(e) => e.dataTransfer.setData('recordId', String(record.id))}
       onClick={() => onClick?.(recordId)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          e.currentTarget.click()
+          e.preventDefault()
+          onClick?.(recordId)
         }
       }}
       className="group relative cursor-pointer rounded-lg border border-border-subtle bg-surface p-3 transition-colors hover:border-border-default text-left w-full"
@@ -668,7 +670,7 @@ function KanbanCard({
       ) : (
         content
       )}
-    </button>
+    </div>
   )
 }
 

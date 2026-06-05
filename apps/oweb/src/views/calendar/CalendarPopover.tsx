@@ -211,7 +211,7 @@ export function CalendarPopover({
       Math.min(window.scrollX + vw / 2 - rect.width / 2, window.scrollX + vw - rect.width - 16),
     )
     setPosition({ top, left })
-  }, [event.start, useDesktopLayout])
+  }, [useDesktopLayout])
 
   const startStr = event.allDay
     ? format(event.start, 'EEE, MMM d, yyyy')
